@@ -1,0 +1,19 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+  <defs>
+    <linearGradient id="apex-grad-left" x1="3.5" y1="2.5" x2="12" y2="19.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#a1a1aa"/>
+    </linearGradient>
+    <linearGradient id="apex-grad-right" x1="20.5" y1="2.5" x2="12" y2="19.5" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e4e4e7"/>
+      <stop offset="100%" stop-color="#52525b"/>
+    </linearGradient>
+    <linearGradient id="apex-core-glow" x1="12" y1="7" x2="12" y2="13" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d4d4d8"/>
+    </linearGradient>
+  </defs>
+  <path d="M12 2.8L3.8 19.2C3.5 19.8 4 20.4 4.7 20.2L12 16.2V2.8Z" fill="url(#apex-grad-left)"/>
+  <path d="M12 2.8V16.2L19.3 20.2C20 20.4 20.5 19.8 20.2 19.2L12 2.8Z" fill="url(#apex-grad-right)"/>
+  <path d="M12 7.2L14.2 10.5L12 13.8L9.8 10.5Z" fill="url(#apex-core-glow)" fill-opacity="0.95"/>
+</svg>

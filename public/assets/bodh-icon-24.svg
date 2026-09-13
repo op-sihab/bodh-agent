@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
+  <defs>
+    <linearGradient id="bodh-stem" x1="4" y1="3" x2="7" y2="21" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#a1a1aa"/>
+    </linearGradient>
+    <linearGradient id="bodh-top-loop" x1="7" y1="3" x2="20" y2="12" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#e4e4e7"/>
+      <stop offset="100%" stop-color="#71717a"/>
+    </linearGradient>
+    <linearGradient id="bodh-bottom-loop" x1="7" y1="12" x2="20" y2="21" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e4e4e7"/>
+      <stop offset="60%" stop-color="#a1a1aa"/>
+      <stop offset="100%" stop-color="#52525b"/>
+    </linearGradient>
+    <linearGradient id="bodh-cross" x1="7" y1="10" x2="16" y2="14" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#71717a"/>
+    </linearGradient>
+  </defs>
+  <!-- Vertical Structural Spine (Knowledge Foundation) -->
+  <path d="M4 3.5C4 3.2 4.2 3 4.5 3H7.5V21H4.5C4.2 21 4 20.8 4 20.5V3.5Z" fill="url(#bodh-stem)"/>
+  <!-- Upper Loop (The Inquiring Mind) -->
+  <path d="M7.5 3H14C17.6 3 19.5 5.2 19.5 8C19.5 10.4 17.8 11.8 14.5 12H7.5V8.8H13.6C15.2 8.8 16.2 8.1 16.2 7.2C16.2 5.9 15 5.5 13.4 5.5H7.5V3Z" fill="url(#bodh-top-loop)"/>
+  <!-- Lower Loop (The Synthesis & Reasoning) -->
+  <path d="M7.5 12H15C18.2 12 20 13.6 20 16.5C20 19.5 17.8 21 14 21H7.5V18.2H13.8C15.5 18.2 16.6 17.5 16.6 16.2C16.6 14.8 15.2 14.3 13.6 14.3H7.5V12Z" fill="url(#bodh-bottom-loop)"/>
+  <!-- Inner Infinity Ribbon Fold -->
+  <path d="M12.5 9.8L16.2 14.2H13.2L9.5 9.8H12.5Z" fill="url(#bodh-cross)" fill-opacity="0.85"/>
+</svg>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" fill="none">
+  <defs>
+    <linearGradient id="bodh-m-stem" x1="180" y1="140" x2="330" y2="884" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#f4f4f5"/>
+      <stop offset="100%" stop-color="#a1a1aa"/>
+    </linearGradient>
+    <linearGradient id="bodh-m-top" x1="330" y1="140" x2="840" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#e4e4e7"/>
+      <stop offset="80%" stop-color="#a1a1aa"/>
+      <stop offset="100%" stop-color="#71717a"/>
+    </linearGradient>
+    <linearGradient id="bodh-m-bottom" x1="330" y1="512" x2="860" y2="884" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#e4e4e7"/>
+      <stop offset="40%" stop-color="#d4d4d8"/>
+      <stop offset="80%" stop-color="#71717a"/>
+      <stop offset="100%" stop-color="#3f3f46"/>
+    </linearGradient>
+    <linearGradient id="bodh-m-twist" x1="480" y1="420" x2="680" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#e4e4e7"/>
+      <stop offset="100%" stop-color="#71717a"/>
+    </linearGradient>
+    <radialGradient id="bodh-m-ambient" cx="512" cy="512" r="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="70%" stop-color="#ffffff" stop-opacity="0.01"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Ambient Atmosphere -->
+  <circle cx="512" cy="512" r="480" fill="url(#bodh-m-ambient)"/>
+  <circle cx="512" cy="512" r="450" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-dasharray="8 8" fill="none"/>
+  <circle cx="512" cy="512" r="340" stroke="rgba(255,255,255,0.03)" stroke-width="1" fill="none"/>
+  
+  <!-- Vertical Structural Spine (Knowledge Foundation) -->
+  <path d="M200 160C200 149 209 140 220 140H330V884H220C209 884 200 875 200 864V160Z" fill="url(#bodh-m-stem)"/>
+  
+  <!-- Upper Loop (The Inquiring Mind) -->
+  <path d="M330 140H580C724 140 820 226 820 348C820 442 748 506 600 512H330V396H566C636 396 684 366 684 326C684 266 630 250 556 250H330V140Z" fill="url(#bodh-m-top)"/>
+  
+  <!-- Lower Loop (The Synthesis & Reasoning) -->
+  <path d="M330 512H620C756 512 840 584 840 706C840 828 748 884 590 884H330V768H574C648 768 700 736 700 682C700 626 642 602 568 602H330V512Z" fill="url(#bodh-m-bottom)"/>
+  
+  <!-- Infinity Fold Accent (The Endless Loop of Understanding) -->
+  <path d="M490 420L680 608H550L360 420H490Z" fill="url(#bodh-m-twist)" fill-opacity="0.9"/>
+</svg>
