@@ -96,14 +96,15 @@ export async function getCQQuestions({ subject_id, chapter_id, limit = 3 } = {})
   if (subject_id) conditions.push(`subject_id = '${subject_id.replace(/'/g, "''")}'`);
   if (chapter_id) conditions.push(`chapter_id = '${chapter_id.replace(/'/g, "''")}'`);
 
+  const fetchLimit = Math.max(limit * 5, 25);
   const sql = `SELECT id, subject_id, chapter_id, exam_id, type, tags, question_text, option_a, option_b, option_c, option_d, answer, solution 
                FROM questions 
                WHERE ${conditions.join(" AND ")} 
-               ORDER BY RANDOM() 
-               LIMIT ${limit};`;
+               LIMIT ${fetchLimit};`;
 
   const { rows, durationMs } = await executeRawSql(sql);
-  return { data: rows, durationMs };
+  const sampled = rows.length > limit ? rows.sort(() => Math.random() - 0.5).slice(0, limit) : rows;
+  return { data: sampled, durationMs };
 }
 
 // 5. Frequency & Repetition Analysis (কোন প্রশ্ন/টপিক বোর্ডে কয়বার এসেছে)
@@ -167,7 +168,8 @@ export async function searchQuestions(keyword, limit = 10) {
 }
 
 // 7. Generate Random Quiz
-export async function getQuiz({ subject_id, chapter_id, exam_id, limit = 5, type = "MCQ" } = {}) {
+export async function getQuiz({ subject_id, chapter_id, exam_id, limit = 5, count = null, type = "MCQ" } = {}) {
+  const finalLimit = count || limit || 5;
   const conditions = [];
   if (type) conditions.push(`type = '${type.replace(/'/g, "''")}'`);
   if (subject_id) conditions.push(`subject_id = '${subject_id.replace(/'/g, "''")}'`);
@@ -175,16 +177,15 @@ export async function getQuiz({ subject_id, chapter_id, exam_id, limit = 5, type
   if (exam_id) conditions.push(`exam_id = '${exam_id.replace(/'/g, "''")}'`);
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const count = Math.min(Math.max(parseInt(limit) || 5, 1), 30);
-
+  const fetchLimit = Math.max(finalLimit * 5, 25);
   const sql = `SELECT id, subject_id, chapter_id, exam_id, type, tags, question_text, option_a, option_b, option_c, option_d, answer, solution 
                FROM questions 
                ${whereClause} 
-               ORDER BY RANDOM() 
-               LIMIT ${count};`;
+               LIMIT ${fetchLimit};`;
 
   const { rows, durationMs } = await executeRawSql(sql);
-  return { data: rows, durationMs };
+  const sampled = rows.length > finalLimit ? rows.sort(() => Math.random() - 0.5).slice(0, finalLimit) : rows;
+  return { data: sampled, durationMs };
 }
 
 // 8. Get Question By ID

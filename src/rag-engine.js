@@ -210,10 +210,10 @@ export async function retrieveRealAcademicContext(userQuery) {
                  FROM questions 
                  WHERE type LIKE '%CQ%' `;
     if (detectedSubject) cqSql += `AND subject_id = '${detectedSubject.id}' `;
-    cqSql += `ORDER BY RANDOM() LIMIT 1;`;
+    cqSql += `LIMIT 25;`;
     const cqRes = await executeRawSql(cqSql);
     if (cqRes.rows.length > 0) {
-      context.creativeQuestion = cqRes.rows[0];
+      context.creativeQuestion = cqRes.rows[Math.floor(Math.random() * cqRes.rows.length)];
       context.retrievedItemsCount += 1;
     }
   }

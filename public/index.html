@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BODH (বোধ) — Autonomous Academic Intelligence</title>
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -24,7 +25,7 @@
             }
           },
           fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '"Anek Bangla"', '"Hind Siliguri"', -apple-system, BlinkMacSystemFont, 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', '"Anek Bangla"', '"Hind Siliguri"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'SF Mono', 'Menlo', 'monospace']
           }
         }
@@ -71,6 +72,11 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 9999px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+
+    .chatgpt-scroll::-webkit-scrollbar { width: 5px; }
+    .chatgpt-scroll::-webkit-scrollbar-track { background: transparent; }
+    .chatgpt-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
+    .chatgpt-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
 
     /* Exact Reference: Lightbulb Thinking Shimmer Beam */
     @keyframes thinkingBeam {
@@ -265,50 +271,54 @@
   <!-- ========================================================= -->
   <div id="sidebarBackdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 hidden md:hidden" onclick="toggleSidebar()"></div>
 
-  <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-64 bg-app-sidebar border-r border-white/[0.07] z-40 flex flex-col justify-between -translate-x-full md:translate-x-0 transition-transform duration-250 select-none">
+  <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-[260px] bg-app-sidebar border-r border-white/[0.07] z-40 flex flex-col justify-between -translate-x-full md:translate-x-0 transition-transform duration-250 select-none">
     
-    <!-- Top: Brand & New Chat -->
-    <div class="p-3.5 space-y-3">
-      <div class="flex items-center justify-between px-1">
-        <div class="flex items-center cursor-pointer group py-1" onclick="resetToHome()">
-          <img src="/assets/bodh-custom-logo.png" alt="বোধ" class="h-6 w-auto object-contain opacity-90 group-hover:opacity-100 transition" />
+    <!-- Top: Brand & Action Buttons -->
+    <div class="pt-4 px-3.5 pb-2 space-y-3">
+      <!-- Brand Row with Logo & Collapse Toggle -->
+      <div class="flex items-center justify-between px-0.5">
+        <div class="flex items-center cursor-pointer group py-0.5" onclick="resetToHome()" title="বোধ">
+          <img src="/assets/bodh-custom-logo.png" alt="বোধ" class="h-8 w-auto object-contain opacity-95 group-hover:opacity-100 transition-all duration-200 drop-shadow-[0_0_12px_rgba(255,255,255,0.06)]" />
         </div>
 
-        <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white p-1 rounded transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <button onclick="toggleSidebar()" class="text-zinc-400 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-white/[0.06] transition cursor-pointer" title="সাইডবার টগল">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
         </button>
       </div>
 
-      <!-- New Chat Button -->
+      <!-- New Chat Button (Sleek Obsidian Surface) -->
       <button onclick="resetToHome(); if(window.innerWidth < 768) toggleSidebar();" 
-        class="w-full py-2 px-3 rounded-xl border border-white/[0.08] hover:border-white/[0.16] bg-app-surface hover:bg-white/[0.04] text-xs text-zinc-300 flex items-center justify-between transition cursor-pointer shadow-sm">
-        <span class="flex items-center gap-2">
-          <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        class="w-full py-2.5 px-3 rounded-xl bg-app-surface/90 hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/[0.16] text-[13.5px] font-medium text-zinc-200 hover:text-white flex items-center justify-between transition cursor-pointer shadow-sm group">
+        <span class="flex items-center gap-2.5">
+          <svg class="w-4 h-4 text-zinc-400 group-hover:text-zinc-200 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
           <span>নতুন আলোচনা</span>
         </span>
-        <kbd class="text-[10px] font-mono text-zinc-500 bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/[0.06]">Ctrl K</kbd>
+        <kbd class="text-[10px] font-mono text-zinc-400 bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/[0.06]">Ctrl K</kbd>
       </button>
     </div>
 
-    <!-- Middle: Clean History List -->
-    <div class="flex-1 overflow-y-auto px-2 space-y-1 text-xs">
-      <div class="px-2 py-1.5 text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+    <!-- Middle: Recents Section Header & History List with ChatGPT-style font & scroll -->
+    <div class="flex-1 overflow-y-auto px-2 space-y-1 chatgpt-scroll pt-1">
+      <div class="px-3 pt-2 pb-1.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
         সাম্প্রতিক আলোচনা
       </div>
       <div id="recentChatsList" class="space-y-0.5">
-        <div class="px-2.5 py-2 text-zinc-500 text-[11px] italic">কোনো পূর্ববর্তী আলোচনা নেই</div>
+        <div class="px-3 py-3 text-zinc-500 text-xs italic">কোনো পূর্ববর্তী আলোচনা নেই</div>
       </div>
     </div>
 
-    <!-- Bottom: Simple User / Settings Footbar -->
-    <div class="p-3 border-t border-white/[0.07] flex items-center justify-between text-xs text-zinc-400 bg-app-sidebar/80">
+    <!-- Bottom: Academic System Footbar (Theme Harmonized) -->
+    <div class="p-3 border-t border-white/[0.07] flex items-center justify-between text-xs text-zinc-400 bg-app-sidebar">
       <div class="flex items-center gap-2">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20"></span>
-        <span class="text-[11px] font-mono text-zinc-400">Turso Connected</span>
+        <span class="text-[11.5px] font-mono text-zinc-400">Turso LibSQL Connected</span>
       </div>
-      <button onclick="resetToHome()" class="p-1.5 hover:text-white rounded hover:bg-white/[0.06] transition" title="চ্যাট ক্লিয়ার করুন">
+      <button onclick="clearAllSessions()" class="p-1.5 hover:text-rose-400 rounded-lg hover:bg-white/[0.06] text-zinc-400 transition cursor-pointer" title="সকল হিস্ট্রি মুছে ফেলুন">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
       </button>
     </div>
@@ -319,16 +329,18 @@
   <!-- ========================================================= -->
   <main class="flex-1 flex flex-col min-w-0 h-screen bg-app-bg relative z-10">
     
-    <!-- Top Header (Slim 48px) -->
-    <header class="h-12 border-b border-white/[0.07] flex items-center justify-between px-4 shrink-0 bg-app-bg/80 backdrop-blur-md">
+    <!-- Top Header (Clean 56px) -->
+    <header class="h-14 border-b border-white/[0.07] flex items-center justify-between px-4 shrink-0 bg-app-bg/90 backdrop-blur-md z-20">
       <div class="flex items-center gap-3">
-        <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white p-1 rounded">
+        <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition cursor-pointer" title="সাইডবার টগল">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
-        <img src="/assets/bodh-custom-logo.png" alt="বোধ" class="h-5 w-auto object-contain opacity-85 hover:opacity-100 transition cursor-pointer" onclick="resetToHome()" />
+        <div class="flex items-center cursor-pointer group py-0.5" onclick="resetToHome()" title="হোমপেজে ফিরুন">
+          <img src="/assets/bodh-custom-logo.png" alt="বোধ" class="h-8 sm:h-9 w-auto object-contain opacity-95 group-hover:opacity-100 transition-all duration-200 drop-shadow-[0_0_12px_rgba(255,255,255,0.06)] group-hover:drop-shadow-[0_0_18px_rgba(255,255,255,0.18)]" />
+        </div>
       </div>
       
-      <button onclick="resetToHome()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-white/[0.04] transition">
+      <button onclick="resetToHome()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition cursor-pointer">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         <span class="hidden sm:inline font-mono text-[11px]">New</span>
       </button>
@@ -340,10 +352,10 @@
       <!-- HERO VIEW (Centered Home) -->
       <div id="heroView" class="w-full max-w-2xl mx-auto my-auto flex flex-col items-center text-center space-y-5">
         
-        <!-- Clean, Compact Emblem (No big blur glow) -->
+        <!-- Clean, Compact Emblem with subtle ambient glow -->
         <div class="flex items-center justify-center">
           <img src="/assets/bodh-custom-logo.png" alt="বোধ" 
-            class="h-14 sm:h-16 w-auto object-contain select-none pointer-events-none opacity-90 transition-transform duration-200" />
+            class="h-16 sm:h-20 w-auto object-contain select-none pointer-events-none opacity-95 drop-shadow-[0_0_24px_rgba(255,255,255,0.08)] transition-transform duration-200" />
         </div>
 
         <div class="space-y-1 text-center -mt-1">
@@ -428,7 +440,48 @@
     let isProcessing = false;
     let isChatActive = false;
     let conversationHistory = [];
-    let recentChats = JSON.parse(localStorage.getItem('prime_recent_chats') || '[]');
+    let currentSessionId = null;
+
+    // Purge legacy flat prompt strings as requested
+    try {
+      if (localStorage.getItem('prime_recent_chats')) {
+        localStorage.removeItem('prime_recent_chats');
+      }
+    } catch(e) {}
+
+    const SESSIONS_STORAGE_KEY = 'bodh_chat_sessions_v1';
+    let chatSessions = [];
+    try {
+      chatSessions = JSON.parse(localStorage.getItem(SESSIONS_STORAGE_KEY) || '[]');
+      if (!Array.isArray(chatSessions)) chatSessions = [];
+    } catch(e) {
+      chatSessions = [];
+    }
+
+    function saveSessions() {
+      try {
+        if (chatSessions.length > 35) chatSessions = chatSessions.slice(0, 35);
+        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(chatSessions));
+      } catch (e) {
+        console.warn("Could not save sessions to localStorage:", e);
+      }
+    }
+
+    function generateSessionTitle(prompt) {
+      if (!prompt) return "নতুন আলোচনা";
+      let clean = prompt.trim().split('\n')[0].replace(/\s+/g, ' ');
+      clean = clean.replace(/(?:ei chapter er jonno|chapter er jonno|theke|theika)\s*(?:ekta|akta)?\s*(?:mcq|cq|prosno|question)\s*(?:dio|dao|den)?/gi, (m) => {
+        if (/mcq/i.test(m)) return ' (MCQ)';
+        if (/cq/i.test(m)) return ' (CQ)';
+        return '';
+      });
+      clean = clean.replace(/\s+(?:dao|dio|den|bolen|koren|bolo|chai|lagbe)$/i, '');
+      clean = clean.replace(/\s+/g, ' ').trim();
+      if (clean.length > 34) {
+        clean = clean.slice(0, 32) + '...';
+      }
+      return clean || "একাডেমিক আলোচনা";
+    }
 
     function toBnDigits(num) {
       if (num === undefined || num === null) return "";
@@ -437,88 +490,264 @@
     }
 
     // Exact Reference Generator: Builds intelligent academic thought tree
-    function generateThoughtTreeData(tool, args, result) {
-      let mainTitle = "বোর্ড ডেটাবেস ও অ্যানালিটিক্স যাচাই";
-      let intentReasoning = "শিক্ষার্থীর প্রশ্নের প্রাসঙ্গিকতা ও একাডেমিক প্রয়োজনীয়তা বিশ্লেষণ করা হয়েছে।";
-      let toolLabel = "বোর্ড প্রশ্নব্যাংক অনুসন্ধান";
-      let countTag = "যাচাই সম্পন্ন";
-      let synthesisReasoning = "প্রাপ্ত ডেটা থেকে নির্ভরযোগ্য একাডেমিক বিশ্লেষণ ও দিকনির্দেশনা প্রস্তুত।";
+    function getBanglaSubjectName(sub) {
+      if (!sub) return "";
+      const s = String(sub).toLowerCase();
+      if (s.includes('phys')) return 'পদার্থবিজ্ঞান';
+      if (s.includes('chem')) return 'রসায়ন';
+      if (s.includes('bio')) return 'জীববিজ্ঞান';
+      if (s.includes('high') || s.includes('h_math')) return 'উচ্চতর গণিত';
+      if (s.includes('math') || s.includes('gonit')) return 'সাধারণ গণিত';
+      if (s.includes('bangla') || s.includes('bng')) return 'বাংলা';
+      if (s.includes('eng')) return 'ইংরেজি';
+      if (s.includes('ict')) return 'তথ্য ও যোগাযোগ প্রযুক্তি';
+      if (s.includes('bgs')) return 'বাংলাদেশ ও বিশ্বপরিচয়';
+      if (s.includes('islam')) return 'ইসলাম ও নৈতিক শিক্ষা';
+      return sub;
+    }
 
-      if (tool === 'get_subject_chapters') {
-        const sub = result?.subject || 'সিলেবাস';
-        mainTitle = `${sub}: অফিশিয়াল পাঠ্যসূচি ও অধ্যায় বিশ্লেষণ`;
-        intentReasoning = `শিক্ষার্থী ${sub} বিষয়ের অফিশিয়াল সিলেবাস ও অধ্যায় বিন্যাস জানতে চেয়েছে।`;
-        toolLabel = `এনসিটিবি কারিকুলাম ও অধ্যায় তালিকা যাচাই`;
+    const BOARD_NAME_MAP = {
+      "DB": "ঢাকা বোর্ড", "DHAKA": "ঢাকা বোর্ড",
+      "CTG.B": "চট্টগ্রাম বোর্ড", "CTG": "চট্টগ্রাম বোর্ড", "CHITTAGONG": "চট্টগ্রাম বোর্ড",
+      "CB": "কুমিল্লা বোর্ড", "COMILLA": "কুমিল্লা বোর্ড", "CUMILLA": "কুমিল্লা বোর্ড",
+      "RB": "রাজশাহী বোর্ড", "RAJSHAHI": "রাজশাহী বোর্ড",
+      "SB": "সিলেট বোর্ড", "SYLHET": "সিলেট বোর্ড",
+      "JB": "যশোর বোর্ড", "JESSORE": "যশোর বোর্ড", "JASHORE": "যশোর বোর্ড",
+      "BB": "বরিশাল বোর্ড", "BARISAL": "বরিশাল বোর্ড", "BARISHAL": "বরিশাল বোর্ড",
+      "DIN.B": "দিনাজপুর বোর্ড", "DIN": "দিনাজপুর বোর্ড", "DINAJPUR": "দিনাজপুর বোর্ড",
+      "MB": "ময়মনসিংহ বোর্ড", "MYMENSINGH": "ময়মনসিংহ বোর্ড",
+      "MADRASA": "মাদ্রাসা বোর্ড", "MAD": "মাদ্রাসা বোর্ড",
+      "TEC": "কারিগরি বোর্ড", "BTEB": "কারিগরি বোর্ড",
+      "ALL.B": "সকল বোর্ড", "ALL": "সকল বোর্ড",
+      "RCC": "রাজশাহী ক্যাডেট কলেজ",
+      "JCC": "ঝিনাইদহ ক্যাডেট কলেজ",
+      "MCC": "মির্জাপুর ক্যাডেট কলেজ",
+      "PCC": "পাবনা ক্যাডেট কলেজ",
+      "FCC": "ফৌজদারহাট ক্যাডেট কলেজ",
+      "SCC": "সিলেট ক্যাডেট কলেজ",
+      "BCC": "বরিশাল ক্যাডেট কলেজ", "CCR": "বরিশাল ক্যাডেট কলেজ",
+      "MGCC": "ময়মনসিংহ গার্লস ক্যাডেট কলেজ",
+      "FGCC": "ফেনী গার্লস ক্যাডেট কলেজ",
+      "JGCC": "জয়পুরহাট গার্লস ক্যাডেট কলেজ",
+      "RUMC": "রাজউক উত্তরা মডেল কলেজ",
+      "DRMC": "ঢাকা রেসিডেনসিয়াল মডেল কলেজ",
+      "VNSC": "ভিকারুননিসা নূন স্কুল ও কলেজ",
+      "ISCM": "আইডিয়াল স্কুল অ্যান্ড কলেজ",
+      "ACC": "আদমজী ক্যান্টনমেন্ট কলেজ",
+      "BNMPC": "বীরশ্রেষ্ঠ নূর মোহাম্মদ পাবলিক কলেজ",
+      "SJHSS": "সেন্ট জোসেফ উচ্চ মাধ্যমিক বিদ্যালয়",
+      "RCPC": "রাজশাহী কলেজিয়েট স্কুল",
+      "CPSCR": "ক্যান্টনমেন্ট পাবলিক স্কুল ও কলেজ",
+      "BCPC": "বান্দরবান ক্যান্টনমেন্ট পাবলিক কলেজ",
+      "MCPC": "মিরপুর ক্যান্টনমেন্ট পাবলিক স্কুল ও কলেজ",
+      "BNSC": "বাংলাদেশ নৌবাহিনী স্কুল ও কলেজ",
+      "BNCP": "ক্যান্টনমেন্ট পাবলিক স্কুল ও কলেজ"
+    };
+
+    function formatFullBoardTags(tagStr) {
+      if (!tagStr) return "";
+      return String(tagStr)
+        .split(",")
+        .map(single => {
+          const clean = single.trim().replace(/^['"-]+|['"-]+$/g, '');
+          if (!clean) return "";
+          const match = clean.match(/^([A-Za-z.]+)\s*[-'"]*\s*(\d{2,4})?$/i);
+          if (match) {
+            const rawCode = match[1].toUpperCase();
+            const cleanCode = rawCode.replace(/\.+$/, '');
+            const yr = match[2];
+            const boardName = BOARD_NAME_MAP[rawCode] || BOARD_NAME_MAP[cleanCode] || match[1];
+            if (yr) {
+              const fullYr = yr.length === 2 ? (parseInt(yr, 10) > 70 ? `19${yr}` : `20${yr}`) : yr;
+              return `${boardName} ${toBnDigits(fullYr)}`;
+            }
+            return boardName;
+          }
+          return toBnDigits(clean);
+        })
+        .filter(Boolean)
+        .join(', ');
+    }
+
+    function isAcademicPrompt(t) {
+      if (!t) return false;
+      const s = t.toLowerCase();
+      const kw = [
+        'প্রশ্ন', 'অধ্যায়', 'অধ্যায়', 'সৃজনশীল', 'cq', 'mcq', 'math', 'গণিত', 'গনিত',
+        'পদার্থ', 'physics', 'রসায়ন', 'রসায়ন', 'chem', 'biology', 'জীববিজ্ঞান',
+        'উচ্চতর', 'কঠিন', 'সহজ', 'সিলেবাস', 'অধ্যায়গুলো', 'বোর্ড', 'টাইপ', 'সূত্র',
+        'আরেকটা', 'arekta', 'next', 'hard', 'easy', 'অন্য', 'অন্যটি', 'কুইজ', 'নৈর্ব্যক্তিক'
+      ];
+      return kw.some(k => s.includes(k));
+    }
+
+    // Exact Reference Generator: Builds intelligent, student-friendly academic thoughts
+    function generateThoughtTreeData(tool, args, result, userPrompt = '') {
+      const up = (userPrompt || '').toLowerCase();
+      let subj = getBanglaSubjectName(args?.subject || result?.subject);
+      let rawTopic = result?.actual_chapter?.name || result?.actual_chapter?.display || result?.chapter_name || args?.chapter || args?.topic || result?.topic || '';
+
+      if (!subj && up) {
+        if (up.includes('রসায়ন') || up.includes('রসায়ন') || up.includes('chem')) subj = 'রসায়ন';
+        else if (up.includes('পদার্থ') || up.includes('phys')) subj = 'পদার্থবিজ্ঞান';
+        else if (up.includes('জীব') || up.includes('bio')) subj = 'জীববিজ্ঞান';
+        else if (up.includes('উচ্চতর') || up.includes('higher') || up.includes('hm')) subj = 'উচ্চতর গণিত';
+        else if (up.includes('গণিত') || up.includes('গনিত') || up.includes('math')) subj = 'সাধারণ গণিত';
+        else if (up.includes('বাংলা') || up.includes('bangla')) subj = 'বাংলা';
+        else if (up.includes('ইংরেজি') || up.includes('english')) subj = 'ইংরেজি';
+        else if (up.includes('ict') || up.includes('তথ্য')) subj = 'তথ্য ও যোগাযোগ প্রযুক্তি';
+        else if (up.includes('bgs') || up.includes('সমাজ')) subj = 'বাংলাদেশ ও বিশ্বপরিচয়';
+        else if (up.includes('ধর্ম') || up.includes('ইসলাম')) subj = 'ইসলাম শিক্ষা';
+      }
+
+      if (!rawTopic && userPrompt) {
+        const numMatch = userPrompt.match(/(?:অধ্যায়|অধ্যায়|chapter|ch)\s*([০-৯0-9]+)/i);
+        if (numMatch) {
+          rawTopic = `অধ্যায় ${toBnDigits(numMatch[1])}`;
+        } else {
+          const beforeChMatch = userPrompt.match(/([^,।?!\n]+?)\s*(?:ei\s+)?(?:chapter|অধ্যায়|অধ্যায়)/i);
+          if (beforeChMatch && beforeChMatch[1].trim() && !/^(ei|oi|ekta|akta|kono|any|theke|theika)$/i.test(beforeChMatch[1].trim())) {
+            rawTopic = beforeChMatch[1].trim();
+          } else {
+            const chMatch = userPrompt.match(/(?:অধ্যায়|অধ্যায়|chapter|ch)\s*([০-৯0-9]+|[^\s,।]+)/i);
+            const stopWords = ['theke', 'er', 'theika', 'থেকে', 'এর', 'টা', 'টি', 'ta', 'ti', 'koyta', 'koi', 'koto', 'ekta', 'akta'];
+            if (chMatch && !stopWords.includes(chMatch[1].toLowerCase())) {
+              rawTopic = `অধ্যায় ${chMatch[1]}`;
+            }
+          }
+        }
+      }
+
+      if (!tool && userPrompt) {
+        if (up.includes('mcq') || up.includes('নৈর্ব্যক্তিক') || up.includes('বহুনির্বাচনী') || up.includes('quiz') || up.includes('কুইজ')) tool = 'get_mcq_quiz';
+        else if (up.includes('সৃজনশীল') || /\bcq\b/i.test(up) || up.includes('উদ্দীপক')) tool = 'get_creative_question';
+        else if (up.includes('কয়টা') || up.includes('কয়টা') || up.includes('সবগুলো') || up.includes('অধ্যায়গুলো') || up.includes('সিলেবাস')) tool = 'get_subject_chapters';
+        else if (up.includes('গুরুত্ব') || up.includes('ইম্পর্টেন্ট') || up.includes('important') || up.includes('আগে পড়ব') || up.includes('সহজ')) tool = 'get_chapter_importance_ranking';
+      }
+
+      const topic = rawTopic ? `'${rawTopic}'` : (subj || 'একাডেমিক প্রস্তুতি');
+
+      let mainTitle = `${topic}: বোর্ড প্রশ্ন ও কনসেপ্ট বিশ্লেষণ`;
+      let intentReasoning = `${topic} সংক্রান্ত বিগত বছরের বোর্ড প্রশ্ন ও পরীক্ষকদের প্যাটার্ন বিশ্লেষণ করছি... বিশেষ করে কোন জায়গাগুলো শিক্ষার্থীদের পরীক্ষায় বেশি কাজে লাগবে তা দেখা হচ্ছে।`;
+      let toolLabel = "বোর্ড প্রশ্নব্যাংক ও সমাধান অনুসন্ধান";
+      let countTag = "যাচাই সম্পন্ন";
+      let synthesisReasoning = "সংগৃহীত বোর্ড তথ্যের আলোকে শিক্ষার্থীর জন্য সহজে বোঝার উপযোগী ব্যাখ্যা ও কাঠামো সাজাচ্ছি।";
+
+      if (tool === 'get_mcq_quiz') {
+        const q = result?.quiz?.[0];
+        const rawTag = q?.formatted_source || q?.all_board_tags || q?.tags || (args?.board ? `${args.board} বোর্ড` : '');
+        const boardTag = formatFullBoardTags(rawTag) || 'বোর্ড স্ট্যান্ডার্ড';
+        mainTitle = `${topic}: বোর্ড MCQ ও কনসেপ্ট বিশ্লেষণ`;
+        intentReasoning = `${subj ? `${subj}: ` : ''}${topic} থেকে বিগত বছরগুলোতে পরীক্ষকরা কোন প্যাঁচ বা ট্রিকি জায়গাগুলো থেকে প্রশ্ন করত তা বিশ্লেষণ করছি... বিশেষ করে যে টাইপের প্রশ্নে শিক্ষার্থীরা সাধারণত দ্বিধায় পড়ে, সেই প্যাটার্নের একটি আদর্শ প্রশ্ন বাছাই করা প্রয়োজন যাতে মৌলিক কনসেপ্ট পুরোপুরি স্পষ্ট হয়।`;
+        toolLabel = `বিগত বছরের বোর্ড ও শীর্ষ টেস্ট পেপার প্রশ্ন আর্কাইভ অনুসন্ধান`;
+        countTag = `✓ ${boardTag} (মানসম্মত প্রশ্ন)`;
+        synthesisReasoning = `বাছাইকৃত প্রশ্নটির ৪টি বিকল্প অপশন পরীক্ষা করে দিচ্ছি—যাতে মুখস্থ না করে শিক্ষার্থী নিজে লজিক খাটিয়ে সঠিক সিদ্ধান্তে পৌঁছাতে পারে এবং ভুল অপশনগুলোর পেছনের কারণও সহজে আত্মস্থ করতে পারে।`;
+      } else if (tool === 'get_creative_question') {
+        mainTitle = `${subj ? `${subj}: ` : ''}${topic} বোর্ড স্ট্যান্ডার্ড সৃজনশীল (CQ) বিশ্লেষণ`;
+        intentReasoning = `${subj ? `${subj}-এর ` : ''}${topic} অংশ থেকে বোর্ড পরীক্ষায় প্রায়ই আসা সৃজনশীল কাঠামো বিশ্লেষণ করছি... উদ্দীপকের সাথে জ্ঞান (ক), অনুধাবন (খ), প্রয়োগ (গ) ও উচ্চতর দক্ষতার (ঘ) সঠিক ভারসাম্য নিশ্চিত করা প্রয়োজন যাতে শিক্ষার্থী পরীক্ষার আসল মানবণ্টন অনুভব করতে পারে।`;
+        toolLabel = `শীর্ষ টেস্ট পেপার ও বিগত বোর্ড সৃজনশীল ব্যাংক অনুসন্ধান`;
+        countTag = `✓ ৪ স্তর সমন্বিত আসল CQ`;
+        synthesisReasoning = `পরীক্ষকদের নম্বর দেওয়ার গোপন নিয়ম (Examiner Secrets) অনুযায়ী উদ্দীপকটি গুছিয়ে দিচ্ছি—কোথায় একক না লিখলে নম্বর কাটা যায় এবং কোন অংশে কীভাবে পয়েন্ট লিখলে পুরো ১০ নম্বর পাওয়া যাবে তা স্পষ্ট করে সাজাচ্ছি।`;
+      } else if (tool === 'get_chapter_importance_ranking') {
+        const mostImp = result?.most_important_chapter || 'শীর্ষ অধ্যায়';
+        mainTitle = `${subj || 'বিষয়'}: বিগত ৫ বছরের বোর্ড প্রশ্ন ফ্রিকোয়েন্সি ও প্রায়োরিটি বিশ্লেষণ`;
+        intentReasoning = `শিক্ষার্থীর মূল্যবান সময় বাঁচাতে ${subj || 'এই'} বিষয়ের বিগত ৫ বছরের সব বোর্ডের প্রশ্ন রেকর্ড বিশ্লেষণ করছি... পুরো বইয়ের সব অধ্যায়ে সমান সময় নষ্ট না করে কোন ২-৩টি অধ্যায় আগে পড়লে ৮০/২০ নিয়মে সর্বাধিক CQ ও MCQ কমন পাওয়া যাবে তা বের করছি।`;
+        toolLabel = `বিগত ৫ বছরের বোর্ড পরীক্ষার অধ্যায়ভিত্তিক প্রশ্ন ফ্রিকোয়েন্সি হিসাব`;
+        countTag = `✓ শীর্ষ প্রায়োরিটি: ${mostImp}`;
+        synthesisReasoning = `কম পরিশ্রমে এ-প্লাস নিশ্চিত করার জন্য অধ্যায়গুলোকে ক্রমানুসারে সাজাচ্ছি—কোন অধ্যায়টি আগে ধরলে আত্মবিশ্বাস বাড়বে এবং পরীক্ষার প্রস্তুতিতে সবচেয়ে দ্রুত ভালো আউটপুট আসবে সেই রুটম্যাপ তৈরি করলাম।`;
+      } else if (tool === 'get_subject_chapters') {
+        const sub = getBanglaSubjectName(result?.subject || args?.subject) || result?.subject || 'রসায়ন';
+        mainTitle = `${sub}: অফিশিয়াল এনসিটিবি পাঠ্যক্রম ও অধ্যায় বিন্যাস`;
+
+        const q = String(userPrompt || '').toLowerCase();
+        const isCountQuery = q.includes('কয়') || q.includes('কত') || q.includes('সংখ্যা') || q.includes('number') || q.includes('count') || q.includes('how many') || q.includes('koi') || q.includes('koy') || q.includes('koto') || q.includes('koida') || q.includes('koyta');
+        const isNameQuery = q.includes('নাম') || q.includes('তালিকা') || q.includes('name') || q.includes('list') || q.includes('সবগুলো') || q.includes('অধ্যায়গুলো') || q.includes('sob') || q.includes('shob');
+
+        if (isCountQuery) {
+          intentReasoning = `${sub} বিষয়ের মূল পাঠ্যবইয়ে মোট কয়টি অধ্যায় রয়েছে তা নিশ্চিত করতে অফিশিয়াল কারিকুলাম রেকর্ড খতিয়ে দেখছি... যাতে শিক্ষার্থী বোর্ড অনুমোদিত নির্ভুল ও পূর্ণাঙ্গ অধ্যায় সংখ্যা জানতে পারে।`;
+          synthesisReasoning = `অফিশিয়াল কারিকুলাম অনুযায়ী মোট অধ্যায় সংখ্যা নিশ্চিত করে প্রতিটি অধ্যায়ের নাম ক্রমানুসারে সাজিয়ে দিচ্ছি।`;
+        } else if (isNameQuery) {
+          intentReasoning = `শিক্ষার্থী ${sub} বিষয়ের সব অধ্যায়ের নাম জানতে চেয়েছে... এনসিটিবি (NCTB) অফিশিয়াল সূচিপত্র ও ক্রম যাচাই করে সবগুলো অধ্যায়ের নাম সঠিকভাবে প্রস্তুত করছি।`;
+          synthesisReasoning = `অধ্যায়গুলোকে মূল পাঠ্যবইয়ের সঠিক ক্রমানুসারে (অধ্যায় ১ থেকে শেষ পর্যন্ত) সাজিয়ে দিচ্ছি, যাতে শিক্ষার্থী সহজেই তার পড়াশোনার চেকলিস্ট তৈরি করতে পারে।`;
+        } else if (result?.divisions && typeof result.divisions === 'object') {
+          intentReasoning = `${sub} বিষয়ের অফিশিয়াল পাঠ্যক্রম ও বিভাগভিত্তিক কাঠামো খতিয়ে দেখছি... পাঠ্যবইয়ের নির্ধারিত গদ্য, পদ্য বা ব্যাকরণ অংশগুলো সুবিন্যস্তভাবে যাচাই করা হচ্ছে।`;
+          synthesisReasoning = `পাঠ্যবইয়ের প্রতিটি বিভাগ ও অংশ ক্রমানুসারে সাজিয়ে দিচ্ছি, যাতে শিক্ষার্থী সম্পূর্ণ সিলেবাসের স্পষ্ট ধারণা পায়।`;
+        } else {
+          intentReasoning = `${sub} বিষয়ের অফিশিয়াল এনসিটিবি কারিকুলাম ও বোর্ড অনুমোদিত অধ্যায় বিন্যাস যাচাই করছি... মূল পাঠ্যবইয়ের প্রতিটি অধ্যায়ের সঠিক ক্রম নির্ধারণ করা হচ্ছে।`;
+          synthesisReasoning = `পাঠ্যবইয়ের ক্রম অনুযায়ী প্রতিটি অধ্যায় সাজিয়ে দিচ্ছি, যাতে শিক্ষার্থী সহজেই তার পড়ার পরিকল্পনা সাজাতে পারে।`;
+        }
 
         if (result?.divisions && typeof result.divisions === 'object') {
+          toolLabel = `এনসিটিবি অফিশিয়াল সিলেবাস ও বিভাগভিত্তিক তালিকা যাচাই`;
           const divEntries = Object.entries(result.divisions);
           const totalItems = divEntries.reduce((sum, [_, arr]) => sum + (Array.isArray(arr) ? arr.length : 1), 0);
-          countTag = `${toBnDigits(totalItems)}টি পাঠ (${toBnDigits(divEntries.length)}টি বিভাগ)`;
-          synthesisReasoning = `${sub} বিষয়ের ${toBnDigits(divEntries.length)}টি বিভাগের মোট ${toBnDigits(totalItems)}টি নির্ধারিত পাঠ ও বিষয়ের আলোকে পূর্ণাঙ্গ দিকনির্দেশনা প্রস্তুত।`;
+          countTag = `✓ ${toBnDigits(totalItems)}টি পাঠ (${toBnDigits(divEntries.length)}টি বিভাগ)`;
         } else {
-          const totalCh = result?.total_chapters || (result?.numbered_chapters ? result.numbered_chapters.length : 0);
-          countTag = `${toBnDigits(totalCh)}টি অধ্যায়`;
-          synthesisReasoning = `${sub} বিষয়ের মোট ${toBnDigits(totalCh)}টি অধ্যায় ও বিগত বোর্ড পরীক্ষার গুরুত্ব অনুসারে পূর্ণাঙ্গ তালিকা প্রস্তুত।`;
+          toolLabel = `এনসিটিবি অফিশিয়াল সিলেবাস ও অধ্যায় তালিকা যাচাই`;
+          let totalCh = result?.total_chapters || result?.chapters?.length || (result?.numbered_chapters ? result.numbered_chapters.length : 0);
+          if (!totalCh) {
+            const s = String(result?.subject || args?.subject || '').toLowerCase();
+            if (s.includes('chem') || s.includes('রসায়ন') || s.includes('রসায়ন')) totalCh = 12;
+            else if (s.includes('phys') || s.includes('পদার্থ')) totalCh = 14;
+            else if (s.includes('bio') || s.includes('জীববিজ্ঞান')) totalCh = 14;
+            else if (s.includes('ict') || s.includes('তথ্য')) totalCh = 6;
+            else if (s.includes('high') || s.includes('উচ্চতর')) totalCh = 14;
+            else if (s.includes('math') || s.includes('গণিত')) totalCh = 17;
+            else if (s.includes('bangla_1') || s.includes('বাংলা ১ম')) totalCh = 3;
+            else if (s.includes('bangla_2') || s.includes('বাংলা ২য়')) totalCh = 2;
+            else totalCh = 0;
+          }
+          countTag = totalCh > 0 ? `✓ ${toBnDigits(totalCh)}টি অধ্যায়` : '✓ সিলেবাস যাচাইকৃত';
         }
-      } else if (tool === 'get_chapter_importance_ranking') {
-        const sub = result?.subject || 'সকল';
-        const mostImp = result?.most_important_chapter || 'গুরুত্বপূর্ণ অধ্যায়';
-        mainTitle = `${sub}: বিগত ৫ বছরের বোর্ড প্রশ্ন ফ্রিকোয়েন্সি ও গুরুত্ব অ্যানালাইসিস`;
-        intentReasoning = `শিক্ষার্থী সর্বাধিক গুরুত্বপূর্ণ ও কমন পাওয়ার উপযোগী অধ্যায় জানতে চেয়েছে। বিগত বছরের বোর্ড প্রশ্ন ফ্রিকোয়েন্সি অ্যানালাইসিস আবশ্যক।`;
-        toolLabel = `বিগত ৫ বছরের বোর্ড পরীক্ষার প্রশ্নব্যাংক বিশ্লেষণ`;
-        countTag = `শীর্ষ: ${mostImp}`;
-        synthesisReasoning = `৮০/২০ নিয়ম অনুযায়ী যেসব অধ্যায় পড়লে সর্বাধিক CQ ও MCQ নিশ্চিত কমন পড়বে তার প্রায়োরিটি রুটম্যাপ প্রস্তুত।`;
       } else if (tool === 'check_board_frequency') {
-        const topic = result?.topic || args?.topic || 'টপিক';
         const total = result?.total_questions ? toBnDigits(result.total_questions) : '';
-        mainTitle = `'${topic}' বিষয়ের বিগত বোর্ড রেকর্ড বিশ্লেষণ`;
-        intentReasoning = `'${topic}' টপিকটি বিগত বোর্ড পরীক্ষায় কতবার এসেছে এবং কতটা গুরুত্বপূর্ণ তা যাচাই।`;
-        toolLabel = `বোর্ড পরীক্ষার প্রশ্নপত্র ও ফ্রিকোয়েন্সি রেকর্ড`;
-        countTag = total ? `${total} বার এসেছে` : 'যাচাইকৃত';
-        synthesisReasoning = `টপিকের গুরুত্ব ও আগামী পরীক্ষায় আসার সম্ভাব্যতা অনুযায়ী স্টাডি পরামর্শ সাজানো।`;
+        mainTitle = `${topic} টপিকের বিগত বোর্ড পরীক্ষার পুনরাবৃত্তি রেকর্ড`;
+        intentReasoning = `বোর্ড পরীক্ষায় ${topic} টপিকটির গুরুত্ব যাচাই করার জন্য বিগত সব সালের প্রশ্নপত্র খতিয়ে দেখছি... এটি কি নিয়মিত বোর্ডে আসে নাকি নির্দিষ্ট কয়েক বছর পর পর পরীক্ষকরা দেয়, সেই পুনরাবৃত্তির প্যাটার্ন বের করা হচ্ছে।`;
+        toolLabel = `বোর্ড পরীক্ষার প্রশ্নপত্র ও ফ্রিকোয়েন্সি রেকর্ড বিশ্লেষণ`;
+        countTag = total ? `✓ ${total} বার বোর্ডে এসেছে` : 'যাচাইকৃত';
+        synthesisReasoning = `টপিকটি আগামী পরীক্ষায় আসার সম্ভাবনা কতটুকু এবং ঠিক কোন দৃষ্টিকোণ থেকে প্রশ্ন আসার সম্ভাবনা বেশি, তার আলোকে শিক্ষার্থীকে কার্যকর পরামর্শ সাজিয়ে দিচ্ছি।`;
       } else if (tool === 'get_board_exam_questions') {
         const board = result?.board || args?.board_name || 'বোর্ড';
         const sets = result?.available_exam_sets?.length ? toBnDigits(result.available_exam_sets.length) : '১+';
         mainTitle = `${board} বোর্ডের বিগত বছরের অফিশিয়াল প্রশ্নপত্র সংগ্রহ`;
-        intentReasoning = `${board} বোর্ডের আসল প্রশ্নপত্রের প্যাটার্ন ও মান যাচাই।`;
+        intentReasoning = `${board} বোর্ডের বিগত বছরগুলোর আসল প্রশ্নপত্রের প্রশ্নের গঠন ও পরীক্ষকদের প্রিয় টপিক বিশ্লেষণ করছি... যাতে শিক্ষার্থী নির্দিষ্ট বোর্ডের মানসিকতা ও প্রশ্নের স্টাইল বুঝতে পারে।`;
         toolLabel = `বোর্ড প্রশ্ন আর্কাইভ অনুসন্ধান`;
-        countTag = `${sets}টি সেট`;
-        synthesisReasoning = `বোর্ড স্ট্যান্ডার্ড প্রশ্ন ও পরীক্ষকদের নম্বর বণ্টনের আলোকে উত্তর প্রস্তুত।`;
-      } else if (tool === 'get_mcq_quiz') {
-        const total = result?.quiz?.length ? toBnDigits(result.quiz.length) : '১';
-        mainTitle = `বোর্ড পরীক্ষার স্ট্যান্ডার্ড MCQ কুইজ প্রস্তুত`;
-        intentReasoning = `শিক্ষার্থীর যাচাই ও অনুশীলনের জন্য বোর্ড স্ট্যান্ডার্ড বহুনির্বাচনী প্রশ্ন প্রস্তুত করা।`;
-        toolLabel = `ডিজিটাইজড বোর্ড প্রশ্নব্যাংক থেকে অ্যাডাপ্টিভ MCQ লোড`;
-        countTag = `${total}টি প্রশ্ন`;
-        synthesisReasoning = `৪টি সুনির্দিষ্ট অপশন ও স্বয়ংক্রিয় ভ্যালিডেশন কোডসহ ইন্টারেক্টিভ কুইজ কার্ড প্রস্তুত।`;
-      } else if (tool === 'get_creative_question') {
-        mainTitle = `বোর্ড স্ট্যান্ডার্ড সৃজনশীল (CQ) প্রশ্ন ও মানবণ্টন`;
-        intentReasoning = `পরীক্ষার আদলে উদ্দীপকসহ ক, খ, গ, ঘ সমন্বিত সৃজনশীল প্রশ্ন সাজানো।`;
-        toolLabel = `শীর্ষ টেস্ট পেপার ও বোর্ড সৃজনশীল ব্যাংক`;
-        countTag = `ক-ঘ চার স্তর`;
-        synthesisReasoning = `পরীক্ষকদের ফুল মার্কস দেওয়ার গোপন নিয়ম ও পয়েন্টসহ পূর্ণাঙ্গ CQ তৈরি।`;
+        countTag = `✓ ${sets}টি প্রশ্ন সেট প্রস্তুত`;
+        synthesisReasoning = `বোর্ড স্ট্যান্ডার্ড প্রশ্ন ও পরীক্ষকদের নম্বর বণ্টনের আলোকে বাস্তবসম্মত উত্তর ও পরীক্ষার টিপস সাজাচ্ছি।`;
       } else if (tool === 'analyze_chapter_patterns') {
         const ch = result?.chapter_name || args?.chapter || 'অধ্যায়';
         const total = result?.total_questions_in_database ? toBnDigits(result.total_questions_in_database) : '৫০+';
-        mainTitle = `${ch} অধ্যায়ের টাইপভিত্তিক ব্লুপ্রিন্ট ও সূত্র সংকলন`;
-        intentReasoning = `অধ্যায়ের অপ্রয়োজনীয় জটিলতা বাদ দিয়ে পরীক্ষার ফিক্সড ৩-৪টি টাইপ চিহ্নিত করা।`;
-        toolLabel = `প্রশ্নব্যাংক টাইপ ক্লাস্টারিং`;
-        countTag = `${total}টি প্রশ্ন বিশ্লেষিত`;
-        synthesisReasoning = `পরীক্ষায় আসার মতো নিশ্চিত টাইপ ও গাণিতিক সূত্রের ব্লুপ্রিন্ট সাজানো।`;
+        mainTitle = `${ch}: বিগত ১০ বছরের মাস্টার টাইপ ও শর্টকাট ব্লুপ্রিন্ট`;
+        intentReasoning = `${ch} অধ্যায়ের শত শত প্রশ্নের পেছনের মাত্র ৩-৪টি মূল টাইপ চিহ্নিত করছি... পুরো অধ্যায় মুখস্থ করার বদলে নির্দিষ্ট প্যাটার্নগুলো ধরে পড়লে পরীক্ষার প্রস্তুতি অনেক দ্রুত ও হালকা হবে।`;
+        toolLabel = `বিগত ১০ বছরের প্রশ্ন ক্লাস্টারিং ও প্যাটার্ন অ্যানালিসিস`;
+        countTag = `✓ ${total}টি প্রশ্ন বিশ্লেষিত`;
+        synthesisReasoning = `মাদার কনসেপ্ট, বোর্ড উদাহরণ ও ১০ সেকেন্ডের শর্টকাট ট্রিক সমন্বিত ছক সাজিয়ে দিচ্ছি—যাতে প্রতিটি টাইপ দেখেই শিক্ষার্থী সরাসরি সমাধানের পথ ধরতে পারে।`;
       } else if (tool === 'search_question_bank') {
         const query = result?.search_query || args?.query || '';
         const total = result?.total_found ? toBnDigits(result.total_found) : '';
-        mainTitle = `'${query}' সংক্রান্ত বোর্ড প্রশ্নব্যাংক ও সমাধান অনুসন্ধান`;
-        intentReasoning = `শিক্ষার্থীর সুনির্দিষ্ট প্রশ্নের সাথে সঙ্গতিপূর্ণ বোর্ড প্রশ্ন ও ব্যাখ্যা খুঁজে বের করা।`;
-        toolLabel = `৫০,৮৫৫টি প্রশ্নব্যাংক থেকে সিমান্টিক সার্চ`;
-        countTag = total ? `${total}টি ফলাফল` : 'ফলাফল প্রস্তুত';
-        synthesisReasoning = `নির্ভুল সমাধান ও ব্যাখ্যাসহ সহজ ভাষায় উত্তর তৈরি।`;
-      } else {
-        mainTitle = `৫০,৮৫৫টি বোর্ড প্রশ্ন থেকে লাইভ অ্যানালিটিক্স যাচাই`;
-        intentReasoning = `ডেটাবেসের আসল বোর্ড পরীক্ষার পরিসংখ্যান যাচাই করা।`;
-        toolLabel = `ডায়নামিক ডেটাবেস অ্যানালিটিক্স`;
-        countTag = `যাচাই সম্পন্ন`;
-        synthesisReasoning = `যাচাইকৃত তথ্যের ভিত্তিতে সার্বিক উত্তর প্রস্তুত।`;
+        mainTitle = `'${query}' সংক্রান্ত বোর্ড প্রশ্ন ও সমাধান অনুসন্ধান`;
+        intentReasoning = `'${query}' নিয়ে বিগত বোর্ড ও শীর্ষ কলেজগুলোতে পরীক্ষকরা কীভাবে প্রশ্ন ঘুরিয়েছে তা বিশ্লেষণ করছি... মূল সূত্র অপরিবর্তিত রেখে তথ্যের মান বা প্রেক্ষাপট কীভাবে পরিবর্তন করা হয় তা চিহ্নিত করছি।`;
+        toolLabel = `৫০,৮৫৫টি ডিজিটাল বোর্ড প্রশ্নব্যাংক থেকে সিমান্টিক সার্চ`;
+        countTag = total ? `✓ ${total}টি প্রশ্ন প্রস্তুত` : 'সমাধান প্রস্তুত';
+        synthesisReasoning = `শিক্ষার্থীর দ্রুত বোঝার সুবিধার্থে স্টেপ-বাই-স্টেপ সমাধান ও সূত্রের প্রয়োগ সহজ ভাষায় উপস্থাপন করছি—যাতে এক দেখাতেই পুরো সমাধান পদ্ধতি মাথায় গেঁথে যায়।`;
+      } else if (tool === 'find_similar_type_questions') {
+        mainTitle = `অনুরূপ সূত্রের প্রশ্ন ও ভেক্টর প্যাটার্ন বিশ্লেষণ`;
+        intentReasoning = `পূর্বের প্রশ্নের মূল কনসেপ্ট ও সূত্রের সাথে হুবহু মিল রেখে অন্য বোর্ডের প্রশ্ন অনুসন্ধান করছি... সূত্র একই থাকবে কিন্তু পরীক্ষকের প্যাঁচ বা সংখ্যা ভিন্ন হবে যাতে শিক্ষার্থী একই কনসেপ্ট বিভিন্ন রূপে অনুশীলন করতে পারে।`;
+        toolLabel = `১০২৪-মাত্রার ভেক্টর এমবেডিং ও সূত্র প্যাটার্ন ম্যাচিং`;
+        countTag = `✓ অনুরূপ বোর্ড প্রশ্ন প্রস্তুত`;
+        synthesisReasoning = `দুটো প্রশ্নের মধ্যকার মূল প্যাঁচ ও সংখ্যার ভিন্নতা ধরিয়ে দিচ্ছি—যাতে পরীক্ষক যেভাবেই ঘুরিয়ে প্রশ্ন করুক না কেন শিক্ষার্থী নির্ভয়ে সঠিক উত্তর বের করতে পারে।`;
+      } else if (tool === 'query_question_database_sql') {
+        const count = result?.rows?.length || result?.total_rows || (Array.isArray(result) ? result.length : 0);
+        mainTitle = `বোর্ড প্রশ্ন ডেটাবেস কাস্টম অ্যানালিটিক্স ও রেকর্ড বিশ্লেষণ`;
+        intentReasoning = `৫০,৮৫৫টি বোর্ড প্রশ্ন ডেটাবেসে সুনির্দিষ্ট এসকিউএল কুয়েরি প্রয়োগ করছি... বিগত বছরগুলোতে কীভাবে প্রশ্নের রূপান্তর ঘটেছে তার নির্ভুল পরিসংখ্যান বের করা হচ্ছে।`;
+        toolLabel = `৫০,৮৫৫টি বোর্ড প্রশ্ন লাইভ অ্যানালিটিক্স কুয়েরি`;
+        countTag = count ? `✓ ${toBnDigits(count)}টি ডেটা রেকর্ড` : '✓ ডেটা সংগৃহীত';
+        synthesisReasoning = `সংগৃহীত বোর্ড পরীক্ষার ডেটা ও পরিসংখ্যানের ভিত্তিতে শিক্ষার্থীর পরীক্ষার প্রস্তুতির জন্য প্রয়োজনীয় সারসংক্ষেপ প্রস্তুত করলাম।`;
+      }
+
+      // Always prioritize the AI model's authentic generated intent reasoning
+      if (args?.academic_intent) {
+        intentReasoning = args.academic_intent;
       }
 
       return { mainTitle, intentReasoning, toolLabel, countTag, synthesisReasoning };
@@ -554,45 +783,105 @@
       }
     }
 
-    // Smooth Typewriter Stream for Inner Thoughts (Mind-like progressive streaming with micro-cursor)
-    async function streamThoughtText(element, text, speedMs = 12) {
-      if (!element || !text) return;
-      const words = text.split(" ");
-      element.innerHTML = '<span class="inline-block w-1 h-3 bg-zinc-400/80 animate-pulse ml-0.5 align-middle rounded-full"></span>';
-      let current = "";
-      for (let i = 0; i < words.length; i++) {
-        current += (i === 0 ? "" : " ") + escapeHtml(words[i]);
-        element.innerHTML = current + '<span class="inline-block w-1 h-3 bg-zinc-400/80 animate-pulse ml-0.5 align-middle rounded-full"></span>';
-        scrollToBottom();
-        if (speedMs > 0) {
-          await new Promise(r => setTimeout(r, speedMs));
-        }
+    function streamThinkingText(el, text, speedMs = 12, onComplete = null) {
+      if (!el || !text) {
+        if (typeof onComplete === 'function') onComplete();
+        return;
       }
-      element.innerHTML = current;
+      el.innerHTML = '';
+      const cursor = document.createElement('span');
+      cursor.className = 'inline-block w-1.5 h-3 bg-zinc-400/80 animate-pulse ml-1 align-middle rounded-full thought-cursor';
+      el.appendChild(cursor);
+
+      let i = 0;
+      const timer = setInterval(() => {
+        if (i < text.length) {
+          cursor.before(document.createTextNode(text[i]));
+          i++;
+        } else {
+          clearInterval(timer);
+          if (cursor.parentNode) cursor.remove();
+          if (typeof onComplete === 'function') onComplete();
+        }
+      }, speedMs);
     }
+
+    const streamThoughtText = (el, txt, spd) => streamThinkingText(el, txt, spd);
 
     function renderRecentChats() {
       const container = document.getElementById('recentChatsList');
       if (!container) return;
-      if (recentChats.length === 0) {
-        container.innerHTML = '<div class="px-2.5 py-2 text-zinc-500 text-[11px] italic">কোনো পূর্ববর্তী আলোচনা নেই</div>';
+      if (!chatSessions || chatSessions.length === 0) {
+        container.innerHTML = '<div class="px-3 py-4 text-zinc-500 text-xs italic text-center">কোনো পূর্ববর্তী আলোচনা নেই</div>';
         return;
       }
-      container.innerHTML = recentChats.slice(-8).reverse().map((t) => `
-        <button onclick="submitPrompt('${escapeHtml(t).replace(/'/g, "\\'")}'); if(window.innerWidth < 768) toggleSidebar();" 
-          class="w-full text-left px-2 py-1.5 rounded-lg hover:bg-white/[0.04] text-zinc-300 truncate text-[11px] transition flex items-center gap-2">
-          <svg class="w-3 h-3 text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-          <span class="truncate">${escapeHtml(t)}</span>
-        </button>
-      `).join('');
+
+      container.innerHTML = chatSessions.map((session) => {
+        const isActive = session.id === currentSessionId;
+        const activeClass = isActive 
+          ? 'bg-white/[0.08] text-white border-white/[0.12] font-medium shadow-sm' 
+          : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white border-transparent';
+        
+        return `
+          <div class="group relative flex items-center w-full rounded-xl border transition-all duration-150 ${activeClass}">
+            <button onclick="loadSession('${session.id}'); if(window.innerWidth < 768) toggleSidebar();" 
+              class="flex-1 flex items-center gap-2.5 px-3 py-2 text-left min-w-0 cursor-pointer" 
+              title="${escapeHtml(session.title)}">
+              <svg class="w-3.5 h-3.5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-300'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+              </svg>
+              <span class="truncate text-[13px] leading-tight flex-1">${escapeHtml(session.title)}</span>
+            </button>
+            <button onclick="deleteSession('${session.id}', event)" 
+              class="opacity-0 group-hover:opacity-100 p-1.5 mr-1 text-zinc-500 hover:text-rose-400 hover:bg-white/[0.08] rounded-lg transition-opacity cursor-pointer shrink-0" 
+              title="আলোচনা মুছুন">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
     }
 
-    function addRecentChat(title) {
-      if (!title || recentChats.includes(title)) return;
-      recentChats.push(title);
-      if (recentChats.length > 15) recentChats.shift();
-      localStorage.setItem('prime_recent_chats', JSON.stringify(recentChats));
+    function loadSession(id) {
+      if (isProcessing) return;
+      const session = chatSessions.find(s => s.id === id);
+      if (!session) return;
+
+      currentSessionId = session.id;
+      conversationHistory = Array.isArray(session.conversationHistory) 
+        ? JSON.parse(JSON.stringify(session.conversationHistory)) 
+        : [];
+
+      const msgs = document.getElementById('messagesArea');
+      if (msgs) {
+        msgs.innerHTML = session.html || '';
+      }
+
+      activateChatView();
       renderRecentChats();
+      scrollToBottom();
+    }
+
+    function deleteSession(id, event) {
+      if (event) event.stopPropagation();
+      chatSessions = chatSessions.filter(s => s.id !== id);
+      saveSessions();
+
+      if (currentSessionId === id) {
+        resetToHome();
+      } else {
+        renderRecentChats();
+      }
+    }
+
+    function clearAllSessions() {
+      if (!chatSessions || chatSessions.length === 0) return;
+      if (!confirm('আপনি কি নিশ্চিত যে সকল পূর্ববর্তী আলোচনা মুছে ফেলতে চান?')) return;
+      chatSessions = [];
+      saveSessions();
+      resetToHome();
     }
 
     function toggleSidebar() {
@@ -603,6 +892,8 @@
     }
 
     function resetToHome() {
+      if (isProcessing) return;
+      currentSessionId = null;
       isChatActive = false;
       conversationHistory = [];
       const hero = document.getElementById('heroView');
@@ -610,14 +901,20 @@
       const docked = document.getElementById('dockedBar');
       const msgs = document.getElementById('messagesArea');
       
-      msgs.innerHTML = '';
-      chat.classList.add('hidden');
-      docked.classList.add('hidden');
+      if (msgs) msgs.innerHTML = '';
+      if (chat) chat.classList.add('hidden');
+      if (docked) docked.classList.add('hidden');
       
-      hero.classList.remove('hidden');
-      hero.classList.add('flex');
-      document.getElementById('heroInput').value = '';
-      setTimeout(() => document.getElementById('heroInput').focus(), 50);
+      if (hero) {
+        hero.classList.remove('hidden');
+        hero.classList.add('flex');
+      }
+      const heroInp = document.getElementById('heroInput');
+      if (heroInp) {
+        heroInp.value = '';
+        setTimeout(() => heroInp.focus(), 50);
+      }
+      renderRecentChats();
     }
 
     function activateChatView() {
@@ -643,7 +940,6 @@
       const txt = inp.value.trim();
       if (!txt || isProcessing) return;
       activateChatView();
-      addRecentChat(txt);
       sendMessage(txt);
       inp.value = '';
     }
@@ -662,7 +958,6 @@
     function submitPrompt(text) {
       if (isProcessing) return;
       activateChatView();
-      addRecentChat(text);
       sendMessage(text);
     }
 
@@ -713,6 +1008,18 @@
         });
       }
 
+      // Save interactive selection in session snapshot
+      const currSession = chatSessions.find(s => s.id === currentSessionId);
+      if (currSession) {
+        const areaEl = document.getElementById('messagesArea');
+        if (areaEl) {
+          const clone = areaEl.cloneNode(true);
+          clone.querySelectorAll('.streaming-cursor, .thought-cursor, [id^="writingPulse_"]').forEach(el => el.remove());
+          currSession.html = clone.innerHTML;
+          saveSessions();
+        }
+      }
+
       // No redundant banner inside the card — the conversational tutor below gives the full explanation!
       const replyMsg = `আমার উত্তর (${letter})`;
       sendMessage(replyMsg);
@@ -729,19 +1036,28 @@
     }
 
     // Content Formatter (Markdown + KaTeX Math + Robust Multi-MCQ Extraction)
-    function renderFormattedContent(rawText) {
+    function renderFormattedContent(rawText, extraBoardTag = null, extraAns = null) {
       if (!rawText) return "";
 
-      let clean = rawText;
+      let clean = rawText
+        .replace(/<\/?(?:thought|thinking|কুইজ|quiz|কথা|kotha|স্ট্যাটাস|status|প্রশ্ন|question|উত্তর|answer|message|response|text|mcq|cq)>/gi, '')
+        .replace(/<[\u0980-\u09FF_-]+>|<\/[\u0980-\u09FF_-]+>/g, '');
 
       // 1. Extract Board Reference Tag (cleanly removes tag from text without leaking placeholder)
       let boardTagsHtml = "";
       clean = clean.replace(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/gi, (match, tag) => {
-        const tags = tag.split(',').map(x => x.trim()).filter(Boolean);
+        const formatted = formatFullBoardTags(tag);
+        const tags = formatted.split(',').map(x => x.trim()).filter(Boolean);
         boardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
         return '';
       });
       clean = clean.replace(/%%%BOARD_CONTAINER%%%/gi, '');
+
+      if (!boardTagsHtml && extraBoardTag) {
+        const formatted = formatFullBoardTags(extraBoardTag);
+        const tags = formatted.split(',').map(x => x.trim()).filter(Boolean);
+        boardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
+      }
 
       // 2. Extract detected answer tag
       let detectedAns = null;
@@ -749,6 +1065,10 @@
         detectedAns = g;
         return '';
       });
+      if (!detectedAns && extraAns) {
+        const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
+        detectedAns = toBnAns[extraAns] || extraAns;
+      }
 
       // 3. Protect KaTeX Display Math ($$...$$ and \[...\])
       const displayMath = [];
@@ -773,6 +1093,21 @@
       const clusters = [];
       let currentCluster = null;
 
+      function isCreativeQuestionCluster(cluster, fullText) {
+        if (!cluster || !cluster.items || cluster.items.length === 0) return false;
+        // If explicitly tagged as MCQ or Quiz, it is NEVER a Creative Question
+        if (/\bMCQ\b|নৈর্ব্যক্তিক|বহুনির্বাচনী|কুইজ/i.test(fullText)) {
+          return false;
+        }
+        if (/উদ্দীপক|সৃজনশীল|\bCQ\b|\bCQ_\d\b|সৃজনশীল প্রশ্ন/i.test(fullText)) {
+          return true;
+        }
+        const cqKeywords = /(?:কাকে বলে|কী\?|কেন\?|কীভাবে|ব্যাখ্যা কর|বিশ্লেষণ কর|নির্ণয় কর|হিসাব কর|প্রমাণ কর|লেখো|চিহ্নিত কর|তুলনা কর|উদ্বৃত্ত|বিক্রিয়াটি লেখ|পার্থক্য|ধর্ম ব্যাখ্যা|প্রক্রিয়া|উপযোগিতা|যৌগটির|মৌলটির)/i;
+        if (cluster.items.some(it => cqKeywords.test(it.text))) return true;
+        if (cluster.items.some(it => it.text.length > 60)) return true;
+        return false;
+      }
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const match = line.match(singleOptionLineRegex);
@@ -789,14 +1124,14 @@
           // Keep cluster active across blank lines between options
         } else {
           if (currentCluster) {
-            if (currentCluster.items.length >= 2) {
+            if (currentCluster.items.length >= 2 && !isCreativeQuestionCluster(currentCluster, clean)) {
               clusters.push(currentCluster);
             }
             currentCluster = null;
           }
         }
       }
-      if (currentCluster && currentCluster.items.length >= 2) {
+      if (currentCluster && currentCluster.items.length >= 2 && !isCreativeQuestionCluster(currentCluster, clean)) {
         clusters.push(currentCluster);
       }
 
@@ -874,9 +1209,6 @@
             <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2">
               ${optionsHtml}
             </div>
-            <div class="flex items-center justify-between pt-1 border-t border-white/[0.04] text-[11px] text-zinc-500 font-mono">
-              <span>যেকোনো একটি অপশন নির্বাচন করো</span>
-            </div>
           </div>
         `;
 
@@ -900,28 +1232,18 @@
         html = html.replace(reg, card.cardHtml);
       }
 
-      // 8. Restore KaTeX Display Math
+      // 8. Restore KaTeX Display Math (Memoized for 60fps streaming)
       html = html.replace(/%%%MATH_D_(\d+)%%%/g, (m, idx) => {
         const code = displayMath[parseInt(idx, 10)];
         if (!code) return m;
-        if (window.katex) {
-          try {
-            return window.katex.renderToString(code.trim(), { displayMode: true, throwOnError: false });
-          } catch(e) {}
-        }
-        return `<div class="katex-display">${escapeHtml(code)}</div>`;
+        return getRenderedKaTeX(code, true);
       });
 
-      // 9. Restore KaTeX Inline Math
+      // 9. Restore KaTeX Inline Math (Memoized for 60fps streaming)
       html = html.replace(/%%%MATH_I_(\d+)%%%/g, (m, idx) => {
         const code = inlineMath[parseInt(idx, 10)];
         if (!code) return m;
-        if (window.katex) {
-          try {
-            return window.katex.renderToString(code.trim(), { displayMode: false, throwOnError: false });
-          } catch(e) {}
-        }
-        return `<span class="katex-inline">${escapeHtml(code)}</span>`;
+        return getRenderedKaTeX(code, false);
       });
 
       html = html.replace(/<p>\s*\[ans:[^\]]*\]\s*<\/p>|\[ans:[^\]]*\]/gi, '');
@@ -929,12 +1251,52 @@
       return html;
     }
 
-    function renderFormattedContentWithCursor(rawText, isStreaming = false) {
+    function renderFormattedContentWithCursor(rawText, showCursor = true, extraBoardTag = null, extraAns = null) {
+      const rendered = renderFormattedContent(rawText, extraBoardTag, extraAns);
+      if (!showCursor) return rendered;
+      return rendered + '<span class="inline-block w-1.5 h-3.5 bg-zinc-400 animate-pulse ml-1 align-middle rounded-full"></span>';
+    }
+
+    // High-performance KaTeX memoization cache to prevent CPU thrashing during streaming
+    const katexCache = new Map();
+    function getRenderedKaTeX(latex, displayMode) {
+      if (!latex) return '';
+      let cleanLatex = String(latex).trim()
+        .replace(/\\\\+/g, '\\')
+        .replace(/\\+$/, '')
+        .replace(/\\mathrm\{\s*~?\s*\}/g, '')
+        .replace(/~+/g, ' ')
+        .trim();
+      if (!cleanLatex) return '';
+
+      const key = (displayMode ? 'D:' : 'I:') + cleanLatex;
+      if (katexCache.has(key)) return katexCache.get(key);
+      let rendered = '';
+      if (window.katex) {
+        try {
+          rendered = window.katex.renderToString(cleanLatex, { displayMode, throwOnError: true });
+        } catch(e) {
+          // If complex latex fails, render as clean chemical formula text (never show red raw code)
+          const fallbackText = cleanLatex
+            .replace(/\\mathrm\{([^}]*)\}/g, '$1')
+            .replace(/\\text\{([^}]*)\}/g, '$1')
+            .replace(/\\/g, '')
+            .trim();
+          rendered = displayMode ? `<div class="katex-display font-medium text-zinc-100">${escapeHtml(fallbackText || cleanLatex)}</div>` : `<span class="katex-inline font-medium text-zinc-100">${escapeHtml(fallbackText || cleanLatex)}</span>`;
+        }
+      } else {
+        rendered = displayMode ? `<div class="katex-display font-medium text-zinc-100">${escapeHtml(cleanLatex)}</div>` : `<span class="katex-inline font-medium text-zinc-100">${escapeHtml(cleanLatex)}</span>`;
+      }
+      if (katexCache.size < 1200) katexCache.set(key, rendered);
+      return rendered;
+    }
+
+    function renderFormattedContentWithCursor(rawText, isStreaming = false, extraBoardTag = null, extraAns = null) {
       if (!rawText) return "";
       
       // Clean up empty trailing table pipes
       let cleanText = rawText.replace(/\|\s*\|\s*$/gm, '|');
-      let html = renderFormattedContent(cleanText);
+      let html = renderFormattedContent(cleanText, extraBoardTag, extraAns);
       if (!isStreaming) return html;
 
       const cursorHtml = '<span class="streaming-cursor"></span>';
@@ -947,8 +1309,60 @@
       return html + cursorHtml;
     }
 
-    // Send Message Async Stream Loop
+    // High-speed smooth typewriter stream for academic thinking monologue
+    function streamThinkingText(targetEl, fullText, speedMs = 18, onComplete = null) {
+      if (!targetEl || !fullText) {
+        if (onComplete) onComplete();
+        return null;
+      }
+      targetEl.innerHTML = '';
+      
+      const words = fullText.match(/\S+|\s+/g) || [fullText];
+      let currentIdx = 0;
+      
+      const cursor = document.createElement('span');
+      cursor.className = 'thought-cursor inline-block w-1.5 h-3 bg-zinc-400/80 animate-pulse ml-1 align-middle rounded-full';
+      targetEl.appendChild(cursor);
+      
+      const timer = setInterval(() => {
+        if (currentIdx >= words.length) {
+          clearInterval(timer);
+          cursor.remove();
+          if (onComplete) onComplete();
+          return;
+        }
+        cursor.insertAdjacentText('beforebegin', words[currentIdx]);
+        currentIdx++;
+        scrollToBottom();
+      }, speedMs);
+      
+      return timer;
+    }
+
     async function sendMessage(text) {
+      if (!currentSessionId) {
+        currentSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        const newSession = {
+          id: currentSessionId,
+          title: generateSessionTitle(text),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          conversationHistory: [],
+          html: ''
+        };
+        chatSessions.unshift(newSession);
+        saveSessions();
+        renderRecentChats();
+      } else {
+        const idx = chatSessions.findIndex(s => s.id === currentSessionId);
+        if (idx > 0) {
+          const [sess] = chatSessions.splice(idx, 1);
+          chatSessions.unshift(sess);
+          saveSessions();
+          renderRecentChats();
+        }
+      }
+
       const area = document.getElementById('messagesArea');
 
       // 1. User Message (Clean, Natural, ChatGPT-style)
@@ -982,22 +1396,20 @@
             <span id="${labelId}" class="thinking-shimmer font-medium tracking-wide">Thinking...</span>
           </div>
 
-          <!-- Exact Reference 2: Dotted Thought Tree (Interactive Collapsible Toggle) -->
+          <!-- Exact Reference 2: Dotted Thought Tree (Interactive Collapsible Toggle, starts HIDDEN and EMPTY) -->
           <div id="${toolContainerId}" class="hidden select-none py-0.5">
             <div class="thought-header flex items-center gap-2 text-xs sm:text-[13px] text-zinc-300 hover:text-white cursor-pointer py-1 transition group w-fit" onclick="toggleThoughtTree('${treeId}', this)">
               <svg class="w-4 h-4 text-zinc-400 group-hover:text-zinc-200 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              <span id="${treeTitleId}" class="font-medium tracking-tight"></span>
+              <span id="${treeTitleId}" class="font-medium tracking-tight">একাডেমিক বিশ্লেষণ ও চিন্তাধারা</span>
               <svg class="thought-chevron w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-300 transition-transform duration-200 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
               </svg>
             </div>
 
-            <!-- Dotted Connector Thread -->
-            <div id="${treeId}" class="thought-tree pl-2.5 ml-2 border-l border-dashed border-zinc-700/80 my-2 space-y-2 text-xs text-zinc-400">
-              <!-- Dynamically populated steps -->
-            </div>
+            <!-- Dotted Connector Thread (EMPTY initially!) -->
+            <div id="${treeId}" class="thought-tree pl-2.5 ml-2 border-l border-dashed border-zinc-700/80 my-2 space-y-2 text-xs text-zinc-400"></div>
           </div>
 
           <!-- Content Container (Full Width Editorial Flow) -->
@@ -1019,127 +1431,227 @@
       let hasTool = false;
       let toolStartEvt = null;
       let toolDoneEvt = null;
-      let thoughtPipelineDone = false;
+      let thinkTimer = null;
+      let initialThoughtCaptured = "";
+      let toolStepIndex = 0;
+      let isThinkingActive = false;
+      let isToolExecuting = false;
+      let toolStartTimes = {};
+      let pendingToolStart = null;
+      let pendingToolDone = null;
 
-      async function streamWords(el, text, delayMs = 14) {
-        if (!el || !text) return;
-        const words = text.trim().split(/\s+/);
-        let current = "";
-        for (let i = 0; i < words.length; i++) {
-          current += (i === 0 ? "" : " ") + escapeHtml(words[i]);
-          el.innerHTML = current + '<span class="inline-block w-1 h-3 bg-zinc-400/80 animate-pulse ml-0.5 align-middle rounded-full"></span>';
-          scrollToBottom();
-          if (delayMs > 0) {
-            await new Promise(r => setTimeout(r, delayMs));
-          }
+      function onThinkingFinished(stepIdx) {
+        isThinkingActive = false;
+        const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
+        if (cur1) cur1.remove();
+        const curSub = document.querySelector(`#stepThinkText_${stepIdx}_${msgId} .thought-cursor`);
+        if (curSub) curSub.remove();
+
+        if (pendingToolStart && pendingToolStart.stepIdx === stepIdx) {
+          const startEvt = pendingToolStart.data;
+          pendingToolStart = null;
+          renderToolRow(startEvt, stepIdx);
+        } else {
+          performStreamRender();
         }
-        el.innerHTML = current;
       }
 
-      async function runThoughtSequence(startEvt) {
-        hasTool = true;
-
-        // Permanently hide the top status header — the Thought Tree IS the thinking block!
-        const statusEl = document.getElementById(statusId);
-        if (statusEl) {
-          statusEl.classList.add('hidden');
-          statusEl.style.display = 'none';
-        }
-
-        const toolContainer = document.getElementById(toolContainerId);
-        const titleEl = document.getElementById(treeTitleId);
+      function renderToolRow(startEvt, stepIdx) {
         const treeEl = document.getElementById(treeId);
+        if (!treeEl) return;
+        if (document.getElementById(`stepTool_${stepIdx}_${msgId}`)) return;
 
-        const startData = generateThoughtTreeData(startEvt.tool, startEvt.args, null);
-        if (titleEl) titleEl.innerText = startData.mainTitle;
+        isToolExecuting = true;
+        toolStartTimes[stepIdx] = Date.now();
 
-        // Step 1: Render ONLY Think step first (Step 2 and Step 3 are not visible yet!)
-        if (treeEl) {
-          treeEl.innerHTML = `
-            <div class="thought-step" id="step1_${msgId}">
-              <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
-                <span class="text-zinc-500 font-bold">•</span>
-                <span>Think</span>
-                <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </div>
-              <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step1Text_${msgId}"></div>
+        const startData = generateThoughtTreeData(startEvt.tool, startEvt.args, null, text);
+        const toolStepHtml = `
+          <div class="thought-step flex items-center gap-2 text-zinc-300 font-medium transition-all pt-1" id="stepTool_${stepIdx}_${msgId}">
+            <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <span id="stepToolLabel_${stepIdx}_${msgId}">${escapeHtml(startData.toolLabel)}</span>
+            <span class="text-[11px] font-mono text-zinc-400 bg-white/[0.06] border-white/[0.08] animate-pulse px-1.5 py-0.5 rounded border" id="stepToolBadge_${stepIdx}_${msgId}">অনুসন্ধান চলছে...</span>
+          </div>
+        `;
+        treeEl.insertAdjacentHTML('beforeend', toolStepHtml);
+
+        // Immediately show writing pulse so screen is NEVER blank after thinking!
+        const contentEl = document.getElementById(contentId);
+        if (contentEl && !contentEl.innerHTML.trim()) {
+          contentEl.classList.remove('hidden');
+          contentEl.innerHTML = `
+            <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
             </div>
           `;
         }
-        if (toolContainer) toolContainer.classList.remove('hidden');
         scrollToBottom();
 
-        // 1. Stream Step 1 reasoning word by word
-        const step1El = document.getElementById(`step1Text_${msgId}`);
-        if (step1El) {
-          await streamWords(step1El, startData.intentReasoning, 14);
+        // If tool_done has already arrived from backend, resolve tool badge with short smooth 100ms
+        if (pendingToolDone && pendingToolDone.stepIdx === stepIdx) {
+          const doneData = pendingToolDone.data;
+          pendingToolDone = null;
+          setTimeout(() => {
+            resolveToolDone(doneData, stepIdx);
+          }, 100);
         }
+      }
 
-        // 2. Introduce Step 2 (Database Tool Execution with active pulse)
-        if (treeEl) {
-          const step2Html = `
-            <div class="thought-step flex items-center gap-2 text-zinc-300 font-medium transition-all" id="step2_${msgId}">
-              <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <span>${escapeHtml(startData.toolLabel)}</span>
-              <span class="text-[11px] font-mono text-zinc-400 bg-white/[0.06] px-1.5 py-0.5 rounded border border-white/[0.08] animate-pulse" id="step2Badge_${msgId}">অনুসন্ধান চলছে...</span>
-            </div>
-          `;
-          treeEl.insertAdjacentHTML('beforeend', step2Html);
-          scrollToBottom();
+      function resolveToolDone(data, stepIdx) {
+        const doneData = generateThoughtTreeData(data.tool, data.args, data.result, text);
+        const stepToolBadge = document.getElementById(`stepToolBadge_${stepIdx}_${msgId}`);
+        if (stepToolBadge) {
+          stepToolBadge.className = "text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20";
+          stepToolBadge.innerText = doneData.countTag || "যাচাই সম্পন্ন";
         }
-
-        // Realistic active search execution pulse (~320ms)
-        await new Promise(r => setTimeout(r, 320));
-
-        // Resolve Step 2 with verified result
-        const doneData = generateThoughtTreeData(
-          toolDoneEvt?.tool || startEvt.tool,
-          toolDoneEvt?.args || startEvt.args,
-          toolDoneEvt?.result
-        );
-
-        const step2Badge = document.getElementById(`step2Badge_${msgId}`);
-        if (step2Badge) {
-          step2Badge.className = "text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20";
-          step2Badge.innerText = doneData.countTag || "সম্পন্ন";
-        }
-        const step2El = document.getElementById(`step2_${msgId}`);
-        if (step2El) {
-          const icon = step2El.querySelector('svg');
+        const stepToolEl = document.getElementById(`stepTool_${stepIdx}_${msgId}`);
+        if (stepToolEl) {
+          const icon = stepToolEl.querySelector('svg');
           if (icon) icon.classList.remove('animate-pulse');
         }
+        const titleEl = document.getElementById(treeTitleId);
+        if (titleEl && doneData.mainTitle) {
+          titleEl.innerText = doneData.mainTitle;
+        }
 
-        // 3. Introduce Step 3 (Think - Synthesis)
-        if (treeEl) {
-          const step3Html = `
-            <div class="thought-step transition-all" id="step3_${msgId}">
-              <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
-                <span class="text-zinc-500 font-bold">•</span>
-                <span>Think</span>
-                <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </div>
-              <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step3Text_${msgId}"></div>
+        isToolExecuting = false;
+        const contentEl = document.getElementById(contentId);
+        if (contentEl && !contentEl.innerHTML.trim()) {
+          contentEl.classList.remove('hidden');
+          contentEl.innerHTML = `
+            <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
             </div>
           `;
-          treeEl.insertAdjacentHTML('beforeend', step3Html);
           scrollToBottom();
         }
+        performStreamRender();
+      }
 
-        const step3El = document.getElementById(`step3Text_${msgId}`);
-        if (step3El) {
-          await streamWords(step3El, doneData.synthesisReasoning, 14);
-        }
+      // 2. Real-time stream handling
+      const initialData = generateThoughtTreeData(null, null, null, text);
+      const isAcademic = isAcademicPrompt(text);
 
-        // 4. Mark Thought Sequence Completed!
-        thoughtPipelineDone = true;
+      let renderRafId = null;
+      let lastRenderTime = 0;
+      const RENDER_THROTTLE_MS = 35; // ~28 FPS smooth streaming render (zero CPU freeze)
 
-        // Release streamed response content if already arrived and buffered
-        const contentEl = document.getElementById(contentId);
-        if (contentEl && streamContent) {
-          contentEl.classList.remove('hidden');
-          contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true);
+      function scheduleStreamRender() {
+        if (renderRafId) return;
+        renderRafId = requestAnimationFrame((timestamp) => {
+          renderRafId = null;
+          if (timestamp - lastRenderTime < RENDER_THROTTLE_MS) {
+            scheduleStreamRender();
+            return;
+          }
+          lastRenderTime = timestamp;
+          performStreamRender();
+        });
+      }
+
+      function performStreamRender() {
+        const parsed = parseStreamThoughts(streamContent);
+
+        if (parsed.hasThought) {
+          const statusEl = document.getElementById(statusId);
+          if (statusEl) statusEl.classList.add('hidden');
+
+          const toolContainer = document.getElementById(toolContainerId);
+          if (toolContainer) toolContainer.classList.remove('hidden');
+
+          const treeEl = document.getElementById(treeId);
+          if (treeEl && !document.getElementById(`step1_${msgId}`)) {
+            treeEl.innerHTML = `
+              <div class="thought-step" id="step1_${msgId}">
+                <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
+                  <span class="text-zinc-500 font-bold">•</span>
+                  <span>Think</span>
+                  <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step1Text_${msgId}"></div>
+              </div>
+            `;
+          }
+
+          const step1TextEl = document.getElementById(`step1Text_${msgId}`);
+          if (step1TextEl) {
+            if (hasTool && initialThoughtCaptured && !isThinkingActive) {
+              // Preserves the streamed thought once tool execution begins
+            } else if (parsed.thought) {
+              if (!hasTool) initialThoughtCaptured = parsed.thought;
+              step1TextEl.innerHTML = escapeHtml(parsed.thought) + (parsed.inProgress ? '<span class="inline-block w-1.5 h-3 bg-zinc-400/80 animate-pulse ml-1 align-middle rounded-full thought-cursor"></span>' : '');
+              if (parsed.inProgress) {
+                isThinkingActive = true;
+              } else if (isThinkingActive) {
+                onThinkingFinished(toolStepIndex || 1);
+              }
+            }
+          }
+
+          const answerText = parsed.answer;
+          if (answerText) {
+            isThinkingActive = false;
+            const contentEl = document.getElementById(contentId);
+            if (contentEl) {
+              contentEl.classList.remove('hidden');
+              const wp = document.getElementById(`writingPulse_${msgId}`);
+              if (wp) wp.remove();
+              const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
+              const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
+              contentEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extraBoardTag, extraAns);
+            }
+            scrollToBottom();
+          }
+        } else if (!parsed.inProgress) {
+          isThinkingActive = false;
+          const statusEl = document.getElementById(statusId);
+          if (statusEl) statusEl.classList.add('hidden');
+
+          const contentEl = document.getElementById(contentId);
+          if (contentEl) {
+            contentEl.classList.remove('hidden');
+            const wp = document.getElementById(`writingPulse_${msgId}`);
+            if (wp) wp.remove();
+            const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
+            const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
+            contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extraBoardTag, extraAns);
+          }
           scrollToBottom();
         }
+      }
+
+      function parseStreamThoughts(raw) {
+        if (!raw) return { hasThought: false, inProgress: false, thought: '', answer: '' };
+
+        // Find all closed thoughts
+        const thoughtRegex = /<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>([\s\S]*?)<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi;
+        const allThoughts = [];
+        let lastClosedEnd = 0;
+        let m;
+        while ((m = thoughtRegex.exec(raw)) !== null) {
+          allThoughts.push(m[1].trim());
+          lastClosedEnd = m.index + m[0].length;
+        }
+
+        const remaining = raw.slice(lastClosedEnd);
+        const inProgressOpen = remaining.match(/<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/i);
+        if (inProgressOpen) {
+          const inProgressText = remaining.slice(inProgressOpen.index + inProgressOpen[0].length).trimStart();
+          const combinedThought = allThoughts.concat([inProgressText]).filter(Boolean).join(' ');
+          return { hasThought: true, inProgress: true, thought: combinedThought, answer: remaining.slice(0, inProgressOpen.index).trimStart() };
+        }
+
+        if (allThoughts.length > 0) {
+          return { hasThought: true, inProgress: false, thought: allThoughts.join(' '), answer: remaining.trimStart() };
+        }
+
+        // Check if raw starts with an incomplete opening tag like `<` or `< thought`
+        if (/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)?[^>]*$/i.test(raw.trim())) {
+          return { hasThought: false, inProgress: true, thought: '', answer: '' };
+        }
+
+        return { hasThought: false, inProgress: false, thought: '', answer: raw };
       }
 
       try {
@@ -1178,69 +1690,176 @@
             try {
               const data = JSON.parse(raw);
 
-              // 1. Tool Start -> Orchestrate Step-by-Step Thought Sequence!
+              if (data.type === "thought_done") {
+                onThinkingFinished(toolStepIndex || 1);
+              }
+
+              // 1. Tool Start -> Queue or Render Tool step after thinking finishes
               if (data.type === "tool_start") {
+                toolStepIndex++;
+                streamContent = "";
+                const contentEl = document.getElementById(contentId);
+                if (contentEl) {
+                  contentEl.classList.add('hidden');
+                  contentEl.innerHTML = "";
+                }
                 toolStartEvt = data;
-                runThoughtSequence(data);
-              }
+                hasTool = true;
 
-              // 2. Tool Done -> Cache result for Step 2 resolution
-              if (data.type === "tool_done") {
-                toolDoneEvt = data;
-              }
+                const statusEl = document.getElementById(statusId);
+                if (statusEl) statusEl.classList.add('hidden');
+                const toolContainer = document.getElementById(toolContainerId);
+                if (toolContainer) toolContainer.classList.remove('hidden');
 
-              // 2b. Generating Start -> Keep top status hidden if tool is running
-              if (data.type === "generating_start") {
-                if (!hasTool) {
-                  const label = document.getElementById(labelId);
-                  if (label) {
-                    label.className = "thinking-shimmer font-medium tracking-wide";
-                    label.innerText = "Writing response...";
+                const titleEl = document.getElementById(treeTitleId);
+                const startData = generateThoughtTreeData(data.tool, data.args, null, text);
+                if (titleEl && startData.mainTitle) titleEl.innerText = startData.mainTitle;
+
+                const treeEl = document.getElementById(treeId);
+                const step1TextEl = document.getElementById(`step1Text_${msgId}`);
+
+                if (toolStepIndex === 1) {
+                  if (!step1TextEl && treeEl) {
+                    const authenticThought = startData.intentReasoning || "অধ্যায় ও বিষয়বস্তু বিশ্লেষণ করে উপযুক্ত প্রশ্ন বাছাই করার সিদ্ধান্ত নেওয়া হয়েছে।";
+                    initialThoughtCaptured = authenticThought;
+                    treeEl.innerHTML = `
+                      <div class="thought-step" id="step1_${msgId}">
+                        <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
+                          <span class="text-zinc-500 font-bold">•</span>
+                          <span>Think</span>
+                          <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </div>
+                        <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step1Text_${msgId}"></div>
+                      </div>
+                    `;
+                    isThinkingActive = true;
+                    pendingToolStart = { data, stepIdx: 1 };
+                    streamThinkingText(document.getElementById(`step1Text_${msgId}`), authenticThought, 10, () => {
+                      onThinkingFinished(1);
+                    });
+                  } else if (isThinkingActive) {
+                    pendingToolStart = { data, stepIdx: 1 };
+                  } else {
+                    renderToolRow(data, 1);
                   }
+                } else {
+                  // Subsequent tool step
+                  const thinkId = `stepThinkText_${toolStepIndex}_${msgId}`;
+                  const authenticThought = startData.intentReasoning || "পরবর্তী ধাপে প্রয়োজনীয় তথ্য অনুসন্ধান করছি...";
+                  const thinkHtml = `
+                    <div class="thought-step pt-1" id="stepThink_${toolStepIndex}_${msgId}">
+                      <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
+                        <span class="text-zinc-500 font-bold">•</span>
+                        <span>Think (ধাপ ${toBnDigits(toolStepIndex)})</span>
+                        <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                      </div>
+                      <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="${thinkId}"></div>
+                    </div>
+                  `;
+                  if (treeEl) treeEl.insertAdjacentHTML('beforeend', thinkHtml);
+                  isThinkingActive = true;
+                  pendingToolStart = { data, stepIdx: toolStepIndex };
+                  streamThinkingText(document.getElementById(thinkId), authenticThought, 10, () => {
+                    onThinkingFinished(toolStepIndex);
+                  });
                 }
               }
 
-              // 3. Content Delta (Instant Real-time Streaming)
-              if (data.type === "content_delta" && data.delta) {
-                streamContent += data.delta;
+              // 2. Tool Done -> Update badge or queue if thinking is still streaming
+              if (data.type === "tool_done") {
+                toolDoneEvt = data;
+                hasTool = true;
 
-                if (!hasTool) {
-                  // Direct conversational answers (no tools) stream immediately!
+                if (thinkTimer) {
+                  clearInterval(thinkTimer);
+                  thinkTimer = null;
+                }
+
+                if (document.getElementById(`stepTool_${toolStepIndex}_${msgId}`)) {
+                  setTimeout(() => {
+                    resolveToolDone(data, toolStepIndex);
+                  }, 100);
+                } else {
+                  pendingToolDone = { data, stepIdx: toolStepIndex };
+                }
+              }
+
+              // 2b. Generating Start -> Show writing pulse immediately so screen is never blank
+              if (data.type === "generating_start") {
+                if (!isThinkingActive) {
                   const statusEl = document.getElementById(statusId);
                   if (statusEl) statusEl.classList.add('hidden');
 
                   const contentEl = document.getElementById(contentId);
-                  if (contentEl) {
+                  if (contentEl && !contentEl.innerHTML.trim()) {
                     contentEl.classList.remove('hidden');
-                    contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true);
+                    contentEl.innerHTML = `
+                      <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
+                      </div>
+                    `;
+                    scrollToBottom();
                   }
-                  scrollToBottom();
-                } else if (thoughtPipelineDone) {
-                  // Thought sequence completed -> stream live tokens directly!
-                  const contentEl = document.getElementById(contentId);
-                  if (contentEl) {
-                    contentEl.classList.remove('hidden');
-                    contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true);
-                  }
-                  scrollToBottom();
                 }
               }
 
-              // 4. Done Event
+              // 3. Content Delta -> Batched rAF Streaming (Zero browser lockup/lag)
+              if (data.type === "content_delta" && data.delta) {
+                isToolExecuting = false;
+                streamContent += data.delta;
+                scheduleStreamRender();
+              }
+
+              // 4. Done Event -> Final crisp render
               if (data.type === "done") {
+                onThinkingFinished(toolStepIndex || 1);
+                isToolExecuting = false;
+                if (renderRafId) {
+                  cancelAnimationFrame(renderRafId);
+                  renderRafId = null;
+                }
+
                 const final = data.content || streamContent;
-                thoughtPipelineDone = true;
+                const parsed = parseStreamThoughts(final);
+                const cleanFinal = parsed.hasThought ? parsed.answer : final;
 
                 const statusEl = document.getElementById(statusId);
                 if (statusEl) statusEl.classList.add('hidden');
 
+                const tEl = document.getElementById(`step1Text_${msgId}`);
+                if (tEl) {
+                  if (initialThoughtCaptured) {
+                    tEl.innerText = initialThoughtCaptured;
+                  } else if (parsed.thought) {
+                    tEl.innerText = parsed.thought;
+                  }
+                }
+
                 const contentEl = document.getElementById(contentId);
                 if (contentEl) {
                   contentEl.classList.remove('hidden');
-                  if (final) contentEl.innerHTML = renderFormattedContentWithCursor(final, false);
+                  const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
+                  const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
+                  if (cleanFinal) contentEl.innerHTML = renderFormattedContentWithCursor(cleanFinal, false, extraBoardTag, extraAns);
                 }
                 conversationHistory.push({ role: "user", content: text });
-                conversationHistory.push({ role: "assistant", content: final });
+                conversationHistory.push({ role: "assistant", content: cleanFinal });
+
+                // Persist conversation and rendered messages to current session
+                const currSession = chatSessions.find(s => s.id === currentSessionId);
+                if (currSession) {
+                  currSession.updatedAt = Date.now();
+                  currSession.conversationHistory = JSON.parse(JSON.stringify(conversationHistory));
+                  const areaEl = document.getElementById('messagesArea');
+                  if (areaEl) {
+                    const clone = areaEl.cloneNode(true);
+                    clone.querySelectorAll('.streaming-cursor, .thought-cursor, [id^="writingPulse_"]').forEach(el => el.remove());
+                    currSession.html = clone.innerHTML;
+                  }
+                  saveSessions();
+                  renderRecentChats();
+                }
                 scrollToBottom();
               }
 
@@ -1265,9 +1884,14 @@
       }
     }
 
+    let scrollRaf = null;
     function scrollToBottom() {
-      const el = document.getElementById('contentScrollArea');
-      if (el) el.scrollTop = el.scrollHeight;
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = null;
+        const el = document.getElementById('contentScrollArea');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
     }
 
     // Auto-resize docked textarea

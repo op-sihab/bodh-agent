@@ -1,49 +1,80 @@
 // Tool definitions and execution handlers for BODH AI (বোধ)
 import { executeRawSql, getSimilarQuestionsByVector } from "./db.js";
+import { appCache } from "./cache.js";
 
 const TAG_MAP = {
-  "DB": "ঢাকা বোর্ড",
-  "Ctg.B": "চট্টগ্রাম বোর্ড",
-  "CTG.B": "চট্টগ্রাম বোর্ড",
-  "CB": "কুমিল্লা বোর্ড",
-  "RB": "রাজশাহী বোর্ড",
-  "SB": "সিলেট বোর্ড",
-  "JB": "যশোর বোর্ড",
-  "BB": "বরিশাল বোর্ড",
-  "Din.B": "দিনাজপুর বোর্ড",
-  "DIN.B": "দিনাজপুর বোর্ড",
-  "MB": "ময়মনসিংহ বোর্ড",
+  "DB": "ঢাকা বোর্ড", "DHAKA": "ঢাকা বোর্ড",
+  "Ctg.B": "চট্টগ্রাম বোর্ড", "CTG.B": "চট্টগ্রাম বোর্ড", "CTG": "চট্টগ্রাম বোর্ড", "CHITTAGONG": "চট্টগ্রাম বোর্ড", "CTG B": "চট্টগ্রাম বোর্ড",
+  "CB": "কুমিল্লা বোর্ড", "COMILLA": "কুমিল্লা বোর্ড", "CUMILLA": "কুমিল্লা বোর্ড", "COM B": "কুমিল্লা বোর্ড",
+  "RB": "রাজশাহী বোর্ড", "RAJSHAHI": "রাজশাহী বোর্ড", "RAJ B": "রাজশাহী বোর্ড",
+  "SB": "সিলেট বোর্ড", "SYLHET": "সিলেট বোর্ড", "SYL B": "সিলেট বোর্ড",
+  "JB": "যশোর বোর্ড", "JESSORE": "যশোর বোর্ড", "JASHORE": "যশোর বোর্ড", "JES B": "যশোর বোর্ড",
+  "BB": "বরিশাল বোর্ড", "BARISAL": "বরিশাল বোর্ড", "BARISHAL": "বরিশাল বোর্ড", "BAR B": "বরিশাল বোর্ড",
+  "Din.B": "দিনাজপুর বোর্ড", "DIN.B": "দিনাজপুর বোর্ড", "DIN": "দিনাজপুর বোর্ড", "DINAJPUR": "দিনাজপুর বোর্ড", "DIN B": "দিনাজপুর বোর্ড",
+  "MB": "ময়মনসিংহ বোর্ড", "MYMENSINGH": "ময়মনসিংহ বোর্ড", "MYM B": "ময়মনসিংহ বোর্ড",
+  "Madrasa": "মাদ্রাসা বোর্ড", "MADRASA": "মাদ্রাসা বোর্ড", "MAD": "মাদ্রাসা বোর্ড", "MADRASHA": "মাদ্রাসা বোর্ড", "MADRASHA B": "মাদ্রাসা বোর্ড", "DAKHIL": "দাখিল মাদ্রাসা বোর্ড",
+  "TEC": "কারিগরি বোর্ড", "BTEB": "কারিগরি বোর্ড",
+  "All.B": "সকল বোর্ড", "ALL.B": "সকল বোর্ড", "ALL": "সকল বোর্ড", "ALL B": "সকল বোর্ড",
   "RCC": "রাজশাহী ক্যাডেট কলেজ",
   "JCC": "ঝিনাইদহ ক্যাডেট কলেজ",
-  "FGCC": "ফেনী গার্লস ক্যাডেট কলেজ",
-  "BNMPC": "বীরশ্রেষ্ঠ নূর মোহাম্মদ পাবলিক কলেজ",
-  "RUMC": "রাজউক উত্তরা মডেল কলেজ",
   "MCC": "মির্জাপুর ক্যাডেট কলেজ",
-  "MGCC": "ময়মনসিংহ গার্লস ক্যাডেট কলেজ",
-  "JGCC": "জয়পুরহাট গার্লস ক্যাডেট কলেজ",
+  "PCC": "পাবনা ক্যাডেট কলেজ",
+  "FCC": "ফৌজদারহাট ক্যাডেট কলেজ",
   "SCC": "সিলেট ক্যাডেট কলেজ",
-  "ACC": "আদমজী ক্যান্টনমেন্ট কলেজ",
-  "VNSC": "ভিকারুননিসা নূন স্কুল ও কলেজ",
-  "ISCM": "আইডিয়াল স্কুল অ্যান্ড কলেজ, মতিঝিল",
+  "BCC": "বরিশাল ক্যাডেট কলেজ", "CCR": "বরিশাল ক্যাডেট কলেজ",
+  "MGCC": "ময়মনসিংহ গার্লস ক্যাডেট কলেজ",
+  "FGCC": "ফেনী গার্লস ক্যাডেট কলেজ",
+  "JGCC": "জয়পুরহাট গার্লস ক্যাডেট কলেজ",
+  "RUMC": "রাজউক উত্তরা মডেল কলেজ",
   "DRMC": "ঢাকা রেসিডেনসিয়াল মডেল কলেজ",
+  "VNSC": "ভিকারুননিসা নূন স্কুল ও কলেজ",
+  "ISCM": "আইডিয়াল স্কুল অ্যান্ড কলেজ",
+  "ACC": "আদমজী ক্যান্টনমেন্ট কলেজ",
+  "BNMPC": "বীরশ্রেষ্ঠ নূর মোহাম্মদ পাবলিক কলেজ",
   "SJHSS": "সেন্ট জোসেফ উচ্চ মাধ্যমিক বিদ্যালয়",
   "RCPC": "রাজশাহী কলেজিয়েট স্কুল",
-  "Madrasa": "মাদ্রাসা বোর্ড"
+  "CPSCR": "ক্যান্টনমেন্ট পাবলিক স্কুল ও কলেজ",
+  "BCPC": "বান্দরবান ক্যান্টনমেন্ট পাবলিক কলেজ",
+  "MCPC": "মিরপুর ক্যান্টনমেন্ট পাবলিক স্কুল ও কলেজ",
+  "BNSC": "বাংলাদেশ নৌবাহিনী স্কুল ও কলেজ",
+  "BNCP": "ক্যান্টনমেন্ট পাবলিক স্কুল ও কলেজ",
+  "GLHSD": "সরকারি করোনেশন / ল্যাবরেটরি হাই স্কুল",
+  "NISD": "ন্যাশনাল আইডিয়াল স্কুল",
+  "MHSC": "মিরপুর ক্যান্টনমেন্ট পাবলিক স্কুল",
+  "CSC": "ক্যান্টনমেন্ট পাবলিক স্কুল",
+  "HC": "হলি ক্রস কলেজ",
+  "RCS": "রাজশাহী কলেজিয়েট স্কুল"
 };
+
+const TAG_MAP_UPPER = Object.fromEntries(
+  Object.entries(TAG_MAP).map(([k, v]) => [k.toUpperCase(), v])
+);
 
 const BN_DIGITS = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
 export const toBengaliNumber = (s) => String(s).replace(/[0-9]/g, d => BN_DIGITS[d] || d);
 
 export const formatTag = (tagStr) => {
   if (!tagStr) return "";
-  for (const [k, v] of Object.entries(TAG_MAP)) {
-    if (tagStr.startsWith(k)) {
-      const yr = tagStr.replace(k, "").trim();
-      const fullYr = yr.length === 2 ? `20${yr}` : yr;
-      return `${v} (${toBengaliNumber(fullYr)})`;
-    }
-  }
-  return tagStr;
+  return tagStr
+    .split(",")
+    .map(single => {
+      const clean = single.trim().replace(/^['"-]+|['"-]+$/g, '');
+      const match = clean.match(/^([A-Za-z.\s]+?)\s*[-'"]*\s*(\d{2,4})?$/i);
+      if (match) {
+        const rawCode = match[1].trim().toUpperCase();
+        const cleanCode = rawCode.replace(/\.+$/, '');
+        const yr = match[2];
+        const boardName = TAG_MAP_UPPER[rawCode] || TAG_MAP_UPPER[cleanCode] || match[1].trim();
+        if (yr) {
+          const fullYr = yr.length === 2 ? (parseInt(yr, 10) > 70 ? `19${yr}` : `20${yr}`) : yr;
+          return `${boardName} ${toBengaliNumber(fullYr)}`;
+        }
+        return boardName;
+      }
+      return clean;
+    })
+    .filter(Boolean)
+    .join(", ");
 };
 
 export const BOARD_MAP = {
@@ -68,6 +99,9 @@ export const BOARD_MAP = {
 export function normalizeBoard(raw) {
   if (!raw) return null;
   const s = String(raw).toLowerCase().trim();
+  if (s === "random" || s === "any" || s === "all" || s === "jekono" || s === "যেকোনো" || s === "যে কোনো" || s.includes("যেকোনো") || s.includes("jekono") || s.includes("random")) {
+    return "RANDOM";
+  }
   for (const [k, v] of Object.entries(BOARD_MAP)) {
     if (s.includes(k.toLowerCase())) return v;
   }
@@ -92,6 +126,14 @@ export function normalizeSubject(raw) {
   if (s.includes("hindu") || s.includes("হিন্দু")) return "ssc_hindu";
   if (s.includes("agri") || s.includes("কৃষি")) return "ssc_agriculture";
   return null;
+}
+
+export function extractChapterNum(raw) {
+  if (!raw) return null;
+  const toEn = s => String(s).replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d));
+  const s = toEn(raw).toLowerCase();
+  const m = s.match(/(?:অধ্যায়|অধ্যায়|chapter|ch)?\s*(\d+)/i);
+  return m ? m[1] : null;
 }
 
 export function normalizeTopic(raw) {
@@ -138,13 +180,261 @@ export function normalizeTopic(raw) {
   return raw;
 }
 
+export function parseYearFilter(rawYear) {
+  if (!rawYear) return [];
+  const bnToEn = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+  const str = String(rawYear).replace(/[০-৯]/g, d => bnToEn[d]).trim();
+
+  // 1. Check for range: e.g. "2020-2025", "2020 - 2025", "2020 to 2025", "20-25", "2020-25", "২০২০-২০২৫", "2020 থেকে 2025"
+  const rangeMatch = str.match(/(?:20)?(\d{2})\s*(?:-|to|থেকে|পর্যন্ত|–|—)\s*(?:20)?(\d{2})/i);
+  if (rangeMatch) {
+    let start = parseInt(rangeMatch[1], 10);
+    let end = parseInt(rangeMatch[2], 10);
+    if (start > end) [start, end] = [end, start];
+    const years = [];
+    for (let y = start; y <= end; y++) {
+      years.push(String(y).padStart(2, '0'));
+    }
+    return years;
+  }
+
+  // 2. Individual 4-digit or 2-digit years: e.g. "2024", "24", "2021, 2023"
+  const matches = str.match(/(?:20)?(\d{2})/g);
+  if (matches) {
+    const list = matches.map(m => {
+      const stripped = m.replace(/^20/, '');
+      return stripped.length === 2 ? stripped : String(m).slice(-2);
+    });
+    return [...new Set(list)];
+  }
+
+  return [];
+}
+
+export function buildYearSqlConditions(boardTag, years) {
+  if (!years || years.length === 0) {
+    if (boardTag && boardTag !== "RANDOM") {
+      return `tags LIKE '%${boardTag}%'`;
+    }
+    return `tags != '' AND tags IS NOT NULL`;
+  }
+
+  if (boardTag && boardTag !== "RANDOM") {
+    const sub = years.map(y => `(tags LIKE '%${boardTag} ${y}%' OR (tags LIKE '%${boardTag}%' AND tags LIKE '% ${y}%'))`);
+    return `(${sub.join(" OR ")})`;
+  } else {
+    const sub = years.map(y => `tags LIKE '% ${y}%'`);
+    return `(${sub.join(" OR ")})`;
+  }
+}
+
+export const CHAPTER_CONCEPTS_MAP = {
+  ssc_biology: {
+    "1": ["জীবন পাঠ", "শ্রেণিবিন্যাস", "দ্বিপদ", "লিনিয়াস", "হুইটটেকার", "প্রোটিস্টা", "মনেরা", "ফানজাই", "প্ল্যান্টি", "অ্যানিম্যালিয়া", "হায়ারার্কি", "আইসিজেডএন", "আইসিবিএন"],
+    "2": ["জীবকোষ", "টিস্যু", "মাইটোকন্ড্রিয়া", "প্লাস্টিড", "গলগি", "রাইবোজোম", "লাইসোজোম", "কোষঝিল্লি", "কোষপ্রাচীর", "জাইলেম", "ফ্লোয়েম", "প্যারেনকাইমা", "কোলেনকাইমা", "স্ক্লেরেনকাইমা", "মৌলিক টিস্যু"],
+    "3": ["কোষ বিভাজন", "মাইটোসিস", "মিয়োসিস", "অ্যামাইটোসিস", "প্রোফেজ", "মেটাফেজ", "অ্যানাফেজ", "টেলোফেজ", "ক্রসিং ওভার", "স্পিন্ডল"],
+    "4": ["জীবনীশক্তি", "সালোকসংশ্লেষণ", "শ্বসন", "এটিপি", "ATP", "ক্যালভিন", "ক্রেবস চক্র", "গ্লাইকোলাইসিস", "ফার্মেন্টেশন", "সবাত", "অবাত", "ক্লোরোফিল"],
+    "5": ["খাদ্য", "পুষ্টি", "পরিপাক", "পাকস্থলী", "যকৃৎ", "অগ্ন্যাশয়", "ক্ষুদ্রান্ত্র", "বৃহদান্ত্র", "ভিটামিন", "খনিজ", "এনজাইম", "বিএমআই", "BMI", "ক্যালোরি", "দাঁত", "আন্ত্রিক রস"],
+    "6": ["জীবে পরিবহন", "রক্ত", "হৃদপিণ্ড", "ধমনী", "শিরা", "রক্তরস", "লোহিত", "শ্বেত", "অনুচক্রিকা", "হিমোগ্লোবিন", "রক্তচাপ", "প্রস্বেদন", "ট্রান্সপিরেশন", "লসিকা", "কৈশিক"],
+    "7": ["গ্যাসীয় বিনিময়", "শ্বসনতন্ত্র", "ফুসফুস", "অ্যালভিওলাস", "ব্রঙ্কাস", "ব্রঙ্কাইটিস", "ট্রাকিয়া", "হাঁপানি", "নিউমোনিয়া", "অক্সিজেন", "কার্বন ডাই-অক্সাইড"],
+    "8": ["রেচন", "বৃক্ক", "নেফ্রন", "ইউরেটার", "মূত্রথলি", "ডায়ালাইসিস", "গ্লোমেরুলাস", "রেনাল", "ইউরিয়া", "ইউরিক"],
+    "9": ["দৃঢ়তা প্রদান", "চলন", "কঙ্কাল", "অস্থি", "তরুণাস্থি", "সাইনোভিয়াল", "অস্টিওপোরোসিস", "লিগামেন্ট", "টেনডন", "ঐচ্ছিক", "অনৈচ্ছিক"],
+    "10": ["সমন্বয়", "নিউরন", "সিন্যাপস", "মস্তিষ্ক", "হরমোন", "থাইরয়েড", "পিটুইটারি", "অক্সিন", "জিব্বেরেলিন", "অ্যাড্রেনালিন", "স্নায়ু"],
+    "11": ["জীবের প্রজনন", "প্রজনন", "পরাগায়ন", "পুংকেশর", "গর্ভাশয়", "পরাগধানী", "নিষেক", "অমরা", "ভ্রূণ", "ফুল", "পুংস্তবক", "স্ত্রীস্তবক", "গর্ভমুণ্ড"],
+    "12": ["জীবের বংশগতি", "বিবর্তন", "বংশগতি", "ডিএনএ", "আরএনএ", "DNA", "RNA", "জিন", "ক্রোমোজোম", "মেন্ডেল", "ডারউইন", "থ্যালাসেমিয়া", "বর্ণান্ধতা", "মিউটেশন"],
+    "13": ["জীবের পরিবেশ", "বাস্তুতন্ত্র", "উৎপাদক", "খাদক", "বিয়োজক", "খাদ্যশিকল", "খাদ্যজাল", "ট্রফিক", "শক্তি পিরামিড", "মিথোজীবিতা", "সিমবায়োসিস", "অ্যান্টিবায়োসিস", "পরজীবী খাদ্যশিকল"],
+    "14": ["জীবপ্রযুক্তি", "টিস্যু কালচার", "রিকম্বিন্যান্ট", "প্লাজমিড", "রেস্ট্রিকশন", "জিএমও", "GMO", "ইনসুলিন", "জিন প্রকৌশল"]
+  },
+  ssc_physics: {
+    "1": ["ভৌত রাশি", "পরিমাপ", "ভার্নিয়ার", "স্ক্রু গজ", "স্লাইড ক্যালিপার্স", "মাত্রা", "পিচ", "লঘিষ্ট গণনা"],
+    "2": ["গতি", "ত্বরণ", "বেগ", "দ্রুতি", "সরণ", "মন্দন", "প্রাস", "পরন্ত বস্তু"],
+    "3": ["বল", "নিউটনের সূত্র", "ভরবেগ", "ঘর্ষণ", "জড়তা", "ভরবেগের সংরক্ষণ", "ক্রিয়া-প্রতিক্রিয়া"],
+    "4": ["কাজ", "ক্ষমতা", "শক্তি", "গতিশক্তি", "বিভবশক্তি", "কর্মদক্ষতা", "জুল", "ওয়াট"],
+    "5": ["পদার্থের অবস্থা", "চাপ", "প্যাসকেল", "আর্কিমিডিস", "প্লবতা", "ঘনত্ব", "বায়ুমণ্ডলীয় চাপ", "ব্যারোমিটার", "পীড়ন", "বিকৃতি"],
+    "6": ["বস্তুর ওপর তাপের প্রভাব", "তাপমাত্রা", "ফারেনহাইট", "সেলসিয়াস", "আপেক্ষিক তাপ", "তাপধারণ ক্ষমতা", "প্রসারণ", "সুপ্ততাপ", "ক্যালোরিমিতি"],
+    "7": ["তরঙ্গ", "শব্দ", "তরঙ্গদৈর্ঘ্য", "কম্পাঙ্ক", "পর্যায়কাল", "প্রতিধ্বনি", "শ্রাব্যতার সীমা"],
+    "8": ["আলোর প্রতিফলন", "দর্পণ", "অবতল", "উত্তল", "ফোকাস দূরত্ব", "বক্রতার ব্যাসার্ধ", "বিম্ব", "প্রতিবিম্ব"],
+    "9": ["আলোর প্রতিসরণ", "প্রতিসরাঙ্ক", "ক্রান্তি কোণ", "সংকট কোণ", "পূর্ণ অভ্যন্তরীণ প্রতিফলন", "লেন্স", "ডায়োপ্টার", "দৃষ্টির ত্রুটি"],
+    "10": ["স্থির বিদ্যুৎ", "কুলম্বের সূত্র", "তড়িৎ তীব্রতা", "তড়িৎ বিভব", "আধান", "ধারক", "চার্জ"],
+    "11": ["চল বিদ্যুৎ", "ওহমের সূত্র", "রোধ", "তুল্য রোধ", "বর্তনী", "তড়িৎ প্রবাহ", "তড়িৎ ক্ষমতা", "তড়িচ্চালক শক্তি", "আপেক্ষিক রোধ"],
+    "12": ["বিদ্যুতের চৌম্বক ক্রিয়া", "চৌম্বক ক্ষেত্র", "সোলেনয়েড", "মোটর", "জেনারেটর", "ট্রান্সফরমার", "তড়িৎচৌম্বক আবেশ", "ফ্যারাডের সূত্র"],
+    "13": ["আধুনিক পদার্থবিজ্ঞান", "ইলেকট্রনিক্স", "তেজস্ক্রিয়তা", "অর্ধায়ু", "সেমিকন্ডাক্টর", "ডায়োড", "ট্রানজিস্টর", "আইসি", "অ্যানালগ", "ডিজিটাল"],
+    "14": ["জীবন বাঁচাতে পদার্থবিজ্ঞান", "এক্স-রে", "সিটি স্ক্যান", "এমআরআই", "MRI", "আল্ট্রাসনোগ্রাফি", "ইসিজি", "ECG", "রেডিওথেরাপি"]
+  },
+  ssc_chemistry: {
+    "1": ["রসায়নের ধারণা", "রসায়ন পাঠ", "ল্যাবরেটরি", "হ্যাজার্ড প্রতীক"],
+    "2": ["পদার্থের অবস্থা", "কণার গতিতত্ত্ব", "ব্যাপন", "নিঃসরণ", "ঊর্ধ্বপাতন", "গলনাঙ্ক", "স্ফুটনাঙ্ক", "শীতলীকরণ"],
+    "3": ["পদার্থের গঠন", "পরমাণু", "প্রোটন", "নিউট্রন", "ইলেকট্রন বিন্যাস", "আইসোটোপ", "বোর মডেল", "রাদারফোর্ড", "আপেক্ষিক পারমাণবিক ভর"],
+    "4": ["পর্যায় সারণি", "পর্যায়", "গ্রুপ", "ক্ষার ধাতু", "মৃৎক্ষার ধাতু", "হ্যালোজেন", "নিষ্ক্রিয় গ্যাস", "আয়নীকরণ শক্তি", "তড়িৎ ঋণাত্মকতা", "ইলেকট্রন আসক্তি"],
+    "5": ["রাসায়নিক বন্ধন", "যোজ্যতা", "যোজনী", "আয়নিক বন্ধন", "সমযোজী বন্ধন", "ধাতব বন্ধন", "অষ্টক নিয়ম", "ক্যাটায়ন", "অ্যানায়ন"],
+    "6": ["মোলের ধারণা", "রাসায়নিক গণনা", "মোল", "অ্যাভোগাড্রো", "মোলার দ্রবণ", "মোলারিটি", "লিমিটিং বিক্রিয়ক", "শতকরা সংযুতি", "স্থূল সংকেত", "আণবিক সংকেত"],
+    "7": ["রাসায়নিক বিক্রিয়া", "জারণ", "বিজারণ", "রেডক্স", "সংযোজন", "বিযোজন", "প্রতিস্থাপন", "দহন", "তাপোৎপাদী", "তাপহারী", "লা-শাতেলিয়ার"],
+    "8": ["রসায়ন ও শক্তি", "তড়িৎ রাসায়নিক কোষ", "গ্যালভানিক কোষ", "ড্রাই সেল", "লবণ সেতু", "অ্যানোড", "ক্যাথোড", "তড়িৎ বিশ্লেষণ"],
+    "9": ["অ্যাসিড-ক্ষারক সমতা", "অ্যাসিড", "ক্ষার", "ক্ষারক", "pH", "নির্দেশক", "প্রশমন বিক্রিয়া", "লবণ"],
+    "10": ["খনিজ সম্পদ", "ধাতু-অধাতু", "ধাতু নিষ্কাশন", "আকরিক", "খনিজ", "ক্ষয়রোধ", "মরিচা"],
+    "11": ["জীবাশ্ম", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "অ্যালকোহল", "অ্যালডিহাইড", "জৈব অ্যাসিড", "পলিমার", "প্লাস্টিক"],
+    "12": ["আমাদের জীবনে রসায়ন", "বেকিং পাউডার", "ভিনেগার", "ব্লিচিং পাউডার", "সাবান", "ডিটারজেন্ট", "টয়লেট ক্লিনার"]
+  },
+  ssc_general_math: {
+    "1": ["বাস্তব সংখ্যা", "মূলদ", "অমূলদ", "আবৃত দশমিক", "ভগ্নাংশ"],
+    "2": ["সেট", "ফাংশন", "ডোমেন", "রেঞ্জ", "সার্বিক সেট", "শক্তি সেট", "ভেনচিত্র"],
+    "3": ["বীজগণিতীয় রাশি", "উৎপাদক", "বর্গ", "ঘন", "লঘিষ্ঠকরণ"],
+    "4": ["সূচক", "লগারিদম", "সূচকীয় সমীকরণ", "লগ"],
+    "5": ["এক চলকবিশিষ্ট সমীকরণ", "ঘাত", "মূল", "সমাধান সেট"],
+    "6": ["রেখা", "কোণ", "ত্রিভুজ", "সমকোণী", "সমদ্বিবাহু", "পিথাগোরাস"],
+    "7": ["ব্যবহারিক জ্যামিতি", "ত্রিভুজ অঙ্কন", "চতুর্ভুজ অঙ্কন", "সম্পাদ্য"],
+    "8": ["বৃত্ত", "স্পর্শক", "কেন্দ্রস্থ কোণ", "বৃত্তস্থ কোণ", "উপপাদ্য", "বৃত্তস্থ চতুর্ভুজ"],
+    "9": ["ত্রিকোণমিতিক অনুপাত", "sin", "cos", "tan", "ত্রিকোণমিতি", "অভেদাবলী"],
+    "10": ["দূরত্ব ও উচ্চতা", "উন্নতি কোণ", "অবনতি কোণ"],
+    "11": ["বীজগাণিতিক অনুপাত", "সমানুপাত", "যোজন-বিয়োজন"],
+    "12": ["দুই চলকবিশিষ্ট সরল সহসমীকরণ", "প্রতিস্থাপন", "অপনয়ন", "আর্যভট্ট", "বজ্রগুণন"],
+    "13": ["সসীম ধারা", "সমান্তর ধারা", "গুণোত্তর ধারা", "পদসংখ্যা", "সমষ্টি"],
+    "14": ["অনুপাত", "সদৃশতা", "প্রতিসমতা"],
+    "15": ["ক্ষেত্রফল সম্পর্কিত ক্ষেত্র ও পরিমাপ", "ত্রিভুজের ক্ষেত্রফল", "সামান্তরিকের ক্ষেত্রফল"],
+    "16": ["পরিমিতি", "বেলন", "সিলিন্ডার", "গোলক", "ঘনক", "চতুর্ভুজ", "বহুভুজ", "বৃত্তাংশ"],
+    "17": ["পরিসংখ্যান", "গড়", "মধ্যক", "প্রচুরক", "অজিব রেখা", "আয়তলেখ", "ক্রমযোজিত"]
+  },
+  ssc_higher_math: {
+    "1": ["সেট", "ফাংশন", "ডোমেন", "রেঞ্জ", "এক-এক ফাংশন", "সার্বিক ফাংশন", "বিপরীত ফাংশন"],
+    "2": ["বীজগণিতীয় রাশি", "বহুপদী", "ভাগশেষ উপপাদ্য", "উৎপাদক উপপাদ্য", "আংশিক ভগ্নাংশ", "চক্র-ক্রমিক"],
+    "3": ["জ্যামিতি", "অ্যাপোলোনিয়াস", "টলেমি", "ব্রহ্মগুপ্ত", "লম্ব অভিক্ষেপ"],
+    "4": ["জ্যামিতিক অঙ্কন", "সম্পাদ্য"],
+    "5": ["সমীকরণ", "দ্বিঘাত সমীকরণ", "মূলের প্রকৃতি", "নিশ্চায়ক", "পৃথায়ক"],
+    "6": ["অসমতা", "পরমমান", "অসমতার সমাধান"],
+    "7": ["অসীম ধারা", "অনন্ত গুণোত্তর ধারা", "অসীমতক সমষ্টি", "পুনরাবৃত্ত"],
+    "8": ["ত্রিকোণমিতি", "রেডিয়ান", "বৃত্তচাপ", "কোণের পরিমাপ", "ত্রিকোণমিতিক অভেদ"],
+    "9": ["সূচকীয়", "লগারিদমীয় ফাংশন", "প্রাকৃতিক লগ"],
+    "10": ["দ্বিপদী বিস্তৃতি", "প্যাসকেলের ত্রিভুজ", "মধ্যপদ", "সহগ"],
+    "11": ["স্থানাঙ্ক জ্যামিতি", "দূরত্ব", "ঢাল", "ত্রিভুজের ক্ষেত্রফল", "সরলরেখার সমীকরণ"],
+    "12": ["সমতলীয় ভেক্টর", "স্কেলার", "ভেক্টর যোগ", "একক ভেক্টর", "অবস্থান ভেক্টর"],
+    "13": ["ঘন জ্যামিতি", "আয়তাকার ঘনবস্তু", "কোনক", "গোলক", "প্রিজম", "পিরামিড"],
+    "14": ["সম্ভাবনা", "Probability", "নমুনা ক্ষেত্র", "ঘটনা", "মার্বেল", "মুদ্রা", "ছক্কা"]
+  }
+};
+
+export function getChapterConceptKeywords(subjId, chNum) {
+  if (!subjId || !chNum) return [];
+  const numStr = String(chNum);
+  const concepts = CHAPTER_CONCEPTS_MAP[subjId]?.[numStr] || [];
+  return concepts;
+}
+
+export function extractChapterKeywords(rawT, matchedChapterInfo, subjId) {
+  let chapterKeywords = [];
+  if (!rawT) return chapterKeywords;
+
+  const normT = normalizeTopic(rawT);
+  const candidateNames = [normT, matchedChapterInfo?.name].filter(Boolean);
+  const stopWords = new Set([
+    'অধ্যায়', 'অধ্যায়', 'chapter', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'ekta', 'akta', 'কুইজ', 'quiz',
+    'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে'
+  ]);
+
+  for (const name of candidateNames) {
+    const cleanName = name.replace(/\s+ও\s+/g, ' ');
+    const words = cleanName.split(/[\s,–—\-:;।?!/&()+]+/).map(w => w.trim()).filter(w => 
+      w.length >= 3 && 
+      !/^\d+$/.test(w) && 
+      !/^[০-৯]+$/.test(w) && 
+      !stopWords.has(w.toLowerCase())
+    );
+    chapterKeywords.push(...words);
+  }
+  const chNum = matchedChapterInfo?.order_num || extractChapterNum(rawT);
+  const extraConcepts = getChapterConceptKeywords(subjId, chNum);
+  if (extraConcepts && extraConcepts.length > 0) {
+    chapterKeywords.push(...extraConcepts);
+  }
+  return [...new Set(chapterKeywords)];
+}
+
+export const RECENT_YEAR_ORDER_BY = `
+  ORDER BY 
+    CASE 
+      WHEN tags LIKE '% 26%' THEN 1 
+      WHEN tags LIKE '% 25%' THEN 2 
+      WHEN tags LIKE '% 24%' THEN 3 
+      WHEN tags LIKE '% 23%' THEN 4 
+      WHEN tags LIKE '% 22%' THEN 5 
+      WHEN tags LIKE '% 21%' THEN 6 
+      WHEN tags LIKE '% 20%' THEN 7 
+      WHEN tags LIKE '% 19%' THEN 8 
+      WHEN tags LIKE '% 18%' THEN 9 
+      ELSE 10 
+    END ASC, 
+    RANDOM()
+`;
+
+let cachedChapters = null;
+
+export async function getAllChaptersCached() {
+  if (cachedChapters && cachedChapters.length > 0) return cachedChapters;
+  const fromCache = appCache.get("all_nctb_chapters");
+  if (fromCache && fromCache.length > 0) {
+    cachedChapters = fromCache;
+    return cachedChapters;
+  }
+  try {
+    const res = await executeRawSql("SELECT id, subject_id, name, order_num FROM chapters ORDER BY subject_id, CAST(order_num AS INTEGER) ASC;");
+    if (res.rows && res.rows.length > 0) {
+      cachedChapters = res.rows;
+      appCache.set("all_nctb_chapters", cachedChapters, 3600);
+    }
+  } catch (e) {
+    console.error("Failed to load chapters cache:", e.message);
+  }
+  return cachedChapters || [];
+}
+
+// Background preload
+getAllChaptersCached().catch(() => {});
+
+export async function findChapterCached(rawTopicOrCh, subjId = null) {
+  if (!rawTopicOrCh) return null;
+  const all = await getAllChaptersCached();
+  if (!all.length) return null;
+
+  const chNum = extractChapterNum(rawTopicOrCh);
+  if (chNum) {
+    const found = all.find(c => (!subjId || c.subject_id === subjId) && String(c.order_num) === String(chNum));
+    if (found) return found;
+  }
+
+  const normT = normalizeTopic(rawTopicOrCh);
+  const clean = (normT || String(rawTopicOrCh)).trim().toLowerCase().normalize('NFC');
+  const foundByName = all.find(c => (!subjId || c.subject_id === subjId) && c.name.toLowerCase().normalize('NFC').includes(clean));
+  if (foundByName) return foundByName;
+
+  const words = clean.split(/\s+/).filter(w => w.length > 2);
+  if (words.length > 0) {
+    const foundByWord = all.find(c => {
+      if (subjId && c.subject_id !== subjId) return false;
+      const cNorm = c.name.toLowerCase().normalize('NFC');
+      return words.some(w => cNorm.includes(w));
+    });
+    if (foundByWord) return foundByWord;
+  }
+
+  // Also match against chapter concepts
+  if (subjId && CHAPTER_CONCEPTS_MAP[subjId]) {
+    for (const [cNum, concepts] of Object.entries(CHAPTER_CONCEPTS_MAP[subjId])) {
+      if (concepts.some(c => clean.includes(c.toLowerCase()) || c.toLowerCase().includes(clean))) {
+        const found = all.find(ch => ch.subject_id === subjId && String(ch.order_num) === cNum);
+        if (found) return found;
+      }
+    }
+  }
+
+  return null;
+}
+
 
 export const AGENT_TOOLS = [
   {
     type: "function",
     function: {
       name: "get_subject_chapters",
-      description: "Get the total number of chapters and full chapter list for any SSC subject. CRITICAL: Do NOT call this tool if the subject or chapter list was already discussed, or if the user is asking a follow-up question like 'বলো কী কী', 'কোনগুলো', 'সবগুলোর নাম বলো'!",
+      description: "Get the official NCTB chapter list, total number of chapters, and question counts for any SSC subject (e.g. Chemistry, Physics, Biology, General Math, Higher Math, Bangla). Use this whenever the student asks for chapters, chapter count, or syllabus of a subject.",
       parameters: {
         type: "object",
         properties: {
@@ -221,11 +511,11 @@ export const AGENT_TOOLS = [
           },
           board: {
             type: "string",
-            description: "Board or college name, e.g. 'ঢাকা', 'চট্টগ্রাম', 'রাজশাহী', 'কুমিল্লা', 'সিলেট', 'ক্যাডেট কলেজ'"
+            description: "Board or college name, e.g. 'ঢাকা', 'চট্টগ্রাম', 'রাজশাহী', 'কুমিল্লা', 'সিলেট', 'ক্যাডেট কলেজ' বা 'random' / 'any' (শিক্ষার্থী যদি নির্দিষ্ট বোর্ড না বলে বা বলে 'যেকোনো বোর্ডের দাও' / 'random board' / 'tmi ekta deo jekono' / 'any board', তবে 'random' পাস করবে যাতে ডেটাবেস থেকে যেকোনো বোর্ডের আসল প্রশ্ন সিলেক্ট হয়)"
           },
           year: {
             type: "string",
-            description: "Exam year, e.g. '2026', '2025', '2024', '2023', '2022'"
+            description: "Exam year or year range, e.g. '2026', '2025', '2024', '2020-2025', '২০২০-২০২৫'"
           },
           difficulty: {
             type: "string",
@@ -240,7 +530,7 @@ export const AGENT_TOOLS = [
     type: "function",
     function: {
       name: "get_mcq_quiz",
-      description: "Get authentic board MCQ questions from real past board exams and recent test papers. Supports chapter-based questions ('গতি', 'পর্যায় সারণী', 'সেট ও ফাংশন' ইত্যাদি) and filtering by board, year, subject, and difficulty.",
+      description: "Get authentic board MCQ questions from real past board exams and recent test papers. Supports chapter-based questions ('গতি', 'পর্যায় সারণী', 'সেট ও ফাংশন' ইত্যাদি) and filtering by board, year, subject, and difficulty. Also supports fetching a random board question across all boards when student asks for 'যেকোনো বোর্ডের দাও', 'tmi ekta deo jekono', 'random board qus' etc.",
       parameters: {
         type: "object",
         properties: {
@@ -258,11 +548,11 @@ export const AGENT_TOOLS = [
           },
           board: {
             type: "string",
-            description: "Board or college name, e.g. 'ঢাকা', 'চট্টগ্রাম', 'রাজশাহী', 'কুমিল্লা', 'সিলেট', 'ক্যাডেট কলেজ'"
+            description: "Board or college name, e.g. 'ঢাকা', 'চট্টগ্রাম', 'রাজশাহী', 'কুমিল্লা', 'সিলেট', 'ক্যাডেট কলেজ' বা 'random' / 'any' (শিক্ষার্থী যদি নির্দিষ্ট বোর্ড না বলে বা বলে 'যেকোনো বোর্ডের দাও' / 'random board' / 'tmi ekta deo jekono' / 'any board', তবে 'random' পাস করবে যাতে ডেটাবেস থেকে যেকোনো বোর্ডের আসল প্রশ্ন সিলেক্ট হয়)"
           },
           year: {
             type: "string",
-            description: "Exam year, e.g. '2026', '2025', '2024', '2023', '2022'"
+            description: "Exam year or year range, e.g. '2026', '2025', '2024', '2020-2025', '২০২০-২০২৫'"
           },
           difficulty: {
             type: "string",
@@ -321,7 +611,7 @@ export const AGENT_TOOLS = [
           },
           year: {
             type: "string",
-            description: "Optional exam year (e.g. 2026, 2025, 2024, 2023)"
+            description: "Optional exam year or year range (e.g. 2026, 2025, 2024, 2020-2025, '২০২০-২০২৫')"
           },
           type: {
             type: "string",
@@ -409,11 +699,24 @@ export const AGENT_TOOLS = [
   }
 ];
 
+// Automatically equip all agent tools with academic_intent for authentic AI thinking
+for (const t of AGENT_TOOLS) {
+  if (t.function?.parameters?.properties) {
+    t.function.parameters.properties.academic_intent = {
+      type: "string",
+      description: "বাধ্যতামূলক: বাংলায় ১-২ বাক্যে তোমার সুনির্দিষ্ট অ্যাকাডেমিক উদ্দেশ্য ও চিন্তাভাবনা (যেমন: কোন বিষয়ের কোন অধ্যায়/টপিক নিয়ে কাজ করছ এবং পরীক্ষকের উদ্দেশ্য কী)"
+    };
+  }
+}
+
 // Execute a single tool call dynamically
 export async function executeAgentTool(toolName, args) {
   switch (toolName) {
     case "get_subject_chapters": {
       const subj = normalizeSubject(args.subject) || args.subject || "ssc_general_math";
+      const cacheKey = `tool:get_subject_chapters:${subj}`;
+      const cached = appCache.get(cacheKey);
+      if (cached) return cached;
 
       const sql = `
         SELECT c.id, c.name, c.order_num, COUNT(q.id) as question_count 
@@ -609,13 +912,15 @@ export async function executeAgentTool(toolName, args) {
         };
       }
 
-      return {
+      const finalRes = {
         subject: subjectName,
         total_chapters: res.rows.length,
         total_questions_in_subject: res.rows.reduce((sum, r) => sum + (parseInt(r.question_count) || 0), 0),
         numbered_chapters: numberedChapters,
         instructions_for_mentor: "উত্তর দেওয়ার সময় অধ্যায়গুলো সুন্দরভাবে নম্বর ও বুলেট তালিকা আকারে উপস্থাপন করো।"
       };
+      appCache.set(cacheKey, finalRes, 3600);
+      return finalRes;
     }
 
     case "check_board_frequency": {
@@ -705,26 +1010,13 @@ export async function executeAgentTool(toolName, args) {
         qWhere.push(`(tags LIKE '%${bCode} ${yrCode}%' OR tags LIKE '%${yrCode}%')`);
       }
 
-      const mcqRes = await executeRawSql(`SELECT question_text, option_a, option_b, option_c, option_d, answer, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type = 'MCQ' AND answer != '' ORDER BY RANDOM() LIMIT 2;`);
-      const cqRes = await executeRawSql(`SELECT question_text, option_a, option_b, option_c, option_d, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ORDER BY RANDOM() LIMIT 1;`);
-
-      // Merge all board occurrences for mcq
-      for (const r of mcqRes.rows) {
-        try {
-          const esc = r.question_text.replace(/'/g, "''");
-          const allOccurrences = await executeRawSql(`SELECT tags FROM questions WHERE question_text = '${esc}' AND tags != '' LIMIT 15;`);
-          const mergedTags = [...new Set(allOccurrences.rows.flatMap(x => (x.tags || '').split(',').map(t => t.trim())).filter(Boolean))];
-          if (mergedTags.length > 0) r.tags = mergedTags.join(', ');
-        } catch(e) {}
+      const mcqRes = await executeRawSql(`SELECT question_text, option_a, option_b, option_c, option_d, answer, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type = 'MCQ' AND answer != '' LIMIT 25;`);
+      if (mcqRes.rows.length > 2) {
+        mcqRes.rows = mcqRes.rows.sort(() => Math.random() - 0.5).slice(0, 2);
       }
-
-      if (cqRes.rows[0]) {
-        try {
-          const esc = cqRes.rows[0].question_text.replace(/'/g, "''");
-          const allOccurrences = await executeRawSql(`SELECT tags FROM questions WHERE question_text = '${esc}' AND tags != '' LIMIT 15;`);
-          const mergedTags = [...new Set(allOccurrences.rows.flatMap(x => (x.tags || '').split(',').map(t => t.trim())).filter(Boolean))];
-          if (mergedTags.length > 0) cqRes.rows[0].tags = mergedTags.join(', ');
-        } catch(e) {}
+      const cqRes = await executeRawSql(`SELECT question_text, option_a, option_b, option_c, option_d, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type IN ('CQ_4', 'CQ_3', 'CQ_N') LIMIT 25;`);
+      if (cqRes.rows.length > 1) {
+        cqRes.rows = [cqRes.rows[Math.floor(Math.random() * cqRes.rows.length)]];
       }
 
       return {
@@ -738,74 +1030,178 @@ export async function executeAgentTool(toolName, args) {
 
     case "get_creative_question": {
       const subjId = normalizeSubject(args.subject);
-      const whereClauses = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `question_text != ''`];
-      if (subjId) whereClauses.push(`subject_id = '${subjId}'`);
 
-      // Topic / chapter filter
-      let matchedCqChapterId = null;
-      if (args.topic || args.chapter) {
-        const rawT = args.chapter || args.topic;
-        const t = normalizeTopic(rawT).replace(/'/g, "''").trim();
-        const chRes = await executeRawSql(`SELECT id FROM chapters WHERE (name LIKE '%${t}%' OR order_num = '${t}') ${subjId ? `AND subject_id = '${subjId}'` : ''} LIMIT 1;`);
-        if (chRes.rows[0]) {
-          matchedCqChapterId = chRes.rows[0].id;
-          whereClauses.push(`(chapter_id = '${chRes.rows[0].id}' OR question_text LIKE '%${t}%')`);
-        } else {
-          whereClauses.push(`question_text LIKE '%${t}%'`);
-        }
-      }
+      const rawT = args.chapter || args.topic;
+      const matchedChapterInfo = rawT ? await findChapterCached(rawT, subjId) : null;
+      const matchedCqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
 
       // Board filter
       const boardTag = normalizeBoard(args.board);
 
-      // Year filter
-      let yrCode = null;
-      if (args.year) {
-        const yStr = String(args.year).replace(/[^0-9]/g, '');
-        yrCode = yStr.length === 4 ? yStr.slice(2) : yStr;
-      }
-
-      if (boardTag && yrCode) {
-        whereClauses.push(`(tags LIKE '%${boardTag} ${yrCode}%' OR (tags LIKE '%${boardTag}%' AND tags LIKE '%${yrCode}%'))`);
-      } else if (boardTag) {
-        whereClauses.push(`tags LIKE '%${boardTag}%'`);
-      } else if (yrCode) {
-        whereClauses.push(`tags LIKE '%${yrCode}%'`);
-      }
+      // Year filter (supports ranges like '2020-2025')
+      const years = parseYearFilter(args.year);
 
       // Difficulty level
       const diff = args.difficulty || (args.board ? "standard" : "hard");
-      if (diff === "hard") {
-        if (!boardTag) {
-          whereClauses.push(`(type = 'CQ_4' OR tags LIKE '%RCC%' OR tags LIKE '%MCC%' OR tags LIKE '%RUMC%' OR tags LIKE '%DRMC%')`);
+
+      // Extract search keywords for this chapter/topic
+      const chapterKeywords = extractChapterKeywords(rawT, matchedChapterInfo, subjId);
+
+      // Two-Tier Chapter Lookup:
+      // Tier 1: If verified chapter ID matched, strictly query that chapter first!
+      let chapterConditionSql = matchedCqChapterId ? `chapter_id = '${matchedCqChapterId}'` : "";
+      if (!chapterConditionSql && chapterKeywords.length > 0) {
+        const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
+        chapterConditionSql = `(${kwSql})`;
+      }
+
+      // In-Memory Question Pool Cache for ultra-fast instant 0ms responses!
+      const yrKey = years.length > 0 ? years.join('_') : 'all';
+      const poolKey = `cq_pool:${subjId || 'any'}:${matchedCqChapterId || 'none'}:${boardTag || 'none'}:${yrKey}:${diff}`;
+      let qRows = appCache.get(poolKey);
+      console.log(`[CQ Tool] poolKey="${poolKey}", cacheHit=${Boolean(qRows && qRows.length)}`);
+
+      if (!qRows || qRows.length === 0) {
+        const baseConditions = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`];
+        if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
+        if (chapterConditionSql) baseConditions.push(chapterConditionSql);
+
+        let whereClauses = [...baseConditions];
+
+        if (years.length > 0) {
+          whereClauses.push(buildYearSqlConditions(boardTag, years));
+        } else if (boardTag && boardTag !== "RANDOM") {
+          whereClauses.push(`tags LIKE '%${boardTag}%'`);
         } else {
-          whereClauses.push(`(type = 'CQ_4' OR option_d != '')`);
+          whereClauses.push(`tags != '' AND tags IS NOT NULL`);
         }
-      } else if (diff === "medium") {
-        whereClauses.push(`type IN ('CQ_3', 'CQ_4')`);
+
+        if (diff === "hard") {
+          if (!boardTag || boardTag === "RANDOM") {
+            whereClauses.push(`(type = 'CQ_4' OR tags LIKE '%RCC%' OR tags LIKE '%MCC%' OR tags LIKE '%RUMC%' OR tags LIKE '%DRMC%')`);
+          } else {
+            whereClauses.push(`(type = 'CQ_4' OR option_d != '')`);
+          }
+        } else if (diff === "medium") {
+          whereClauses.push(`type IN ('CQ_3', 'CQ_4')`);
+        }
+
+        // Fast query with recent-year priority!
+        let sql = `
+          SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+          FROM questions
+          WHERE ${whereClauses.join(" AND ")}
+          ${RECENT_YEAR_ORDER_BY}
+          LIMIT 80;
+        `;
+        let res = await executeRawSql(sql);
+
+        // Fallback 1: If board + year was too strict, try requested years across ANY board first!
+        if (res.rows.length === 0 && boardTag && boardTag !== "RANDOM" && years.length > 0) {
+          const yrAllBoards = buildYearSqlConditions(null, years);
+          const fb1 = [...baseConditions, yrAllBoards];
+          sql = `
+            SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+            FROM questions
+            WHERE ${fb1.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 2: If still empty, try board without year restriction
+        if (res.rows.length === 0 && boardTag && boardTag !== "RANDOM") {
+          const fb2 = [...baseConditions, `tags LIKE '%${boardTag}%'`];
+          sql = `
+            SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+            FROM questions
+            WHERE ${fb2.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 3: Any authentic question in this chapter
+        if (res.rows.length === 0) {
+          const fb3 = [...baseConditions, `tags != '' AND tags IS NOT NULL`];
+          sql = `
+            SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+            FROM questions
+            WHERE ${fb3.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 3.5: If verified chapter ID had 0 questions, check unmapped questions using concepts
+        if (res.rows.length === 0 && chapterKeywords.length > 0) {
+          const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
+          const fbUnmapped = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`, `(chapter_id NOT LIKE 'ch_%' AND (${kwSql}))`];
+          if (subjId) fbUnmapped.push(`subject_id = '${subjId}'`);
+          let fbUnmappedWhere = [...fbUnmapped];
+          if (boardTag && boardTag !== "RANDOM") {
+            fbUnmappedWhere.push(`tags LIKE '%${boardTag}%'`);
+          } else {
+            fbUnmappedWhere.push(`tags != '' AND tags IS NOT NULL`);
+          }
+          sql = `
+            SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+            FROM questions
+            WHERE ${fbUnmappedWhere.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 4: General subject fallback ONLY IF user did not specify chapter/topic
+        if (res.rows.length === 0 && !rawT) {
+          const fb4 = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`];
+          if (subjId) fb4.push(`subject_id = '${subjId}'`);
+          sql = `
+            SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+            FROM questions
+            WHERE ${fb4.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        qRows = res.rows;
+        if (qRows && qRows.length > 0) {
+          appCache.set(poolKey, qRows, 600);
+        }
       }
 
-      let sql = `SELECT question_text, option_a, option_b, option_c, option_d, tags, type FROM questions WHERE ${whereClauses.join(" AND ")} ORDER BY RANDOM() LIMIT 1;`;
-      let res = await executeRawSql(sql);
-
-      // Fallback if combination is too restrictive
-      if (!res.rows[0]) {
-        const fallbackWhere = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `question_text != ''`];
-        if (matchedCqChapterId) fallbackWhere.push(`chapter_id = '${matchedCqChapterId}'`);
-        else if (subjId) fallbackWhere.push(`subject_id = '${subjId}'`);
-        if (boardTag && !matchedCqChapterId) fallbackWhere.push(`tags LIKE '%${boardTag}%'`);
-        sql = `SELECT question_text, option_a, option_b, option_c, option_d, tags, type FROM questions WHERE ${fallbackWhere.join(" AND ")} ORDER BY RANDOM() LIMIT 1;`;
-        res = await executeRawSql(sql);
-      }
-
-      const q = res.rows[0];
+      // Sample prioritizing the most recent available years in qRows
+      const topCqSlice = qRows ? qRows.slice(0, Math.min(qRows.length, 6)) : [];
+      const q = topCqSlice.length > 0 ? topCqSlice[Math.floor(Math.random() * topCqSlice.length)] : null;
       if (!q) return { error: "কোনো সৃজনশীল প্রশ্ন পাওয়া যায়নি" };
 
+      const bnDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+      const toBnDigits = s => String(s || '').replace(/[0-9]/g, d => bnDigits[d] || d);
+      const allChapters = await getAllChaptersCached();
+      const chObj = allChapters.find(c => c.id === q.chapter_id);
+      const chName = chObj?.name || matchedChapterInfo?.name || "";
+      const chOrder = chObj?.order_num || matchedChapterInfo?.order_num || "";
+      const chapterDisplay = chName ? `অধ্যায় ${toBnDigits(chOrder)}: ${chName}` : "বোর্ড সৃজনশীল প্রশ্ন";
+
       return {
+        question_id: q.id,
+        actual_chapter: {
+          id: q.chapter_id,
+          order_num: chOrder,
+          name: chName,
+          display: chapterDisplay
+        },
         difficulty_level: diff === "hard" ? "কঠিন / অ্যাডভান্সড (উচ্চতর দক্ষতা)" : diff === "medium" ? "মাঝারি (বোর্ড স্ট্যান্ডার্ড)" : "সহজ (বেসিক)",
         board_tag: formatTag(q.tags),
         raw_tag: q.tags,
-        stem: q.question_text,
+        stem: q.question_text || q.question_html || "নিচের উদ্দীপকটি লক্ষ করো এবং সংশ্লিষ্ট প্রশ্নগুলোর উত্তর দাও:",
         part_ka: q.option_a || "জ্ঞানমূলক প্রশ্ন",
         part_kha: q.option_b || "অনুধাবনমূলক প্রশ্ন",
         part_ga: q.option_c || "প্রয়োগমূলক প্রশ্ন (৩ নম্বর)",
@@ -816,7 +1212,7 @@ export async function executeAgentTool(toolName, args) {
           part_ga: "প্রয়োগমূলক (৩ নম্বর): দেওয়া আছে তথ্য -> সূত্র -> মান বসানো -> হিসাব -> এককসহ উত্তর। (সতর্কতা: একক না দিলে স্যার ১ নম্বর কেটে নেন!)",
           part_gha: "উচ্চতর দক্ষতা (৪ নম্বর): গাণিতিক প্রমাণ বা যৌক্তিক বিশ্লেষণের পর স্পষ্ট সিদ্ধান্তমূলক সমাপনী বাক্য (যেমন: 'অতএব উদ্দীপকের উক্তিটি সঠিক') লেখা বাধ্যতামূলক।"
         },
-        mentor_guidance: "শিক্ষার্থীকে উদ্দীপক এবং প্রতিটি অংশ (বিশেষ করে গ ও ঘ) সমাধানের গাণিতিক বা ধারণাগত ধাপগুলো বুঝিয়ে দাও এবং পরীক্ষকের নম্বর দেওয়ার নিয়মগুলো মনে করিয়ে দাও।"
+        instructions_for_mentor: `সৃজনশীল প্রশ্ন উপস্থাপনের সময় শিরোনামে এই প্রশ্নের আসল অধ্যায় [${chapterDisplay}] এবং বোর্ড/কলেজ ট্যাগ [${formatTag(q.tags)}] স্পষ্টভাবে উল্লেখ করবে। ভুলেও ভুল বা অন্য কোনো অধ্যায়ের নাম লিখবে না! সৃজনশীল প্রশ্ন কুইজ নয়, তাই কোনো অপশন নির্বাচন করতে বলবে না—বরং শিক্ষার্থীকে উদ্দীপক পড়ে ক, খ, গ, ঘ সমাধান করতে বলবে।`
       };
     }
 
@@ -824,88 +1220,201 @@ export async function executeAgentTool(toolName, args) {
       const subjId = normalizeSubject(args.subject);
       const isMockTest = args.mode === "mock_test";
       const count = Math.min(parseInt(args.count) || (isMockTest ? 1 : 2), 5);
-      const whereClauses = [`question_text != ''`, `answer != ''`];
-      if (subjId) whereClauses.push(`subject_id = '${subjId}'`);
 
       const boardTag = normalizeBoard(args.board);
 
-      // Year matching
-      let yrCode = null;
-      if (args.year) {
-        const yStr = String(args.year).replace(/[^0-9]/g, '');
-        yrCode = yStr.length === 4 ? yStr.slice(2) : yStr;
+      // Year matching (supports ranges like '2020-2025')
+      const years = parseYearFilter(args.year);
+
+      const rawT = args.chapter || args.topic;
+      const matchedChapterInfo = rawT ? await findChapterCached(rawT, subjId) : null;
+      const matchedMcqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
+
+      // Extract search keywords for this chapter/topic
+      const chapterKeywords = extractChapterKeywords(rawT, matchedChapterInfo, subjId);
+
+      // Two-Tier Chapter Lookup:
+      // Tier 1: If verified chapter ID matched, strictly query that chapter first!
+      let chapterConditionSql = matchedMcqChapterId ? `chapter_id = '${matchedMcqChapterId}'` : "";
+      if (!chapterConditionSql && chapterKeywords.length > 0) {
+        const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
+        chapterConditionSql = `(${kwSql})`;
       }
 
-      if (boardTag && yrCode) {
-        whereClauses.push(`(tags LIKE '%${boardTag} ${yrCode}%' OR (tags LIKE '%${boardTag}%' AND tags LIKE '%${yrCode}%'))`);
-      } else if (boardTag) {
-        whereClauses.push(`tags LIKE '%${boardTag}%'`);
-      } else if (yrCode) {
-        whereClauses.push(`tags LIKE '%${yrCode}%'`);
-      }
+      const diff = args.difficulty || "medium";
 
-      let matchedMcqChapterId = null;
-      if (args.topic || args.chapter) {
-        const rawT = args.chapter || args.topic;
-        const t = normalizeTopic(rawT).replace(/'/g, "''").trim();
-        const chRes = await executeRawSql(`SELECT id FROM chapters WHERE (name LIKE '%${t}%' OR order_num = '${t}') ${subjId ? `AND subject_id = '${subjId}'` : ''} LIMIT 1;`);
-        if (chRes.rows[0]) {
-          matchedMcqChapterId = chRes.rows[0].id;
-          whereClauses.push(`chapter_id = '${chRes.rows[0].id}'`);
+      // In-Memory Question Pool Cache for ultra-fast instant 0ms responses!
+      const yrKey = years.length > 0 ? years.join('_') : 'all';
+      const poolKey = `mcq_pool:${subjId || 'any'}:${matchedMcqChapterId || 'none'}:${boardTag || 'none'}:${yrKey}:${diff}`;
+      let qRows = appCache.get(poolKey);
+
+      if (!qRows || qRows.length === 0) {
+        const baseConditions = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`];
+        if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
+        if (chapterConditionSql) baseConditions.push(chapterConditionSql);
+
+        let whereClauses = [...baseConditions];
+
+        if (years.length > 0) {
+          whereClauses.push(buildYearSqlConditions(boardTag, years));
+        } else if (boardTag && boardTag !== "RANDOM") {
+          whereClauses.push(`tags LIKE '%${boardTag}%'`);
         } else {
-          whereClauses.push(`question_text LIKE '%${t}%'`);
+          // Strictly prioritize authentic questions with actual board/college tags!
+          whereClauses.push(`tags != '' AND tags IS NOT NULL`);
+        }
+
+        if (diff === "hard") {
+          whereClauses.push(`(tags LIKE '%CC%' OR tags LIKE '%RUMC%' OR tags LIKE '%DRMC%' OR tags LIKE '%SJHSS%' OR question_text LIKE '%নিচের কোনটি সঠিক%' OR question_text LIKE '%i.%')`);
+        } else if (diff === "easy") {
+          whereClauses.push(`question_text NOT LIKE '%নিচের কোনটি সঠিক%' AND LENGTH(question_text) < 100`);
+        }
+
+        // Fast join-free query with recent-year priority!
+        let sql = `
+          SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+          FROM questions
+          WHERE ${whereClauses.join(" AND ")}
+          ${RECENT_YEAR_ORDER_BY}
+          LIMIT 80;
+        `;
+        let res = await executeRawSql(sql);
+
+        // Fallback 1: If board + year was too restrictive, try requested years across ANY authentic board first!
+        if (res.rows.length === 0 && boardTag && boardTag !== "RANDOM" && years.length > 0) {
+          const yrAllBoards = buildYearSqlConditions(null, years);
+          const fbWhere1 = [...baseConditions, yrAllBoards];
+          sql = `
+            SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+            FROM questions
+            WHERE ${fbWhere1.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 2: Try board without year restriction
+        if (res.rows.length === 0 && boardTag && boardTag !== "RANDOM") {
+          const fbWhere2 = [...baseConditions, `tags LIKE '%${boardTag}%'`];
+          sql = `
+            SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+            FROM questions
+            WHERE ${fbWhere2.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 3: If this specific board has no questions in this chapter, try without board filter (get any authentic board question)
+        if (res.rows.length === 0) {
+          const fbWhere3 = [...baseConditions, `tags != '' AND tags IS NOT NULL`];
+          sql = `
+            SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+            FROM questions
+            WHERE ${fbWhere3.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 3.5: If verified chapter had 0 questions, check unmapped questions using concepts
+        if (res.rows.length === 0 && chapterKeywords.length > 0) {
+          const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
+          const fbUnmapped = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `(chapter_id NOT LIKE 'ch_%' AND (${kwSql}))`];
+          if (subjId) fbUnmapped.push(`subject_id = '${subjId}'`);
+          let fbUnmappedWhere = [...fbUnmapped];
+          if (boardTag && boardTag !== "RANDOM") {
+            fbUnmappedWhere.push(`tags LIKE '%${boardTag}%'`);
+          } else {
+            fbUnmappedWhere.push(`tags != '' AND tags IS NOT NULL`);
+          }
+          sql = `
+            SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+            FROM questions
+            WHERE ${fbUnmappedWhere.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        // Fallback 4: General subject fallback ONLY IF user did not specify chapter/topic
+        if (res.rows.length === 0 && !rawT) {
+          const fbWhere4 = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`];
+          if (subjId) fbWhere4.push(`subject_id = '${subjId}'`);
+          if (boardTag && boardTag !== "RANDOM") fbWhere4.push(`tags LIKE '%${boardTag}%'`);
+          sql = `
+            SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+            FROM questions
+            WHERE ${fbWhere4.join(" AND ")}
+            ${RECENT_YEAR_ORDER_BY}
+            LIMIT 80;
+          `;
+          res = await executeRawSql(sql);
+        }
+
+        qRows = res.rows;
+        if (qRows && qRows.length > 0) {
+          appCache.set(poolKey, qRows, 600);
         }
       }
 
-      if (args.difficulty === "hard") {
-        whereClauses.push(`(type = 'MCQ_N' OR tags LIKE '%CC%' OR tags LIKE '%RUMC%' OR tags LIKE '%DRMC%' OR tags LIKE '%SJHSS%' OR question_text LIKE '%নিচের কোনটি সঠিক%' OR question_text LIKE '%i.%')`);
-      } else if (args.difficulty === "easy") {
-        whereClauses.push(`type = 'MCQ' AND question_text NOT LIKE '%নিচের কোনটি সঠিক%' AND LENGTH(question_text) < 100`);
-      } else {
-        whereClauses.push(`type = 'MCQ'`);
-      }
+      // Sample prioritizing the most recent available years in qRows
+      const topSlice = qRows ? qRows.slice(0, Math.max(count * 4, 8)) : [];
+      let sampled = topSlice.length > 0 ? [...topSlice].sort(() => Math.random() - 0.5).slice(0, count) : [];
+      let res = { rows: sampled };
 
-      let sql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${whereClauses.join(" AND ")} ORDER BY RANDOM() LIMIT ${count};`;
-      let res = await executeRawSql(sql);
-
-      if (res.rows.length === 0) {
-        // Fallback: preserve chapter if specified, but relax difficulty
-        const fallbackWhere = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`];
-        if (matchedMcqChapterId) fallbackWhere.push(`chapter_id = '${matchedMcqChapterId}'`);
-        else if (subjId) fallbackWhere.push(`subject_id = '${subjId}'`);
-        sql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${fallbackWhere.join(" AND ")} ORDER BY RANDOM() LIMIT ${count};`;
-        res = await executeRawSql(sql);
-      }
-
-      // Aggregate all board and college occurrences across the entire database for each question
-      for (const r of res.rows) {
-        try {
-          const esc = r.question_text.replace(/'/g, "''");
-          const allOccurrences = await executeRawSql(`SELECT tags FROM questions WHERE question_text = '${esc}' AND tags != '' LIMIT 15;`);
-          const mergedTags = [...new Set(allOccurrences.rows.flatMap(x => (x.tags || '').split(',').map(t => t.trim())).filter(Boolean))];
-          if (mergedTags.length > 0) {
-            r.tags = mergedTags.join(', ');
-          }
-        } catch (e) {}
-      }
-
-        const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
-        const rawAns = res.rows[0]?.answer || '';
-        const normAns = toBnAns[rawAns] || rawAns || 'খ';
-
+      if (!res.rows || res.rows.length === 0) {
         return {
           subject: subjId || "all",
-          board: args.board || "all",
-          year: args.year || "all",
-          mode: isMockTest ? "mock_test" : "practice",
-          difficulty: args.difficulty || "standard",
-          quiz: res.rows.map(r => ({
-            ...r,
-            formatted_source: formatTag(r.tags),
-            all_board_tags: r.tags
-          })),
-          instructions_for_mentor: "কুইজ মোড: প্রশ্ন, বোর্ড রেফারেন্স [বোর্ড: " + (res.rows[0]?.tags || "বোর্ড স্ট্যান্ডার্ড") + "] ও ৪টি অপশন (ক, খ, গ, ঘ) উপস্থাপন করো। অপশনের শেষে ব্র্যাকেটে [ans: " + normAns + "] লিখবে। এই মেসেজে কোনো ব্যাখ্যা বা সঠিক উত্তর টেক্সটে লিখবে না, যাতে কুইজ স্পয়েল না হয়। শিক্ষার্থী অপশন ক্লিক করলে স্বয়ংক্রিয়ভাবে পরবর্তী মেসেজে তুমি পূর্ণাঙ্গ ব্যাখ্যা ও মূল্যায়ন দেবে।"
+          quiz: [],
+          status: "not_found",
+          message: "নির্দিষ্ট অধ্যায়ে কোনো বহুনির্বাচনী প্রশ্ন পাওয়া যায়নি।"
         };
+      }
+
+      const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
+      const rawAns = res.rows[0]?.answer || '';
+      const normAns = toBnAns[rawAns] || rawAns || 'খ';
+
+      const bnDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+      const toBnDigits = s => String(s || '').replace(/[0-9]/g, d => bnDigits[d] || d);
+      const allChapters = await getAllChaptersCached();
+      const chObj = allChapters.find(c => c.id === (res.rows[0]?.chapter_id || matchedMcqChapterId));
+      const chName = chObj?.name || matchedChapterInfo?.name || "";
+      const chOrder = chObj?.order_num || matchedChapterInfo?.order_num || "";
+      const chapterDisplay = chName ? `অধ্যায় ${toBnDigits(chOrder)}: ${chName}` : "";
+
+      const qTag = res.rows[0]?.tags || "";
+      const hasMatchedBoard = boardTag ? qTag.includes(boardTag) : true;
+      const boardWarning = (!hasMatchedBoard && boardTag)
+        ? ` (সতর্কতা: শিক্ষার্থী ${args.board} বোর্ডের প্রশ্ন চেয়েছিল, ডেটাবেসে এই অধ্যায়ের ${formatTag(qTag)} প্রশ্ন পাওয়ায় তা দেওয়া হয়েছে। শিক্ষার্থীকে বলবে: "${args.board} বোর্ডের সমমানের চমৎকার একটি বোর্ড প্রশ্ন দিচ্ছি...")`
+        : "";
+
+      return {
+        subject: subjId || "all",
+        actual_chapter: {
+          id: res.rows[0]?.chapter_id || matchedMcqChapterId,
+          order_num: chOrder,
+          name: chName,
+          display: chapterDisplay
+        },
+        board: args.board || "all",
+        year: args.year || "all",
+        mode: isMockTest ? "mock_test" : "practice",
+        difficulty: args.difficulty || "standard",
+        quiz: res.rows.map(r => ({
+          ...r,
+          chapter_name: r.chapter_name,
+          chapter_order: r.chapter_order,
+          formatted_source: formatTag(r.tags),
+          all_board_tags: formatTag(r.tags) || r.tags
+        })),
+        instructions_for_mentor: "কুইজ মোড: প্রশ্ন, বোর্ড রেফারেন্স [বোর্ড: " + (formatTag(res.rows[0]?.tags) || "বোর্ড স্ট্যান্ডার্ড") + "] ও ৪টি অপশন (ক, খ, গ, ঘ) উপস্থাপন করো। অপশনের শেষে ব্র্যাকেটে [ans: " + normAns + "] লিখবে। ভুলেও 'যেকোনো একটি অপশন নির্বাচন করো' লিখবে না। এই মেসেজে কোনো ব্যাখ্যা বা সঠিক উত্তর টেক্সটে লিখবে না, যাতে কুইজ স্পয়েল না হয়। শিক্ষার্থী অপশন ক্লিক করলে স্বয়ংক্রিয়ভাবে পরবর্তী মেসেজে তুমি পূর্ণাঙ্গ ব্যাখ্যা ও মূল্যায়ন দেবে।" + boardWarning
+      };
     }
 
     case "get_chapter_importance_ranking": {
@@ -977,23 +1486,18 @@ export async function executeAgentTool(toolName, args) {
 
       const subjId = normalizeSubject(args.subject);
       const boardTag = normalizeBoard(args.board);
-      let yrCode = null;
-      if (args.year) {
-        const yStr = String(args.year).replace(/[^0-9]/g, '');
-        yrCode = yStr.length === 4 ? yStr.slice(2) : yStr;
-      }
+      const years = parseYearFilter(args.year);
 
       const whereClauses = [
         `(question_text LIKE '%${query}%' OR solution LIKE '%${query}%')`
       ];
 
       if (subjId) whereClauses.push(`subject_id = '${subjId}'`);
-      if (boardTag && yrCode) {
-        whereClauses.push(`(tags LIKE '%${boardTag} ${yrCode}%' OR (tags LIKE '%${boardTag}%' AND tags LIKE '%${yrCode}%'))`);
-      } else if (boardTag) {
+
+      if (years.length > 0) {
+        whereClauses.push(buildYearSqlConditions(boardTag, years));
+      } else if (boardTag && boardTag !== "RANDOM") {
         whereClauses.push(`tags LIKE '%${boardTag}%'`);
-      } else if (yrCode) {
-        whereClauses.push(`tags LIKE '%${yrCode}%'`);
       }
 
       if (args.type === "MCQ") {
@@ -1003,13 +1507,21 @@ export async function executeAgentTool(toolName, args) {
       }
 
       const limit = Math.min(parseInt(args.limit) || 2, 5);
-      let sql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id FROM questions WHERE ${whereClauses.join(" AND ")} ORDER BY RANDOM() LIMIT ${limit};`;
+      let sql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id FROM questions WHERE ${whereClauses.join(" AND ")} ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
       let res = await executeRawSql(sql);
 
       // Fallback if combination is too strict
       if (res.rows.length === 0) {
-        const fallbackSql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id FROM questions WHERE (question_text LIKE '%${query}%' OR solution LIKE '%${query}%') ORDER BY RANDOM() LIMIT ${limit};`;
+        const fallbackSql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id FROM questions WHERE (question_text LIKE '%${query}%' OR solution LIKE '%${query}%') ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
         res = await executeRawSql(fallbackSql);
+      }
+
+      // Prioritize top recent slice
+      const topSearchSlice = res.rows.slice(0, Math.max(limit * 3, limit));
+      if (topSearchSlice.length > limit) {
+        res.rows = topSearchSlice.sort(() => Math.random() - 0.5).slice(0, limit);
+      } else {
+        res.rows = topSearchSlice;
       }
 
       return {
@@ -1096,9 +1608,11 @@ export async function executeAgentTool(toolName, args) {
         SELECT id, tags, type, question_text, option_a, option_b, option_c, option_d, answer, solution
         FROM questions
         WHERE subject_id = '${subjId}' ${chapIdClause} AND question_text IS NOT NULL AND question_text != ''
-        ORDER BY RANDOM()
-        LIMIT 15;
+        LIMIT 50;
       `);
+      if (sampleRes.rows.length > 15) {
+        sampleRes.rows = sampleRes.rows.sort(() => Math.random() - 0.5).slice(0, 15);
+      }
 
       // Check if pre-analyzed master types exist in chapter_types table
       let masterTypes = [];
@@ -1235,5 +1749,31 @@ export async function executeAgentTool(toolName, args) {
 
     default:
       return { error: `Unknown tool: ${toolName}` };
+  }
+}
+
+export async function prewarmQuestionPools() {
+  try {
+    const targets = [
+      { tool: "get_creative_question", args: { subject: "ssc_chemistry", chapter: "12", difficulty: "hard" } },
+      { tool: "get_creative_question", args: { subject: "ssc_chemistry", chapter: "12", difficulty: "medium" } },
+      { tool: "get_creative_question", args: { subject: "ssc_physics", chapter: "2", difficulty: "hard" } },
+      { tool: "get_mcq_quiz", args: { subject: "ssc_chemistry", chapter: "12", count: 1 } },
+      { tool: "get_mcq_quiz", args: { subject: "ssc_physics", chapter: "1", count: 1 } }
+    ];
+    for (const t of targets) {
+      await executeAgentTool(t.tool, t.args).catch(() => {});
+    }
+  } catch (e) {}
+}
+
+let isPrewarmed = false;
+export function triggerPrewarm(ctx = null) {
+  if (isPrewarmed) return;
+  isPrewarmed = true;
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(prewarmQuestionPools().catch(() => {}));
+  } else {
+    prewarmQuestionPools().catch(() => {});
   }
 }
