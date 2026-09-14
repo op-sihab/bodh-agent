@@ -113,6 +113,7 @@ export function normalizeSubject(raw) {
   const s = String(raw).toLowerCase().trim();
   if (s === "ssc_bangla_2nd" || s.includes("bangla_2") || s.includes("bangla 2") || s.includes("bangla-2") || s.includes("বাংলা ২") || s.includes("বাংলা ২য়") || s.includes("বাংলা ২য়") || s.includes("ব্যাকরণ") || s.includes("byakoron")) return "ssc_bangla_2nd";
   if (s === "ssc_english_2nd" || s.includes("english_2") || s.includes("english 2") || s.includes("english-2") || s.includes("eng 2") || s.includes("eng_2") || s.includes("ইংরেজি ২") || s.includes("ইংরেজি ২য়") || s.includes("ইংরেজি ২য়") || s.includes("grammar")) return "ssc_english_2nd";
+  if (s.includes("suva") || s.includes("সুভা") || s.includes("শুভা") || s.includes("কাকতাড়ুয়া") || s.includes("kaktarua") || s.includes("বহিপীর") || s.includes("bohipir") || s.includes("বই পড়া") || s.includes("boi pora")) return "ssc_bangla_1st";
   if (s === "ssc_bangla_1st" || s.includes("goddo") || s.includes("gotto") || s.includes("গদ্য") || s.includes("kobita") || s.includes("কবিতা") || s.includes("sahitto") || s.includes("সাহিত্য") || s.includes("সহপাঠ") || s.includes("sohopath") || s.includes("bangla") || s.includes("বাংলা")) return "ssc_bangla_1st";
   if (s === "ssc_english_1st" || s.includes("english") || s.includes("ইংরেজি") || s.includes("eng")) return "ssc_english_1st";
   if (s.includes("higher") || s.includes("উচ্চতর") || s.includes("হায়ার") || s.includes("hm")) return "ssc_higher_math";
@@ -195,7 +196,13 @@ export function normalizeTopic(raw) {
     "porjoy saroni": "পর্যায় সারণী",
     "periodic table": "পর্যায় সারণী",
     "moler dharona": "মোলের ধারণা",
-    "kosh": "কোষ"
+    "kosh": "কোষ",
+    "suva": "সুভা",
+    "shuva": "সুভা",
+    "shova": "সুভা",
+    "kaktarua": "কাকতাড়ুয়া",
+    "bohipir": "বহিপীর",
+    "boi pora": "বই পড়া"
   };
   for (const [k, v] of Object.entries(TOPIC_MAP)) {
     if (t.includes(k)) return v;
@@ -332,6 +339,11 @@ export const CHAPTER_CONCEPTS_MAP = {
     "12": ["সমতলীয় ভেক্টর", "স্কেলার", "ভেক্টর যোগ", "একক ভেক্টর", "অবস্থান ভেক্টর"],
     "13": ["ঘন জ্যামিতি", "আয়তাকার ঘনবস্তু", "কোনক", "গোলক", "প্রিজম", "পিরামিড"],
     "14": ["সম্ভাবনা", "Probability", "নমুনা ক্ষেত্র", "ঘটনা", "মার্বেল", "মুদ্রা", "ছক্কা"]
+  },
+  ssc_bangla_1st: {
+    "1": ["গদ্য", "সুভা", "শুভা", "বই পড়া", "আম-আঁটির ভেঁপু", "মানুষ মুহম্মদ", "নিমগাছ", "শিক্ষা ও মনুষ্যত্ব", "প্রবাস বন্ধু", "মমতাদি", "একাত্তরের দিনগুলি", "সাহিত্যের রূপ ও রীতি", "বাণীকণ্ঠ", "প্রতাপ"],
+    "2": ["কবিতা", "কপোতাক্ষ নদ", "জীবন-সঙ্গীত", "জুতা-আবিष्कार", "বঙ্গবাণী", "ঝিঙে ফুল", "প্রাণ", "সেইদিন এই মাঠ", "পল্লীজননী", "রানার", "তোমাকে পাওয়ার জন্যে, হে স্বাধীনতা", "আমার পরিচয়", "স্বাধীনতা"],
+    "3": ["সহপাঠ", "কাকতাড়ুয়া", "বহিপীর", "উপন্যাস", "নাটক", "বুধা", "হাতেম আলী", "তাহেরা"]
   }
 };
 

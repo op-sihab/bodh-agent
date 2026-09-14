@@ -359,8 +359,15 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   }
 
   const isUserAnswering = /^(ক|খ|গ|ঘ|a|b|c|d|১|২|৩|৪)$|^উত্তর\s*[:ঃ]?\s*(ক|খ|গ|ঘ|a|b|c|d)|^ans\s*[:ঃ]?\s*(ক|খ|গ|ঘ|a|b|c|d)/i.test(userMessage.trim());
-  const isMcqIntent = !isUserAnswering && (/mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq|ekta mcq|আরেকটা দাও|নতুন mcq/i.test(userMessage) || (/(প্রশ্ন দাও|test dao|কুইজ)/i.test(userMessage) && !/সৃজনশীল|cq/i.test(userMessage)));
-  const isCqIntent = !isUserAnswering && /cq|সৃজনশীল|উদ্দীপক/i.test(userMessage);
+  const lastAssistantMsg = pastHistory.slice().reverse().find(m => m.role === "assistant")?.content || "";
+  const wasLastTurnMcq = /\[ans:\s*[ক-ঘa-d]\]|\(ক\)|\(খ\)|\(গ\)|\(ঘ\)/i.test(lastAssistantMsg);
+  const wasLastTurnCq = /ক\s*\)\s*|খ\s*\)\s*|গ\s*\)\s*|ঘ\s*\)/i.test(lastAssistantMsg) && !wasLastTurnMcq;
+
+  const isFollowUpMcq = wasLastTurnMcq && !isUserAnswering && /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim());
+  const isFollowUpCq = wasLastTurnCq && !isUserAnswering && /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim());
+
+  const isMcqIntent = !isUserAnswering && (isFollowUpMcq || /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq|ekta mcq|আরেকটা দাও|নতুন mcq|board\s*standard/i.test(userMessage) || (/(প্রশ্ন দাও|test dao|কুইজ|board question)/i.test(userMessage) && !/সৃজনশীল|cq/i.test(userMessage)));
+  const isCqIntent = !isUserAnswering && (isFollowUpCq || /cq|সৃজনশীল|উদ্দীপক/i.test(userMessage));
 
   if (isMcqIntent) {
     inputHistory.push({
@@ -571,9 +578,6 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
       const cleanAnswer = stepContent ? stepContent.replace(/<[\s]*thought[\s]*>[\s\S]*?<[\s]*\/[\s]*thought[\s]*>/gi, "").trim() : "";
       if (!cleanAnswer && currentStep < MAX_STEPS) {
         // Model emitted thinking tags without actually answering or calling a tool
-        const isMcqIntent = /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq/i.test(userMessage);
-        const isCqIntent = /cq|সৃজনশীল|উদ্দীপক|ক\s*\)\s*|খ\s*\)/i.test(userMessage);
-
         if (isMcqIntent) {
           console.warn(`[AgentLoop] Step ${currentStep} emitted thought without tool_use for MCQ intent. Synthesizing get_mcq_quiz...`);
           toolCall = {
@@ -604,8 +608,16 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
             stepContent += "</thought>\n\n";
           }
           await onEvent({ type: "thought_done", thought: stepContent });
-          conversationMessages.push({ role: "assistant", content: stepContent });
-          conversationMessages.push({ role: "user", content: "শিক্ষার্থীর প্রশ্নের সম্পূর্ণ উত্তর সরাসরি বাংলায় সুন্দরভাবে বুঝিয়ে দাও।" });
+          inputHistory.push({
+            type: "message",
+            role: "assistant",
+            content: stepContent
+          });
+          inputHistory.push({
+            type: "message",
+            role: "user",
+            content: "শিক্ষার্থীর প্রশ্নের সম্পূর্ণ উত্তর সরাসরি বাংলায় সুন্দরভাবে বুঝিয়ে দাও।"
+          });
           continue reactLoop;
         }
       } else {

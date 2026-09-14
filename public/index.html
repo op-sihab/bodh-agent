@@ -1688,6 +1688,22 @@
             try {
               const data = JSON.parse(raw);
 
+              if (data.type === "error") {
+                console.error("[SSE Error]", data.error);
+                isThinkingActive = false;
+                const statusEl = document.getElementById(statusId);
+                if (statusEl) statusEl.classList.add('hidden');
+                const wp = document.getElementById(`writingPulse_${msgId}`);
+                if (wp) wp.remove();
+                const contentEl = document.getElementById(contentId);
+                if (contentEl) {
+                  contentEl.classList.remove('hidden');
+                  contentEl.innerHTML = `<span class="text-rose-400 font-mono text-xs">ত্রুটি: ${escapeHtml(data.error || 'অপ্রত্যাশিত সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।')}</span>`;
+                }
+                scrollToBottom();
+                return;
+              }
+
               if (data.type === "thought_done") {
                 onThinkingFinished(toolStepIndex || 1);
               }
