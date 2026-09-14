@@ -271,8 +271,8 @@ export const CHAPTER_CONCEPTS_MAP = {
     "7": ["রাসায়নিক বিক্রিয়া", "জারণ", "বিজারণ", "রেডক্স", "সংযোজন", "বিযোজন", "প্রতিস্থাপন", "দহন", "তাপোৎপাদী", "তাপহারী", "লা-শাতেলিয়ার"],
     "8": ["রসায়ন ও শক্তি", "তড়িৎ রাসায়নিক কোষ", "গ্যালভানিক কোষ", "ড্রাই সেল", "লবণ সেতু", "অ্যানোড", "ক্যাথোড", "তড়িৎ বিশ্লেষণ"],
     "9": ["অ্যাসিড-ক্ষারক সমতা", "অ্যাসিড", "ক্ষার", "ক্ষারক", "pH", "নির্দেশক", "প্রশমন বিক্রিয়া", "লবণ"],
-    "10": ["খনিজ সম্পদ", "ধাতু-অধাতু", "ধাতু নিষ্কাশন", "আকরিক", "খনিজ", "ক্ষয়রোধ", "মরিচা"],
-    "11": ["জীবাশ্ম", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "অ্যালকোহল", "অ্যালডিহাইড", "জৈব অ্যাসিড", "পলিমার", "প্লাস্টিক"],
+    "10": ["খনিজ সম্পদঃ ধাতু-অধাতু", "খনিজ সম্পদ: ধাতু-অধাতু", "খনিজ সম্পদ ধাতু অধাতু", "ধাতু-অধাতু", "ধাতু নিষ্কাশন", "আকরিক", "খনিজ", "ক্ষয়রোধ", "মরিচা"],
+    "11": ["খনিজ সম্পদঃ জীবাশ্ম", "খনিজ সম্পদ: জীবাশ্ম", "খনিজ সম্পদ জীবাশ্ম", "জীবাশ্ম", "জীবাশ্ম জ্বালানি", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "অ্যালকোহল", "অ্যালডিহাইড", "জৈব অ্যাসিড", "পলিমার", "প্লাস্টিক"],
     "12": ["আমাদের জীবনে রসায়ন", "বেকিং পাউডার", "ভিনেগার", "ব্লিচিং পাউডার", "সাবান", "ডিটারজেন্ট", "টয়লেট ক্লিনার"]
   },
   ssc_general_math: {
@@ -394,32 +394,90 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
   const all = await getAllChaptersCached();
   if (!all.length) return null;
 
+  // Clean and normalize strings: unify Bengali visarga (ঃ), colon (:), dashes, commas into spaces
+  const normalizeClean = (str) => {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .normalize('NFC')
+      .replace(/[ঃ:–—\-_,।/|]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const rawClean = normalizeClean(rawTopicOrCh);
   const chNum = extractChapterNum(rawTopicOrCh);
-  if (chNum) {
-    const found = all.find(c => (!subjId || c.subject_id === subjId) && String(c.order_num) === String(chNum));
+
+  // If chapter number is explicitly provided and subject is known
+  if (chNum && subjId) {
+    const found = all.find(c => c.subject_id === subjId && String(c.order_num) === String(chNum));
     if (found) return found;
   }
 
-  const normT = normalizeTopic(rawTopicOrCh);
-  const clean = (normT || String(rawTopicOrCh)).trim().toLowerCase().normalize('NFC');
-  const foundByName = all.find(c => (!subjId || c.subject_id === subjId) && c.name.toLowerCase().normalize('NFC').includes(clean));
-  if (foundByName) return foundByName;
-
-  const words = clean.split(/\s+/).filter(w => w.length > 2);
-  if (words.length > 0) {
-    const foundByWord = all.find(c => {
-      if (subjId && c.subject_id !== subjId) return false;
-      const cNorm = c.name.toLowerCase().normalize('NFC');
-      return words.some(w => cNorm.includes(w));
-    });
-    if (foundByWord) return foundByWord;
+  // 1. Strict full name match (normalized without punctuation mismatch)
+  if (subjId) {
+    const exactSubj = all.find(c => c.subject_id === subjId && (normalizeClean(c.name) === rawClean || normalizeClean(c.name).includes(rawClean) || rawClean.includes(normalizeClean(c.name))));
+    if (exactSubj) return exactSubj;
   }
 
-  // Also match against chapter concepts
-  if (subjId && CHAPTER_CONCEPTS_MAP[subjId]) {
-    for (const [cNum, concepts] of Object.entries(CHAPTER_CONCEPTS_MAP[subjId])) {
-      if (concepts.some(c => clean.includes(c.toLowerCase()) || c.toLowerCase().includes(clean))) {
-        const found = all.find(ch => ch.subject_id === subjId && String(ch.order_num) === cNum);
+  // Also check across ALL subjects if full name matches
+  const exactAny = all.find(c => normalizeClean(c.name) === rawClean || normalizeClean(c.name).includes(rawClean) || rawClean.includes(normalizeClean(c.name)));
+  if (exactAny) return exactAny;
+
+  // 2. Best-matching words scoring (highest word overlap wins, NOT just any random word!)
+  const stopWords = new Set(['অধ্যায়', 'অধ্যায়', 'এর', 'থেকে', 'chapter', 'ch', 'এবং', 'ও', 'সম্পর্কিত', 'theke', 'theika', 'dio', 'dao', 'ekta', 'akta', 'mcq', 'cq', 'prosno']);
+  const queryWords = rawClean.split(' ').filter(w => w.length > 1 && !stopWords.has(w));
+
+  if (queryWords.length > 0) {
+    let bestMatch = null;
+    let highestScore = 0;
+
+    // First search in target subject
+    const candidates = subjId ? all.filter(c => c.subject_id === subjId) : all;
+    for (const c of candidates) {
+      const cWords = normalizeClean(c.name).split(' ').filter(w => w.length > 1 && !stopWords.has(w));
+      let score = 0;
+      for (const qw of queryWords) {
+        if (cWords.some(cw => cw === qw || cw.includes(qw) || qw.includes(cw))) {
+          score += 2; // Exact word match
+        }
+      }
+      if (score > highestScore) {
+        highestScore = score;
+        bestMatch = c;
+      }
+    }
+
+    if (bestMatch && highestScore >= 2) return bestMatch;
+
+    // If subject was wrong or null, search across ALL subjects for best match
+    if (!subjId || highestScore < 2) {
+      let globalBest = null;
+      let globalHighest = 0;
+      for (const c of all) {
+        const cWords = normalizeClean(c.name).split(' ').filter(w => w.length > 1 && !stopWords.has(w));
+        let score = 0;
+        for (const qw of queryWords) {
+          if (cWords.some(cw => cw === qw || cw.includes(qw) || qw.includes(cw))) {
+            score += 2;
+          }
+        }
+        if (score > globalHighest) {
+          globalHighest = score;
+          globalBest = c;
+        }
+      }
+      if (globalBest && globalHighest >= 2) return globalBest;
+    }
+  }
+
+  // 3. Match against CHAPTER_CONCEPTS_MAP
+  const checkSubjects = subjId ? [subjId] : Object.keys(CHAPTER_CONCEPTS_MAP);
+  for (const sId of checkSubjects) {
+    if (!CHAPTER_CONCEPTS_MAP[sId]) continue;
+    for (const [cNum, concepts] of Object.entries(CHAPTER_CONCEPTS_MAP[sId])) {
+      if (concepts.some(con => rawClean.includes(normalizeClean(con)) || normalizeClean(con).includes(rawClean))) {
+        const found = all.find(ch => ch.subject_id === sId && String(ch.order_num) === cNum);
         if (found) return found;
       }
     }
@@ -1029,10 +1087,29 @@ export async function executeAgentTool(toolName, args) {
     }
 
     case "get_creative_question": {
-      const subjId = normalizeSubject(args.subject);
+      let subjId = normalizeSubject(args.subject);
 
-      const rawT = args.chapter || args.topic;
-      const matchedChapterInfo = rawT ? await findChapterCached(rawT, subjId) : null;
+      const candidateStrings = [];
+      if (args.chapter && args.topic) candidateStrings.push(`${args.chapter} ${args.topic}`);
+      if (args.chapter) candidateStrings.push(args.chapter);
+      if (args.topic) candidateStrings.push(args.topic);
+      if (args.query) candidateStrings.push(args.query);
+
+      let matchedChapterInfo = null;
+      let rawT = "";
+      for (const cand of candidateStrings) {
+        matchedChapterInfo = await findChapterCached(cand, subjId);
+        if (matchedChapterInfo) {
+          rawT = cand;
+          break;
+        }
+      }
+      if (!rawT && candidateStrings.length > 0) {
+        rawT = candidateStrings[0];
+      }
+      if (matchedChapterInfo && matchedChapterInfo.subject_id) {
+        subjId = matchedChapterInfo.subject_id;
+      }
       const matchedCqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
 
       // Board filter
@@ -1217,7 +1294,7 @@ export async function executeAgentTool(toolName, args) {
     }
 
     case "get_mcq_quiz": {
-      const subjId = normalizeSubject(args.subject);
+      let subjId = normalizeSubject(args.subject);
       const isMockTest = args.mode === "mock_test";
       const count = Math.min(parseInt(args.count) || (isMockTest ? 1 : 2), 5);
 
@@ -1226,8 +1303,27 @@ export async function executeAgentTool(toolName, args) {
       // Year matching (supports ranges like '2020-2025')
       const years = parseYearFilter(args.year);
 
-      const rawT = args.chapter || args.topic;
-      const matchedChapterInfo = rawT ? await findChapterCached(rawT, subjId) : null;
+      const candidateStrings = [];
+      if (args.chapter && args.topic) candidateStrings.push(`${args.chapter} ${args.topic}`);
+      if (args.chapter) candidateStrings.push(args.chapter);
+      if (args.topic) candidateStrings.push(args.topic);
+      if (args.query) candidateStrings.push(args.query);
+
+      let matchedChapterInfo = null;
+      let rawT = "";
+      for (const cand of candidateStrings) {
+        matchedChapterInfo = await findChapterCached(cand, subjId);
+        if (matchedChapterInfo) {
+          rawT = cand;
+          break;
+        }
+      }
+      if (!rawT && candidateStrings.length > 0) {
+        rawT = candidateStrings[0];
+      }
+      if (matchedChapterInfo && matchedChapterInfo.subject_id) {
+        subjId = matchedChapterInfo.subject_id;
+      }
       const matchedMcqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
 
       // Extract search keywords for this chapter/topic

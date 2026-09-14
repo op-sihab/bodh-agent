@@ -358,6 +358,24 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
     }
   }
 
+  const isUserAnswering = /^(ক|খ|গ|ঘ|a|b|c|d|১|২|৩|৪)$|^উত্তর\s*[:ঃ]?\s*(ক|খ|গ|ঘ|a|b|c|d)|^ans\s*[:ঃ]?\s*(ক|খ|গ|ঘ|a|b|c|d)/i.test(userMessage.trim());
+  const isMcqIntent = !isUserAnswering && (/mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq|ekta mcq|আরেকটা দাও|নতুন mcq/i.test(userMessage) || (/(প্রশ্ন দাও|test dao|কুইজ)/i.test(userMessage) && !/সৃজনশীল|cq/i.test(userMessage)));
+  const isCqIntent = !isUserAnswering && /cq|সৃজনশীল|উদ্দীপক/i.test(userMessage);
+
+  if (isMcqIntent) {
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College MCQ. You MUST invoke get_mcq_quiz with the relevant chapter/topic/subject/board/year. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
+    });
+  } else if (isCqIntent) {
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College Creative Question (CQ). You MUST invoke get_creative_question with the relevant chapter/topic/subject/board/year. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
+    });
+  }
+
   // Add current user message
   inputHistory.push({
     type: "message",
@@ -462,8 +480,8 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   reactLoop: while (currentStep < MAX_STEPS) {
     currentStep++;
 
-    // Force synthesis on final step if tools were already executed
-    const toolsForStep = (currentStep === MAX_STEPS && executedToolsLog.length > 0)
+    // Once a tool has already been executed, force direct answer synthesis in the next step (NO TOOLS)!
+    const toolsForStep = (executedToolsLog.length > 0 || currentStep >= MAX_STEPS)
       ? undefined
       : availableTools;
 
@@ -543,8 +561,48 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
 
     // CASE A: Model provided direct response text (No tool called in this step) -> Streamed in real time!
     if (!toolCall) {
-      finalResponseContent = stepContent;
-      break reactLoop;
+      const cleanAnswer = stepContent ? stepContent.replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim() : "";
+      if (!cleanAnswer && currentStep < MAX_STEPS) {
+        // Model emitted thinking tags without actually answering or calling a tool
+        const isMcqIntent = /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq/i.test(userMessage);
+        const isCqIntent = /cq|সৃজনশীল|উদ্দীপক|ক\s*\)\s*|খ\s*\)/i.test(userMessage);
+
+        if (isMcqIntent) {
+          console.warn(`[AgentLoop] Step ${currentStep} emitted thought without tool_use for MCQ intent. Synthesizing get_mcq_quiz...`);
+          toolCall = {
+            id: "call_synth_mcq_" + Date.now(),
+            name: "get_mcq_quiz",
+            input: {
+              query: userMessage,
+              academic_intent: "শিক্ষার্থীর চাওয়া অধ্যায়ের সঠিক বোর্ড বহুনির্বাচনী প্রশ্ন অনুসন্ধান করছি..."
+            }
+          };
+        } else if (isCqIntent) {
+          console.warn(`[AgentLoop] Step ${currentStep} emitted thought without tool_use for CQ intent. Synthesizing get_creative_question...`);
+          toolCall = {
+            id: "call_synth_cq_" + Date.now(),
+            name: "get_creative_question",
+            input: {
+              query: userMessage,
+              academic_intent: "শিক্ষার্থীর চাওয়া অধ্যায়ের সঠিক বোর্ড সৃজনশীল প্রশ্ন অনুসন্ধান করছি..."
+            }
+          };
+        } else {
+          // General question: nudge model to complete the answer directly in Bengali
+          console.warn(`[AgentLoop] Step ${currentStep} produced thought but no answer or tool. Continuing to generate answer...`);
+          if (stepContent && stepContent.includes("<thought>") && !stepContent.includes("</thought>")) {
+            await onEvent({ type: "content_delta", delta: "</thought>\n\n" });
+            stepContent += "</thought>\n\n";
+          }
+          await onEvent({ type: "thought_done", thought: stepContent });
+          conversationMessages.push({ role: "assistant", content: stepContent });
+          conversationMessages.push({ role: "user", content: "শিক্ষার্থীর প্রশ্নের সম্পূর্ণ উত্তর সরাসরি বাংলায় সুন্দরভাবে বুঝিয়ে দাও।" });
+          continue reactLoop;
+        }
+      } else {
+        finalResponseContent = stepContent;
+        break reactLoop;
+      }
     }
 
     // CASE B: Model invoked a tool! (Think -> Act -> Observe)

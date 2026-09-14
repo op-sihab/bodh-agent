@@ -1534,18 +1534,11 @@
       const isAcademic = isAcademicPrompt(text);
 
       let renderRafId = null;
-      let lastRenderTime = 0;
-      const RENDER_THROTTLE_MS = 35; // ~28 FPS smooth streaming render (zero CPU freeze)
 
       function scheduleStreamRender() {
         if (renderRafId) return;
-        renderRafId = requestAnimationFrame((timestamp) => {
+        renderRafId = requestAnimationFrame(() => {
           renderRafId = null;
-          if (timestamp - lastRenderTime < RENDER_THROTTLE_MS) {
-            scheduleStreamRender();
-            return;
-          }
-          lastRenderTime = timestamp;
           performStreamRender();
         });
       }
