@@ -390,11 +390,62 @@ export const RECENT_YEAR_ORDER_BY = `
 
 let cachedChapters = null;
 
+// Dynamic Inverted Index & Token Document Frequencies across all NCTB chapters
+let tokenDocFreq = new Map();
+let chapterTokensMap = new Map();
+let isCorpusIndexed = false;
+const dynamicDbLookupCache = new Map();
+
+const STOP_WORDS_IR = new Set([
+  'অধ্যায়', 'অধ্যায়', 'chapter', 'ch', 'এর', 'থেকে', 'theke', 'এবং', 'ও', 'সম্পর্কিত', 'dio', 'dao', 'ekta', 'akta', 'mcq', 'cq', 'prosno', 'প্রশ্ন',
+  'দাও', 'দেও', 'কুইজ', 'quiz', 'কোনটি', 'কোন', 'কি', 'কী', 'নিচের', 'নিচে', 'বোর্ড', 'সাল'
+]);
+
+export function normalizeAcademicString(str) {
+  if (!str) return "";
+  return String(str)
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d)
+    // Keep Bengali Anusvara (ং is \u0982), strip Visarga (ঃ is \u0983), colons, hyphens, dashes, and punctuation
+    .replace(/[\u0983:;,\–\—\-_।/\\()\[\]{}'"`?*!+~@#$%^&=|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildCorpusIndex(chapters) {
+  if (!chapters || chapters.length === 0) return;
+  tokenDocFreq.clear();
+  chapterTokensMap.clear();
+
+  for (const ch of chapters) {
+    const normName = normalizeAcademicString(ch.name);
+    const titleTokens = normName.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
+    const concepts = CHAPTER_CONCEPTS_MAP[ch.subject_id]?.[String(ch.order_num)] || [];
+    const conceptTokens = concepts.flatMap(c => normalizeAcademicString(c).split(' ')).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
+    const allTokens = [...new Set([...titleTokens, ...conceptTokens])];
+    chapterTokensMap.set(ch.id, allTokens);
+    for (const t of allTokens) {
+      tokenDocFreq.set(t, (tokenDocFreq.get(t) || 0) + 1);
+    }
+  }
+  isCorpusIndexed = true;
+}
+
+function getIDF(token, totalDocs) {
+  const df = tokenDocFreq.get(token) || 1;
+  return Math.log(1 + (totalDocs / df));
+}
+
 export async function getAllChaptersCached() {
-  if (cachedChapters && cachedChapters.length > 0) return cachedChapters;
+  if (cachedChapters && cachedChapters.length > 0) {
+    if (!isCorpusIndexed) buildCorpusIndex(cachedChapters);
+    return cachedChapters;
+  }
   const fromCache = appCache.get("all_nctb_chapters");
   if (fromCache && fromCache.length > 0) {
     cachedChapters = fromCache;
+    buildCorpusIndex(cachedChapters);
     return cachedChapters;
   }
   try {
@@ -402,6 +453,7 @@ export async function getAllChaptersCached() {
     if (res.rows && res.rows.length > 0) {
       cachedChapters = res.rows;
       appCache.set("all_nctb_chapters", cachedChapters, 3600);
+      buildCorpusIndex(cachedChapters);
     }
   } catch (e) {
     console.error("Failed to load chapters cache:", e.message);
@@ -412,113 +464,10 @@ export async function getAllChaptersCached() {
 // Background preload
 getAllChaptersCached().catch(() => {});
 
-export const DISCRIMINATOR_RULES = {
-  // --- CHEMISTRY ---
-  // Ch 10: খনিজ সম্পদঃ ধাতু-অধাতু vs Ch 11: খনিজ সম্পদঃ জীবাশ্ম
-  "ch_0051": {
-    positives: ["ধাতু", "অধাতু", "নিষ্কাশন", "আকরিক", "মরিচা", "ক্ষয়রোধ", "হেমাটাইট", "বক্সাইট", "ক্যালামাইন", "গ্যালেনা", "সিন্নাবার", "ধাতব", "খনিজ মল", "ঝালাই", "খনিজ সম্পদ ধাতু অধাতু"],
-    negatives: ["জীবাশ্ম", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "পলিমার", "জৈব এসিড", "জৈব যৌগ", "ইথানল", "ইথানয়িক", "পেট্রোলিয়াম", "প্লাস্টিক", "ইউরিয়া"]
-  },
-  "ch_0052": {
-    positives: ["জীবাশ্ম", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "পলিমার", "প্লাস্টিক", "জৈব এসিড", "জৈব যৌগ", "ইথানল", "ইথানয়িক", "পেট্রোলিয়াম", "কয়লা", "প্রাকৃতিক গ্যাস", "ফ্যাটি এসিড", "মনোমার", "ডিকার্বক্সিলেশন", "খনিজ সম্পদ জীবাশ্ম"],
-    negatives: ["ধাতু", "অধাতু", "নিষ্কাশন", "আকরিক", "ক্ষয়রোধ", "মরিচা", "হেমাটাইট", "বক্সাইট", "ক্যালামাইন", "সিন্নাবার", "গ্যালেনা"]
-  },
-  // Ch 2: পদার্থের অবস্থা vs Ch 3: পদার্থের গঠন
-  "ch_0042": {
-    positives: ["অবস্থা", "কণার গতিতত্ত্ব", "ব্যাপন", "নিঃসরণ", "গলনাঙ্ক", "স্ফুটনাঙ্ক", "ঊর্ধ্বপাতন", "শীতলীকরণ"],
-    negatives: ["পরমাণু", "প্রোটন", "নিউট্রন", "ইলেকট্রন বিন্যাস", "আইসোটোপ", "রাদারফোর্ড", "বোর মডেল", "আপেক্ষিক পারমাণবিক ভর"]
-  },
-  "ch_0044": {
-    positives: ["গঠন", "পরমাণু", "প্রোটন", "নিউট্রন", "ইলেকট্রন বিন্যাস", "আইসোটোপ", "রাদারফোর্ড", "বোর মডেল", "আপেক্ষিক পারমাণবিক ভর", "কোয়ান্টাম", "শক্তিস্তর"],
-    negatives: ["ব্যাপন", "নিঃসরণ", "গলনাঙ্ক", "স্ফুটনাঙ্ক", "ঊর্ধ্বপাতন"]
-  },
-
-  // --- PHYSICS ---
-  // Ch 8: আলোর প্রতিফলন vs Ch 9: আলোর প্রতিসরণ
-  "ch_0008": {
-    positives: ["প্রতিফলন", "দর্পণ", "অবতল দর্পণ", "উত্তল দর্পণ", "বিম্ব", "প্রতিবিম্ব", "বক্রতার ব্যাসার্ধ", "ফোকাস দূরত্ব", "দর্পণে"],
-    negatives: ["প্রতিসরণ", "লেন্স", "প্রতিসরাঙ্ক", "সংকট কোণ", "ক্রান্তি কোণ", "পূর্ণ অভ্যন্তরীণ প্রতিফলন", "ডায়োপ্টার", "মরীচিকা"]
-  },
-  "ch_0009": {
-    positives: ["প্রতিসরণ", "লেন্স", "প্রতিসরাঙ্ক", "সংকট কোণ", "ক্রান্তি কোণ", "পূর্ণ অভ্যন্তরীণ প্রতিফলন", "ডায়োপ্টার", "মরীচিকা", "উত্তল লেন্স", "অবতল লেন্স", "দৃষ্টির ত্রুটি", "মায়োপিয়া"],
-    negatives: ["প্রতিফলন", "দর্পণ", "অবতল দর্পণ", "উত্তল দর্পণ"]
-  },
-  // Ch 10: স্থির বিদ্যুৎ vs Ch 11: চল বিদ্যুৎ
-  "ch_0010": {
-    positives: ["স্থির বিদ্যুৎ", "স্থিরতড়িৎ", "কুলম্ব", "তড়িৎ আবেশ", "ইলেকট্রোস্কোপ", "তড়িৎ তীব্রতা", "আধান", "ধারক", "ধারকত্ব", "তড়িৎ বিভব"],
-    negatives: ["চল বিদ্যুৎ", "চলতড়িৎ", "ওহম", "রোধ", "তুল্য রোধ", "বর্তনী", "সার্কিট", "অ্যামিটার", "ভোল্টমিটার", "আপেক্ষিক রোধ"]
-  },
-  "ch_0011": {
-    positives: ["চল বিদ্যুৎ", "চলতড়িৎ", "ওহম", "রোধ", "তুল্য রোধ", "বর্তনী", "সার্কিট", "তড়িৎ প্রবাহ", "তড়িৎ ক্ষমতা", "আপেক্ষিক রোধ", "ফিউজ", "অ্যামিটার", "ভোল্টমিটার", "রোধের সূত্র"],
-    negatives: ["স্থির বিদ্যুৎ", "স্থিরতড়িৎ", "কুলম্ব", "ইলেকট্রোস্কোপ", "তড়িৎ আবেশ"]
-  },
-  // Ch 2: গতি vs Ch 3: বল
-  "ch_0002": {
-    positives: ["গতি", "ত্বরণ", "বেগ", "দ্রুতি", "সরণ", "মন্দন", "প্রাস", "পরন্ত বস্তু", "গতির সমীকরণ"],
-    negatives: ["ঘর্ষণ", "জড়তা", "ভরবেগের সংরক্ষণ", "ক্রিয়া প্রতিক্রিয়া"]
-  },
-  "ch_0003": {
-    positives: ["বল", "নিউটনের সূত্র", "ভরবেগ", "ঘর্ষণ", "জড়তা", "ভরবেগের সংরক্ষণ", "ক্রিয়া প্রতিক্রিয়া", "নিউটনের ৩য় সূত্র"],
-    negatives: ["পরন্ত বস্তু", "প্রাস"]
-  },
-
-  // --- BIOLOGY ---
-  "ch_0029": {
-    positives: ["টিস্যু", "মাইটোকন্ড্রিয়া", "প্লাস্টিড", "গলগি", "রাইবোজোম", "লাইসোজোম", "জাইলেম", "ফ্লোয়েম", "প্যারেনকাইমা", "কোলেনকাইমা", "স্ক্লেরেনকাইমা"],
-    negatives: ["কোষ বিভাজন", "মাইটোসিস", "মিয়োসিস", "অ্যামাইটোসিস", "প্রোফেজ", "মেটাফেজ", "অ্যানাফেজ", "টেলোফেজ", "ক্রসিং ওভার"]
-  },
-  "ch_0030": {
-    positives: ["কোষ বিভাজন", "মাইটোসিস", "মিয়োসিস", "অ্যামাইটোসিস", "প্রোফেজ", "মেটাফেজ", "অ্যানাফেজ", "টেলোফেজ", "ক্রসিং ওভার", "স্পিন্ডল তন্তু"],
-    negatives: ["জাইলেম", "ফ্লোয়েম", "প্যারেনকাইমা", "কোলেনকাইমা", "স্ক্লেরেনকাইমা"]
-  },
-  "ch_0031": {
-    positives: ["জীবনীশক্তি", "সালোকসংশ্লেষণ", "শ্বসন", "এটিপি", "ATP", "ক্যালভিন চক্র", "ক্রেবস চক্র", "গ্লাইকোলাইসিস", "ফার্মেন্টেশন", "ক্লোরোফিল", "হ্যাস ও স্ল্যাক"],
-    negatives: ["পরিপাক", "পাকস্থলী", "যকৃৎ", "অগ্ন্যাশয়", "বিএমআই", "BMI"]
-  },
-  "ch_0032": {
-    positives: ["খাদ্য", "পুষ্টি", "পরিপাক", "পাকস্থলী", "যকৃৎ", "অগ্ন্যাশয়", "ক্ষুদ্রান্ত্র", "বৃহদান্ত্র", "ভিটামিন", "বিএমআই", "BMI", "ক্যালোরি", "দাঁত", "আন্ত্রিক রস"],
-    negatives: ["সালোকসংশ্লেষণ", "ক্যালভিন চক্র", "গ্লাইকোলাইসিস", "ক্রেবস চক্র"]
-  },
-  "ch_0033": {
-    positives: ["জীবে পরিবহণ", "রক্ত", "হৃদপিণ্ড", "ধমনী", "শিরা", "রক্তরস", "লোহিত", "শ্বেত", "অনুচক্রিকা", "হিমোগ্লোবিন", "রক্তচাপ", "প্রস্বেদন"],
-    negatives: ["রেচন", "বৃক্ক", "নেফ্রন", "ইউরেটার", "মূত্রথলি", "ডায়ালাইসিস", "গ্লোমেরুলাস"]
-  },
-  "ch_0035": {
-    positives: ["রেচন", "বৃক্ক", "নেফ্রন", "ইউরেটার", "মূত্রথলি", "ডায়ালাইসিস", "গ্লোমেরুলাস", "রেনাল", "ইউরিয়া", "ইউরিক এসিড"],
-    negatives: ["রক্তরস", "হিমোগ্লোবিন", "প্রস্বেদন", "হৃদপিণ্ড"]
-  },
-
-  // --- BGS ---
-  "ch_0082": {
-    positives: ["নদ নদী", "পদ্মা", "মেঘনা", "যমুনা", "প্রাকৃতিক সম্পদ", "পানি সম্পদ", "নদী"],
-    negatives: ["পুঁজিবাদ", "সমাজতন্ত্র", "জিডিপি", "GDP", "মাথাপিছু আয়"]
-  },
-  "ch_0087": {
-    positives: ["জাতীয় সম্পদ", "অর্থনৈতিক ব্যবস্থা", "পুঁজিবাদী", "সমাজতান্ত্রিক", "মিশ্র অর্থব্যবস্থা", "ইসলামী অর্থব্যবস্থা", "সম্পদের বণ্টন"],
-    negatives: ["নদ নদী", "জিডিপি", "GDP", "মাথাপিছু আয়", "অর্থনৈতিক নির্দেশক"]
-  },
-  "ch_0088": {
-    positives: ["অর্থনৈতিক নির্দেশক", "জিডিপি", "GDP", "GNP", "মাথাপিছু আয়", "জাতীয় আয়", "অর্থনীতির প্রকৃতি"],
-    negatives: ["নদ নদী", "পানি সম্পদ", "পুঁজিবাদী", "সমাজতান্ত্রিক"]
-  }
-};
-
 export async function findChapterCached(rawTopicOrCh, subjId = null) {
   if (!rawTopicOrCh) return null;
   const all = await getAllChaptersCached();
   if (!all.length) return null;
-
-  // Clean and normalize strings: unify Bengali visarga (ঃ), colon (:), dashes, commas into spaces
-  const normalizeClean = (str) => {
-    if (!str) return "";
-    return String(str)
-      .toLowerCase()
-      .normalize('NFC')
-      .replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d)
-      .replace(/[\u0982\u0983:;,\–\—\-_।/\\()\[\]{}'"`?*!+~@#$%^&=|]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  };
 
   // Extract all available textual signals from string or object
   let fullContext = "";
@@ -538,77 +487,130 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     targetSubj = subjId || normalizeSubject(fullContext);
   }
 
-  const rawClean = normalizeClean(fullContext);
+  const rawClean = normalizeAcademicString(fullContext);
   const extractedNum = extractChapterNum(fullContext);
+  const queryTokens = [...new Set(rawClean.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t)))];
 
   let bestMatch = null;
   let highestScore = -99999;
+  const totalChapters = all.length;
 
   for (const c of all) {
     let score = 0;
-    const normChName = normalizeClean(c.name);
+    const normChName = normalizeAcademicString(c.name);
     const chNum = parseInt(c.order_num, 10);
     const isSameSubj = targetSubj && c.subject_id === targetSubj;
+    const chTokens = chapterTokensMap.get(c.id) || [];
 
     // 1. Exact normalized name match (Punctuation Invariant)
     if (rawClean === normChName) {
-      score += 3500;
+      score += 2500;
     } else if (rawClean.includes(normChName)) {
-      score += 2500 + (normChName.length * 10);
+      score += 1800 + (normChName.length * 8);
     } else if (normChName.includes(rawClean) && rawClean.length >= 4) {
-      score += 1800 + (rawClean.length * 10);
+      score += 1400 + (rawClean.length * 8);
     }
 
-    // 2. Explicit chapter number match
-    if (extractedNum && chNum === parseInt(extractedNum, 10)) {
-      if (isSameSubj) {
-        score += 2200;
+    // 2. Explicit chapter number match or mismatch penalty
+    if (extractedNum) {
+      if (chNum === parseInt(extractedNum, 10)) {
+        score += isSameSubj ? 1500 : 800;
       } else {
-        score += 600;
+        score -= 1000; // Strong penalty if user specified another number!
       }
     }
 
-    // 3. Concept Map matching
+    // 3. Dynamic BM25 / TF-IDF Token Similarity (Weighted by Uniqueness across all chapters)
+    let matchedWeight = 0;
+    let matchedCount = 0;
+    for (const qt of queryTokens) {
+      if (chTokens.includes(qt) || chTokens.some(ct => ct.includes(qt) || qt.includes(ct))) {
+        const idf = getIDF(qt, totalChapters);
+        matchedWeight += idf * 150;
+        matchedCount++;
+      }
+    }
+    score += matchedWeight;
+
+    // Coverage Bonus & Dynamic Mutual Exclusion Penalty
+    if (chTokens.length > 0 && queryTokens.length > 0) {
+      const queryOverlapRatio = matchedCount / queryTokens.length;
+      const chOverlapRatio = matchedCount / chTokens.length;
+      score += (queryOverlapRatio * 400) + (chOverlapRatio * 250);
+
+      // Dynamic mutual exclusion penalty:
+      // If query contains a unique token from ANOTHER chapter that this chapter lacks, penalize this chapter!
+      const missingTokens = queryTokens.filter(qt => !chTokens.includes(qt) && !chTokens.some(ct => ct.includes(qt) || qt.includes(ct)));
+      for (const mt of missingTokens) {
+        if (tokenDocFreq.has(mt)) {
+          score -= getIDF(mt, totalChapters) * 180;
+        }
+      }
+    }
+
+    // 4. Curriculum Concept Map Matching (e.g. for subtopics like "হাইড্রোকার্বন", "সালোকসংশ্লেষণ")
     const concepts = CHAPTER_CONCEPTS_MAP[c.subject_id]?.[String(c.order_num)] || [];
     for (const con of concepts) {
-      const normCon = normalizeClean(con);
-      if (normCon.length >= 2 && rawClean.includes(normCon)) {
-        score += 800;
+      const normCon = normalizeAcademicString(con);
+      if (normCon.length >= 2 && (rawClean.includes(normCon) || queryTokens.includes(normCon))) {
+        score += 850;
       }
     }
 
-    // 4. Discriminator and Anti-Collision Rules
-    const rules = DISCRIMINATOR_RULES[c.id];
-    if (rules) {
-      for (const pos of rules.positives) {
-        if (rawClean.includes(normalizeClean(pos))) {
-          score += 1000;
-        }
-      }
-      for (const neg of rules.negatives) {
-        if (rawClean.includes(normalizeClean(neg))) {
-          score -= 2500; // Mutual exclusion penalty
-        }
-      }
-    }
-
-    // 5. Token overlap
-    const chTokens = normChName.split(' ').filter(t => t.length >= 2);
-    const queryTokens = rawClean.split(' ').filter(t => t.length >= 2);
-    for (const qt of queryTokens) {
-      if (chTokens.includes(qt)) {
-        score += 80;
-      }
-    }
-
-    // 6. Subject Alignment Bonus
+    // 5. Subject Alignment Bonus
     if (isSameSubj) {
-      score += 120;
+      score += 150;
     }
 
     if (score > highestScore) {
       highestScore = score;
       bestMatch = c;
+    }
+  }
+
+  // Phase 2 Fallback: If title and concept matching confidence is low (< 350),
+  // dynamically query the 50,855 questions database!
+  if (highestScore < 350 && queryTokens.length > 0) {
+    const searchTerms = queryTokens.filter(t => t.length >= 2);
+    if (searchTerms.length > 0) {
+      const cacheKey = `${targetSubj || 'all'}_${searchTerms.join("_")}`;
+      if (dynamicDbLookupCache.has(cacheKey)) {
+        const cached = dynamicDbLookupCache.get(cacheKey);
+        bestMatch = cached.ch;
+        highestScore = cached.score;
+      } else {
+        const fullPhrase = searchTerms.join(" ");
+        const clauses = [`q.question_text LIKE '%${fullPhrase.replace(/'/g, "''")}%'`];
+        for (const t of searchTerms) {
+          clauses.push(`q.question_text LIKE '%${t.replace(/'/g, "''")}%'`);
+        }
+        const subjCondition = targetSubj ? `AND c.subject_id = '${targetSubj}'` : '';
+        const dbSearchSql = `
+          SELECT q.chapter_id, c.id, c.name, c.subject_id, COUNT(*) as cnt 
+          FROM questions q 
+          JOIN chapters c ON q.chapter_id = c.id 
+          WHERE (${clauses.join(' OR ')}) ${subjCondition}
+          GROUP BY q.chapter_id, c.id, c.name, c.subject_id 
+          ORDER BY 
+            CASE WHEN q.question_text LIKE '%${fullPhrase.replace(/'/g, "''")}%' THEN 1 ELSE 2 END ASC,
+            cnt DESC 
+          LIMIT 1;
+        `;
+        try {
+          const dbRes = await executeRawSql(dbSearchSql);
+          if (dbRes.rows.length > 0) {
+            const foundChId = dbRes.rows[0].chapter_id;
+            const foundCh = all.find(c => c.id === foundChId);
+            if (foundCh) {
+              bestMatch = foundCh;
+              highestScore = 900;
+              dynamicDbLookupCache.set(cacheKey, { ch: foundCh, score: 900 });
+            }
+          }
+        } catch (e) {
+          console.error("Dynamic DB lookup error:", e);
+        }
+      }
     }
   }
 
