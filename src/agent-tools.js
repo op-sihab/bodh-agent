@@ -147,13 +147,21 @@ export function extractChapterNum(raw) {
     if (re.test(norm)) return String(num);
   }
 
-  // 2. Check digits with 'ch', 'chapter', 'অধ্যায়', 'অধ্যায়'
+  // 2. Check digits with explicit chapter keywords ('ch', 'chapter', 'অধ্যায়', 'অধ্যায়', 'চ্যাপ্টার')
   const converted = norm.replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d);
-  const m = converted.match(/(?:অধ্যায়|অধ্যায়|chapter|ch)\s*(\d{1,2})/i) || 
-            converted.match(/(?:^|\s)(\d{1,2})\s*(?:নং|তম|শ|ম|র্থ|st|nd|rd|th)?\s*(?:অধ্যায়|অধ্যায়|chapter|ch)/i) ||
-            converted.match(/(?:^|\s)(?:অধ্যায়|অধ্যায়|chapter|ch)?\s*(\d{1,2})\b/i);
+  const m = converted.match(/(?:অধ্যায়|অধ্যায়|চ্যাপ্টার|chapter|ch)\s*[:ঃ.\-]?\s*(\d{1,2})\b/i) || 
+            converted.match(/(?:^|\s)(\d{1,2})\s*(?:নং|তম|শ|ম|র্থ|st|nd|rd|th)\s*(?:অধ্যায়|অধ্যায়|চ্যাপ্টার|chapter|ch)?\b/i) ||
+            converted.match(/(?:^|\s)(\d{1,2})\s*(?:অধ্যায়|অধ্যায়|চ্যাপ্টার|chapter|ch)\b/i);
   if (m) {
     const num = parseInt(m[1], 10);
+    if (num >= 1 && num <= 25) return String(num);
+  }
+
+  // 3. If input begins with a number (e.g. "6 theke", "6 er", "6 no") or is purely a number
+  const trimmed = converted.trim();
+  const leadingMatch = trimmed.match(/^(\d{1,2})(?:\s*(?:theke|এর|থেকে|er|নং|no\b)|$)/i);
+  if (leadingMatch) {
+    const num = parseInt(leadingMatch[1], 10);
     if (num >= 1 && num <= 25) return String(num);
   }
 
@@ -483,9 +491,13 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
 
   // Extract all available textual signals from string or object
   let fullContext = "";
-  let targetSubj = subjId;
+  let targetSubj = subjId ? normalizeSubject(subjId) : null;
+  let targetChapterNum = null;
 
   if (typeof rawTopicOrCh === "object" && rawTopicOrCh !== null) {
+    if (rawTopicOrCh.chapter) {
+      targetChapterNum = extractChapterNum(rawTopicOrCh.chapter);
+    }
     const parts = [
       rawTopicOrCh.chapter,
       rawTopicOrCh.topic,
@@ -493,14 +505,26 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
       rawTopicOrCh.userMessage
     ].filter(Boolean);
     fullContext = parts.join(" ");
-    targetSubj = rawTopicOrCh.subject || subjId || normalizeSubject(fullContext);
+    targetSubj = rawTopicOrCh.subject ? normalizeSubject(rawTopicOrCh.subject) : (targetSubj || normalizeSubject(fullContext));
   } else {
     fullContext = String(rawTopicOrCh);
-    targetSubj = subjId || normalizeSubject(fullContext);
+    targetChapterNum = extractChapterNum(fullContext);
+    targetSubj = targetSubj || normalizeSubject(fullContext);
+  }
+
+  if (!targetChapterNum) {
+    targetChapterNum = extractChapterNum(fullContext);
+  }
+
+  // TIER 0: 100% Deterministic Subject + Chapter Number Resolution
+  if (targetSubj && targetChapterNum) {
+    const numInt = parseInt(targetChapterNum, 10);
+    const directCh = all.find(c => c.subject_id === targetSubj && parseInt(c.order_num, 10) === numInt);
+    if (directCh) return directCh;
   }
 
   const rawClean = normalizeAcademicString(fullContext);
-  const extractedNum = extractChapterNum(fullContext);
+  const extractedNum = targetChapterNum;
   const queryTokens = [...new Set(rawClean.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t)))];
 
   let bestMatch = null;

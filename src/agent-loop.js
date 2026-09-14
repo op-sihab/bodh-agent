@@ -92,6 +92,12 @@ const SYSTEM_PROMPT = `
        - কখনোই 'বোর্ড পরীক্ষা অনুষ্ঠিত হয়নি', '২০২০-২০২৫ সময়ে এসএসসি পরীক্ষা নিয়মিতভাবে অনুষ্ঠিত হয়নি', বা 'নির্দিষ্ট সময়ে প্রশ্ন পাওয়া যাচ্ছে না' জাতীয় কোনো মনগড়া ও ভিত্তিহীন ঐতিহাসিক অজুহাত দেবে না!
        - ডেটাবেসে ২০২০ থেকে ২০২৬ সালের সকল শিক্ষা বোর্ডের হাজার হাজার আসল প্রশ্ন ও বহুনির্বাচনী প্রশ্ন সংরক্ষিত আছে।
        - শিক্ষার্থী কোনো নির্দিষ্ট সালের বা সালের রেঞ্জের প্রশ্ন চাইলে (যেমন: "2020-2025 er mondhe ase nai", "২০২০-২০২৫ এর প্রশ্ন দাও", "2024 er dao"): সাথে সাথে get_mcq_quiz বা get_creative_question টুলে year: "2020-2025" (বা নির্দিষ্ট সাল) এবং বোর্ড উল্লেখ থাকলে সেই board পাস করে আসল প্রশ্ন তুলে আনবে।
+     * **কঠোর নিয়ম ৮ (ডেটাবেসের প্রশ্নের ওপর পূর্ণ আস্থা ও ভুয়া অধ্যায় বিতর্ক সম্পূর্ণ নিষিদ্ধ - Zero False Chapter Doubt Hallucination):**
+       - ডেটাবেসের প্রতিটি বহুনির্বাচনী ও সৃজনশীল প্রশ্ন শিক্ষা বোর্ডের অফিশিয়াল প্রশ্নব্যাংক থেকে যাচাইকৃত ও সংশ্লিষ্ট অধ্যায়ের সাথে যুক্ত।
+       - শিক্ষার্থী যদি প্রশ্নের ধরন বা টাইপ নিয়ে কোনো মন্তব্য করে (যেমন: "এই টাইপের নয়", "ei type er nai", "এমন প্রশ্ন নয়", "r nai", "arekta dao", "অন্য প্রশ্ন দাও"):
+       - **কখনোই পূর্ববর্তী প্রশ্নটি ভুল বা অন্য অধ্যায়ের ছিল বলে অযথা সন্দেহ প্রকাশ করবে না বা ভুল স্বীকার করে ক্ষমা চাইবে না!**
+       - যেমন: রসায়ন ৬ষ্ঠ অধ্যায়ে বিক্রিয়ার সমীকরণযুক্ত মোলার ভর বা পরমাণু গণনার প্রশ্ন আসা স্বাভাবিক। একে 'অধ্যায় ৫: রাসায়নিক বন্ধনের প্রশ্ন' বা 'ভুল অধ্যায়' দাবি করবে না এবং শিক্ষার্থীকে পুনরায় অধ্যায়ের নাম নিশ্চিত করতে বলবে না!
+       - চলমান অধ্যায় ও বিষয়ের ওপর অবিচল আস্থা রেখে তাৎক্ষণিকভাবে get_mcq_quiz বা get_creative_question টুল কল করে প্রামাণিক প্রশ্নব্যাংক থেকে শিক্ষার্থীর চাওয়া অনুযায়ী আরেকটি প্রশ্ন তুলে আনবে।
    - **ব্যতিক্রম:** শিক্ষার্থী যখন চলমান কুইজ বা প্রশ্নের উত্তর দিচ্ছে (যেমন: "খ", "উত্তর ক", "ans b", "amar mone hoy kh"), তখন ভুলেও কোনো টুল কল করবে না! সরাসরি পূর্বের প্রশ্নের উত্তরের সাথে মিলিয়ে মূল্যায়ন করবে।
 ৭. ইন্টারেক্টিভ কুইজ ও ডায়নামিক অ্যাডাপ্টিভ টেস্ট মোড (Dynamic Adaptive Testing & Live Grading):
    - শিক্ষার্থী যদি বলে "আমার থেকে টেস্ট নাও", "একটা পরীক্ষা নাও", "mcq test dao", বা পূর্বের প্রশ্নের পর "পরের প্রশ্ন দাও / next":
@@ -363,23 +369,54 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   const wasLastTurnMcq = /\[ans:\s*[ক-ঘa-d]\]|\(ক\)|\(খ\)|\(গ\)|\(ঘ\)/i.test(lastAssistantMsg);
   const wasLastTurnCq = /ক\s*\)\s*|খ\s*\)\s*|গ\s*\)\s*|ঘ\s*\)/i.test(lastAssistantMsg) && !wasLastTurnMcq;
 
-  const isFollowUpMcq = wasLastTurnMcq && !isUserAnswering && /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim());
+  // Extract active subject and chapter from conversation history for unbreakable continuity
+  let activeSubject = null;
+  let activeChapter = null;
+
+  for (const turn of pastHistory.slice().reverse()) {
+    const text = typeof turn.content === "string" ? turn.content : "";
+    if (!activeSubject) {
+      activeSubject = normalizeSubject(text);
+    }
+    if (!activeChapter) {
+      const chNum = extractChapterNum(text);
+      if (chNum) activeChapter = chNum;
+    }
+    if (activeSubject && activeChapter) break;
+  }
+
+  const isQuestionCommentOrFollowUp = wasLastTurnMcq && !isUserAnswering && (
+    /type|টাইপ|আরেকটা|আরো|আর\s*নেই|r\s*nai|ar\s*nai|r\s*ki\s*nai|emon|এমন|এইরকম|এই\s*ধরনের|পরের|next|বোর্ড|board|কঠিন|সহজ|গাণিতিক|math|বহুপদী|বিবৃতি|dekhi|দেখি/i.test(userMessage)
+  );
+
+  const isFollowUpMcq = wasLastTurnMcq && !isUserAnswering && (
+    isQuestionCommentOrFollowUp ||
+    /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim())
+  );
   const isFollowUpCq = wasLastTurnCq && !isUserAnswering && /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim());
 
   const isMcqIntent = !isUserAnswering && (isFollowUpMcq || /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq|ekta mcq|আরেকটা দাও|নতুন mcq|board\s*standard/i.test(userMessage) || (/(প্রশ্ন দাও|test dao|কুইজ|board question)/i.test(userMessage) && !/সৃজনশীল|cq/i.test(userMessage)));
   const isCqIntent = !isUserAnswering && (isFollowUpCq || /cq|সৃজনশীল|উদ্দীপক/i.test(userMessage));
 
   if (isMcqIntent) {
+    const subjectHint = activeSubject ? `for subject '${activeSubject}'` : "";
+    const chapterHint = activeChapter ? `and chapter '${activeChapter}'` : "";
     inputHistory.push({
       type: "message",
       role: "system",
-      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College MCQ. First, briefly express your academic reasoning inside <thought>...</thought> in Bengali (mentioning the subject, chapter, or exam board), then invoke get_mcq_quiz with the relevant parameters. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
+      content: `IMPORTANT ACADEMIC DIRECTIVE: The student is requesting or discussing a Board/College MCQ ${subjectHint} ${chapterHint}.
+1. Maintain Strict Academic Confidence: NEVER apologize, NEVER claim a previous question was from the wrong chapter (e.g. chemistry Chapter 6 contains reaction equations with mole/mass/atom counting), and NEVER ask the student to confirm the chapter name when it is already established (${activeSubject || "current subject"}, Chapter ${activeChapter || "current chapter"}).
+2. Express your brief academic reasoning inside <thought>...</thought> in Bengali (searching for the requested question type from this chapter).
+3. Then invoke get_mcq_quiz with subject: '${activeSubject || ""}', chapter: '${activeChapter || ""}', query: '${userMessage}'.
+Under NO circumstances should you hallucinate or chat without calling the tool.`
     });
   } else if (isCqIntent) {
+    const subjectHint = activeSubject ? `for subject '${activeSubject}'` : "";
+    const chapterHint = activeChapter ? `and chapter '${activeChapter}'` : "";
     inputHistory.push({
       type: "message",
       role: "system",
-      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College Creative Question (CQ). First, briefly express your academic reasoning inside <thought>...</thought> in Bengali (mentioning the subject, chapter, or exam board), then invoke get_creative_question with the relevant parameters. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
+      content: `IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College Creative Question (CQ) ${subjectHint} ${chapterHint}. First, briefly express your academic reasoning inside <thought>...</thought> in Bengali, then invoke get_creative_question with subject: '${activeSubject || ""}', chapter: '${activeChapter || ""}', query: '${userMessage}'. Under NO circumstances should you invent or hallucinate a question in text without calling the tool.`
     });
   }
 
@@ -585,8 +622,10 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
             id: "call_synth_mcq_" + Date.now(),
             name: "get_mcq_quiz",
             input: {
+              subject: activeSubject || undefined,
+              chapter: activeChapter || undefined,
               query: userMessage,
-              academic_intent: "শিক্ষার্থীর চাওয়া অধ্যায়ের সঠিক বোর্ড বহুনির্বাচনী প্রশ্ন অনুসন্ধান করছি..."
+              academic_intent: `শিক্ষার্থীর অনুরোধ অনুযায়ী ${activeChapter ? `অধ্যায় ${activeChapter}-এর ` : ""}বোর্ড বহুনির্বাচনী প্রশ্ন অনুসন্ধান করছি...`
             }
           };
         } else if (isCqIntent) {
@@ -596,8 +635,10 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
             id: "call_synth_cq_" + Date.now(),
             name: "get_creative_question",
             input: {
+              subject: activeSubject || undefined,
+              chapter: activeChapter || undefined,
               query: userMessage,
-              academic_intent: "শিক্ষার্থীর চাওয়া অধ্যায়ের সঠিক বোর্ড সৃজনশীল প্রশ্ন অনুসন্ধান করছি..."
+              academic_intent: `শিক্ষার্থীর অনুরোধ অনুযায়ী ${activeChapter ? `অধ্যায় ${activeChapter}-এর ` : ""}বোর্ড সৃজনশীল প্রশ্ন অনুসন্ধান করছি...`
             }
           };
         } else {
