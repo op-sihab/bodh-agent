@@ -1348,6 +1348,7 @@
           createdAt: Date.now(),
           updatedAt: Date.now(),
           conversationHistory: [],
+          state: null,
           html: ''
         };
         chatSessions.unshift(newSession);
@@ -1653,10 +1654,15 @@
       }
 
       try {
+        const currSession = chatSessions.find(s => s.id === currentSessionId);
         const res = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, history: conversationHistory })
+          body: JSON.stringify({
+            message: text,
+            history: conversationHistory,
+            state: currSession ? currSession.state : null
+          })
         });
 
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1702,6 +1708,14 @@
                 }
                 scrollToBottom();
                 return;
+              }
+
+              if (data.type === "state_sync" && data.state) {
+                const currSession = chatSessions.find(s => s.id === currentSessionId);
+                if (currSession) {
+                  currSession.state = data.state;
+                  saveSessions();
+                }
               }
 
               if (data.type === "thought_done") {
@@ -1864,6 +1878,9 @@
                 const currSession = chatSessions.find(s => s.id === currentSessionId);
                 if (currSession) {
                   currSession.updatedAt = Date.now();
+                  if (data.state) {
+                    currSession.state = data.state;
+                  }
                   currSession.conversationHistory = JSON.parse(JSON.stringify(conversationHistory));
                   const areaEl = document.getElementById('messagesArea');
                   if (areaEl) {

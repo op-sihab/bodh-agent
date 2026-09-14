@@ -1,5 +1,6 @@
 // Multi-turn Agentic Autonomous Loop with Tool Calling & Token Streaming
 import { AGENT_TOOLS, executeAgentTool, normalizeSubject, extractChapterNum, normalizeBoard, formatTag } from "./agent-tools.js";
+import { MemoryManager, createInitialState, SUBJECT_DISPLAY_NAMES } from "./agent-memory.js";
 
 const MERGE_API_URL = "https://api-gateway.merge.dev/v1/responses";
 const MERGE_API_KEY = process.env.MERGE_API_KEY || "mg_XKCpgi4dR6M2DmaBFgvjme8uTeGyWWTWGP_XP4zUjN8";
@@ -343,22 +344,38 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   const startTime = performance.now();
   const pastHistory = options.history || [];
 
-  // Build input history with system prompt, past chat turns, and current user query
+  // 1. Reconcile and activate the 4-Tier Memory State (Working Memory, Episodic Ledger, Directives)
+  const memoryReconciliation = MemoryManager.reconcile(userMessage, pastHistory, options.state);
+  let state = memoryReconciliation.state;
+  const isAnswering = memoryReconciliation.isAnswering;
+  const isMetaDebate = memoryReconciliation.isMetaDebate;
+
+  const activeSubject = state.subject_id;
+  const activeChapter = state.chapter_num;
+
+  // Build input history with system prompt, memory blocks, and past chat turns
   const inputHistory = [
     { type: "message", role: "system", content: SYSTEM_PROMPT }
   ];
 
-  // Token Optimization: Keep only last 4 turns (2 user, 2 assistant)
-  // Truncate overlong assistant messages (> 750 chars) to conserve context
+  // Inject Working Memory State Snapshot & Episodic Ledger
+  const episodicLedger = MemoryManager.generateEpisodicLedger(state);
+  if (episodicLedger) {
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: episodicLedger
+    });
+  }
+
+  // Token & Structure Optimization: Keep last 4 turns with structure-preserving truncator
   for (const item of pastHistory.slice(-4)) {
     if (item.role === "user" || item.role === "assistant") {
       let content = item.content;
       if (typeof content === "string") {
-        // Strip out any thought tags from past conversation history so model is not confused!
-        content = content.replace(/<[\s]*(?:thought|thinking)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking)[\s]*>/gi, '').trim();
-      }
-      if (item.role === "assistant" && typeof content === "string" && content.length > 750) {
-        content = content.slice(0, 750) + "...";
+        content = item.role === "assistant"
+          ? MemoryManager.preserveStructuredContent(content, 1100)
+          : content.replace(/<[\s]*(?:thought|thinking)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking)[\s]*>/gi, '').trim();
       }
       inputHistory.push({
         type: "message",
@@ -366,49 +383,6 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
         content
       });
     }
-  }
-
-  const lastAssistantMsg = pastHistory.slice().reverse().find(m => m.role === "assistant")?.content || "";
-  const wasLastTurnMcq = /\[ans:\s*[ক-ঘa-d]\]|\(ক\)|\(খ\)|\(গ\)|\(ঘ\)/i.test(lastAssistantMsg);
-  const wasLastTurnCq = /ক\s*\)\s*|খ\s*\)\s*|গ\s*\)\s*|ঘ\s*\)/i.test(lastAssistantMsg) && !wasLastTurnMcq;
-
-  const isUserAnswering = (
-    /^(?:আমার\s*উত্তর\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?|[ক-ঘa-dA-D১-৪]$|^\(?([ক-ঘa-dA-D১-৪])\)$|^উত্তর\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?|^ans\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?|^amar\s*(?:uttor|ans)\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?)/i.test(userMessage.trim()) ||
-    (wasLastTurnMcq && /^(?:হবে\s*[ক-ঘa-d]|[ক-ঘa-d]\s*হবে|mone\s*hoy\s*[ক-ঘa-d]|মনে\s*হয়\s*[ক-ঘa-d])/i.test(userMessage.trim()))
-  );
-
-  // Extract active subject and chapter from conversation history for unbreakable continuity
-  let pastSubject = null;
-  let pastChapter = null;
-
-  for (const turn of pastHistory.slice().reverse()) {
-    const text = typeof turn.content === "string" ? turn.content : "";
-    if (!pastSubject) {
-      pastSubject = normalizeSubject(text);
-    }
-    if (!pastChapter) {
-      const chNum = extractChapterNum(text);
-      if (chNum) pastChapter = chNum;
-    }
-    if (pastSubject && pastChapter) break;
-  }
-
-  const isMetaDebate = /(?:kobe|কবে|kiser|কিসের|koi|কই|kothay|কোথায়|keno|কেন)\s*(?:bollam|chaicilam|cheye|dekhte|vitti|ভিত্তি|dekhso|bolle|boltesile)|(?:vul|ভুল)\s*bolso|besi\s*bujo|বেশি\s*বোঝ|faltu|ফালতু|to\s*boli\s*nai|তো\s*বলি\s*নাই|চাই\s*নাই|chai\s*nai/i.test(userMessage);
-  const isSubjectRejection = /(?:na|না|নাই|নি|not|no)\b/i.test(userMessage) && !/(?:porbo|পড়ব|start|dao|দাও)/i.test(userMessage);
-  const isQuestioningSubject = /(?:kobe|কবে|kiser|কিসের|koi|কই|kothay|কোথায়|keno|কেন)\b/i.test(userMessage);
-
-  let activeSubject = pastSubject;
-  let activeChapter = pastChapter;
-
-  // Only allow current message to switch subject if it is an intentional, non-debate, non-negated switch
-  const currentMsgSubject = normalizeSubject(userMessage);
-  if (currentMsgSubject && !isMetaDebate && !isSubjectRejection && !isQuestioningSubject) {
-    activeSubject = currentMsgSubject;
-  }
-
-  const currentMsgChapter = extractChapterNum(userMessage);
-  if (currentMsgChapter && !isMetaDebate) {
-    activeChapter = currentMsgChapter;
   }
 
   // Always inject Active Academic Subject Lock Directive when an active subject is established
@@ -428,20 +402,7 @@ STRICT SUBJECT & CHAPTER PERSISTENCE DIRECTIVE:
   }
 
   if (isMetaDebate) {
-    const subjNameMap = {
-      'ssc_biology': 'জীববিজ্ঞান',
-      'ssc_physics': 'পদার্থবিজ্ঞান',
-      'ssc_chemistry': 'রসায়ন',
-      'ssc_general_math': 'সাধারণ গণিত',
-      'ssc_higher_math': 'উচ্চতর গণিত',
-      'ssc_bangla_1st': 'বাংলা ১ম পত্র',
-      'ssc_bangla_2nd': 'বাংলা ২য় পত্র',
-      'ssc_english_1st': 'ইংরেজি ১ম পত্র',
-      'ssc_english_2nd': 'ইংরেজি ২য় পত্র',
-      'ssc_ict': 'আইসিটি',
-      'ssc_bgs': 'বাংলাদেশ ও বিশ্বপরিচয়'
-    };
-    const activeSubjBn = subjNameMap[activeSubject] || activeSubject || "চলমান বিষয়";
+    const activeSubjBn = state.subject_name || SUBJECT_DISPLAY_NAMES[activeSubject] || "চলমান বিষয়";
     const chDisplay = activeChapter ? `অধ্যায় ${activeChapter}` : "";
     inputHistory.push({
       type: "message",
@@ -454,32 +415,43 @@ The student is questioning or challenging why you mentioned another subject or m
     });
   }
 
-  const isQuestionCommentOrFollowUp = wasLastTurnMcq && !isUserAnswering && (
+  const lastAssistantMsg = pastHistory.slice().reverse().find(m => m.role === "assistant")?.content || "";
+  const wasLastTurnMcq = /\[ans:\s*[ক-ঘa-d]\]|\(ক\)|\(খ\)|\(গ\)|\(ঘ\)/i.test(lastAssistantMsg);
+  const wasLastTurnCq = /ক\s*\)\s*|খ\s*\)\s*|গ\s*\)\s*|ঘ\s*\)/i.test(lastAssistantMsg) && !wasLastTurnMcq;
+
+  const isQuestionCommentOrFollowUp = wasLastTurnMcq && !isAnswering && (
     /type|টাইপ|আরেকটা|আরো|আর\s*নেই|r\s*nai|ar\s*nai|r\s*ki\s*nai|emon|এমন|এইরকম|এই\s*ধরনের|পরের|next|বোর্ড|board|কঠিন|সহজ|গাণিতিক|math|বহুপদী|বিবৃতি|dekhi|দেখি|dohhay|odhay|অধ্যায়|অধ্যায়|chapter/i.test(userMessage)
   );
 
-  const isFollowUpMcq = wasLastTurnMcq && !isUserAnswering && (
+  const isFollowUpMcq = wasLastTurnMcq && !isAnswering && (
     isQuestionCommentOrFollowUp ||
     /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim())
   );
-  const isFollowUpCq = wasLastTurnCq && !isUserAnswering && /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim());
+  const isFollowUpCq = wasLastTurnCq && !isAnswering && /^(board\s*standard|board\s*er|board|next|পরেরটা|পরের\s*প্রশ্ন|আরেকটা|আরেকটি|arekta|aro|আরো|hard|কঠিন|easy|সহজ|onno|অন্য)/i.test(userMessage.trim());
 
-  const isMcqIntent = !isUserAnswering && (isFollowUpMcq || /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq|ekta mcq|আরেকটা দাও|নতুন mcq|board\s*standard/i.test(userMessage) || (/(প্রশ্ন দাও|test dao|কুইজ|board question)/i.test(userMessage) && !/সৃজনশীল|cq/i.test(userMessage)));
-  const isCqIntent = !isUserAnswering && (isFollowUpCq || /cq|সৃজনশীল|উদ্দীপক/i.test(userMessage));
+  const isMcqIntent = !isAnswering && (isFollowUpMcq || /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq|ekta mcq|আরেকটা দাও|নতুন mcq|board\s*standard/i.test(userMessage) || (/(প্রশ্ন দাও|test dao|কুইজ|board question)/i.test(userMessage) && !/সৃজনশীল|cq/i.test(userMessage)));
+  const isCqIntent = !isAnswering && (isFollowUpCq || /cq|সৃজনশীল|উদ্দীপক/i.test(userMessage));
 
-  if (isUserAnswering) {
+  if (isAnswering) {
+    const toBnAns = { 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ', '1': '১', '2': '২', '3': '৩', '4': '৪' };
+    const rawMatch = userMessage.trim().match(/[ক-ঘa-dA-D১-৪]/i);
+    const userChoice = rawMatch ? (toBnAns[rawMatch[0].toLowerCase()] || rawMatch[0]) : userMessage.trim();
+    const correctCode = state.active_question?.answer_code || "";
+    const isCorrect = correctCode && (userChoice === correctCode || (userChoice === '১' && correctCode === 'ক') || (userChoice === '২' && correctCode === 'খ') || (userChoice === '৩' && correctCode === 'গ') || (userChoice === '৪' && correctCode === 'ঘ'));
+
+    // Record answer evaluation in state and sync
+    state = MemoryManager.recordAnswerEvaluation(state, userChoice, isCorrect);
+    await onEvent({ type: "state_sync", state });
+
     inputHistory.push({
       type: "message",
       role: "system",
-      content: `IMPORTANT ACADEMIC DIRECTIVE (QUIZ EVALUATION & GRADING): The student is answering the previous MCQ (${userMessage}).
-1. STRICT EVALUATION ONLY: Compare the student's answer against the correct answer [ans: ...] from the previous message.
-2. If correct: enthusiastically praise the student in 1 line, then provide a 2-3 line clear scientific reason/explanation.
-3. If incorrect: gently explain why in 2-3 lines with the correct scientific principle and state the right option.
-4. ZERO CHAPTER/SYLLABUS DOUBT & ZERO APOLOGY:
-   - NEVER criticize the previous question or doubt its chapter!
-   - NEVER say "তবে আগের প্রশ্নটি অমুক অধ্যায়ের সঙ্গে সামঞ্জস্যপূর্ণ ছিল না" or "সঠিক অধ্যায় অনুসরণ করে দেব" or apologize!
-   - NEVER claim the student wanted a different subject. All questions in BODH database are 100% verified and authentic board questions. Do not debate syllabus or chapter boundaries.
-5. End with an encouraging 1-line invite for the next challenge.`
+      content: `IMPORTANT ACADEMIC DIRECTIVE (QUIZ EVALUATION & GRADING): The student answered '${userChoice}'.
+Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CORRECT (সঠিক)" : "INCORRECT (ভুল)"}.
+1. STRICT EVALUATION ONLY: Praise warmly if correct (1 line), then provide 2-3 line clear scientific reason. If incorrect, explain gently why with the scientific principle and state the right option.
+2. ZERO CHAPTER/SYLLABUS DOUBT & ZERO APOLOGY: Never criticize the question or claim wrong chapter or apologize. The question is 100% verified.
+3. Current Quiz Streak: ${state.quiz_metrics.streak}, Total Score: ${state.quiz_metrics.correct}/${state.quiz_metrics.attempted}.
+4. End with an encouraging 1-line invite for the next challenge.`
     });
   } else if (isMcqIntent) {
     const subjectHint = activeSubject ? `for subject '${activeSubject}'` : "";
@@ -591,7 +563,8 @@ Under NO circumstances should you hallucinate or chat without calling the tool.`
       content: fullContent,
       toolCalls: [],
       latencyMs: totalLatency,
-      ttft: firstTokenTime
+      ttft: firstTokenTime,
+      state
     });
     return;
   }
@@ -812,6 +785,11 @@ Under NO circumstances should you hallucinate or chat without calling the tool.`
 
     // 4. Token Optimization: Compact tool result before appending to context
     const compacted = compactToolResult(toolName, rawResult, toolArgs);
+
+    // Update Academic Working Memory with authentic question and chapter data
+    state = MemoryManager.updateAfterToolExecution(state, toolName, toolArgs, rawResult);
+    await onEvent({ type: "state_sync", state });
+
     const toolCallObj = {
       type: "tool_use",
       id: callId,
@@ -852,7 +830,8 @@ Under NO circumstances should you hallucinate or chat without calling the tool.`
     content: finalResponseContent,
     toolCalls: executedToolsLog,
     latencyMs: totalLatency,
-    ttft: firstTokenTime
+    ttft: firstTokenTime,
+    state
   });
   return;
 }

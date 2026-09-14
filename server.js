@@ -70,6 +70,7 @@ app.post("/api/chat/stream", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const message = body.message || "";
   const history = body.history || [];
+  const state = body.state || null;
 
   if (!message.trim()) {
     return c.json({ error: "Message is required" }, 400);
@@ -86,7 +87,7 @@ app.post("/api/chat/stream", async (c) => {
         await stream.writeSSE({
           data: JSON.stringify(event)
         });
-      }, { history });
+      }, { history, state });
     } catch (err) {
       await stream.writeSSE({
         data: JSON.stringify({ type: "error", error: err.message })
@@ -100,6 +101,7 @@ app.post("/api/chat", async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const message = body.message || "";
   const history = body.history || [];
+  const state = body.state || null;
 
   if (!message.trim()) {
     return c.json({ error: "Message is required" }, 400);
@@ -112,7 +114,7 @@ app.post("/api/chat", async (c) => {
       if (event.type === "done") {
         finalResponse = event;
       }
-    }, { history });
+    }, { history, state });
 
     return c.json({
       success: true,
