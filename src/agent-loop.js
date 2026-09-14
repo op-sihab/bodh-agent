@@ -366,15 +366,22 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
     inputHistory.push({
       type: "message",
       role: "system",
-      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College MCQ. You MUST invoke get_mcq_quiz with the relevant chapter/topic/subject/board/year. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
+      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College MCQ. First, briefly express your academic reasoning inside <thought>...</thought> in Bengali (mentioning the subject, chapter, or exam board), then invoke get_mcq_quiz with the relevant parameters. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
     });
   } else if (isCqIntent) {
     inputHistory.push({
       type: "message",
       role: "system",
-      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College Creative Question (CQ). You MUST invoke get_creative_question with the relevant chapter/topic/subject/board/year. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
+      content: "IMPORTANT ACADEMIC DIRECTIVE: The student is requesting an authentic Board/College Creative Question (CQ). First, briefly express your academic reasoning inside <thought>...</thought> in Bengali (mentioning the subject, chapter, or exam board), then invoke get_creative_question with the relevant parameters. Under NO circumstances should you invent or hallucinate a question in text without calling the tool."
     });
   }
+
+  // Reinforce continuous step-by-step thinking for every turn (multi-turn consistency)
+  inputHistory.push({
+    type: "message",
+    role: "system",
+    content: "বাধ্যতামূলক আচরণবিধি: প্রতিটি উত্তরের শুরুতে—টুল কল করার আগে বা সরাসরি উত্তর দেওয়ার আগে—অবশ্যই <thought>...</thought> ট্যাগের ভেতরে বাংলায় ১-২ বাক্যে তোমার সুনির্দিষ্ট অ্যাকাডেমিক চিন্তা প্রকাশ করবে। কোনো অবস্থাতেই <thought> ট্যাগ ছাড়া সরাসরি উত্তর বা টুল কল শুরু করবে না।"
+  });
 
   // Add current user message
   inputHistory.push({
@@ -561,7 +568,7 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
 
     // CASE A: Model provided direct response text (No tool called in this step) -> Streamed in real time!
     if (!toolCall) {
-      const cleanAnswer = stepContent ? stepContent.replace(/<thought>[\s\S]*?<\/thought>/gi, "").trim() : "";
+      const cleanAnswer = stepContent ? stepContent.replace(/<[\s]*thought[\s]*>[\s\S]*?<[\s]*\/[\s]*thought[\s]*>/gi, "").trim() : "";
       if (!cleanAnswer && currentStep < MAX_STEPS) {
         // Model emitted thinking tags without actually answering or calling a tool
         const isMcqIntent = /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq/i.test(userMessage);
@@ -570,6 +577,7 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
         if (isMcqIntent) {
           console.warn(`[AgentLoop] Step ${currentStep} emitted thought without tool_use for MCQ intent. Synthesizing get_mcq_quiz...`);
           toolCall = {
+            type: "tool_use",
             id: "call_synth_mcq_" + Date.now(),
             name: "get_mcq_quiz",
             input: {
@@ -580,6 +588,7 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
         } else if (isCqIntent) {
           console.warn(`[AgentLoop] Step ${currentStep} emitted thought without tool_use for CQ intent. Synthesizing get_creative_question...`);
           toolCall = {
+            type: "tool_use",
             id: "call_synth_cq_" + Date.now(),
             name: "get_creative_question",
             input: {
@@ -590,7 +599,7 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
         } else {
           // General question: nudge model to complete the answer directly in Bengali
           console.warn(`[AgentLoop] Step ${currentStep} produced thought but no answer or tool. Continuing to generate answer...`);
-          if (stepContent && stepContent.includes("<thought>") && !stepContent.includes("</thought>")) {
+          if (stepContent && /<[\s]*thought[\s]*>/i.test(stepContent) && !/<[\s]*\/[\s]*thought[\s]*>/i.test(stepContent)) {
             await onEvent({ type: "content_delta", delta: "</thought>\n\n" });
             stepContent += "</thought>\n\n";
           }
@@ -613,15 +622,14 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
     // If model invoked tool directly without text, stream its authentic academic_intent as thinking first!
     if (!stepContent) {
       const intentText = toolArgs.academic_intent || getToolHumanLabel(toolName, toolArgs) || "প্রাসঙ্গিক তথ্য ও প্রশ্ন অনুসন্ধান করছি...";
+      await onEvent({ type: "content_delta", delta: "<thought>" });
+      await streamWords(intentText, onEvent, 20);
+      await onEvent({ type: "content_delta", delta: "</thought>\n\n" });
       stepContent = `<thought>${intentText}</thought>`;
-      await onEvent({
-        type: "content_delta",
-        delta: stepContent
-      });
     }
 
     // Ensure any open thought tag is cleanly closed and flushed to client
-    if (stepContent && stepContent.includes("<thought>") && !stepContent.includes("</thought>")) {
+    if (stepContent && /<[\s]*thought[\s]*>/i.test(stepContent) && !/<[\s]*\/[\s]*thought[\s]*>/i.test(stepContent)) {
       await onEvent({
         type: "content_delta",
         delta: "</thought>"
@@ -668,13 +676,19 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
 
     // 4. Token Optimization: Compact tool result before appending to context
     const compacted = compactToolResult(toolName, rawResult, toolArgs);
+    const toolCallObj = {
+      type: "tool_use",
+      id: callId,
+      name: toolName,
+      input: toolArgs
+    };
 
     inputHistory.push({
       type: "message",
       role: "assistant",
       content: stepContent
-        ? [{ type: "text", text: stepContent }, toolCall]
-        : [toolCall]
+        ? [{ type: "text", text: stepContent }, toolCallObj]
+        : [toolCallObj]
     });
     inputHistory.push({
       type: "message",

@@ -1596,10 +1596,15 @@
             }
             scrollToBottom();
           }
-        } else if (!parsed.inProgress) {
+        } else if (!parsed.inProgress && streamContent.trim()) {
           isThinkingActive = false;
           const statusEl = document.getElementById(statusId);
           if (statusEl) statusEl.classList.add('hidden');
+
+          if (hasTool) {
+            const toolContainer = document.getElementById(toolContainerId);
+            if (toolContainer) toolContainer.classList.remove('hidden');
+          }
 
           const contentEl = document.getElementById(contentId);
           if (contentEl) {
