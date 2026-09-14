@@ -128,12 +128,35 @@ export function normalizeSubject(raw) {
   return null;
 }
 
+const BN_TO_EN_DIGITS = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+const BENGALI_ORDINALS = {
+  "১ম": 1, "২য়": 2, "২য়": 2, "৩য়": 3, "৩য়": 3, "৪র্থ": 4, "৫ম": 5, "৬ষ্ঠ": 6, "৭ম": 7, "৮ম": 8, "৯ম": 9, "১০ম": 10,
+  "১১শ": 11, "১২শ": 12, "১৩শ": 13, "১৪শ": 14, "১৫শ": 15, "১৬শ": 16, "১৭শ": 17,
+  "প্রথম": 1, "দ্বিতীয়": 2, "দ্বিতীয়": 2, "তৃতীয়": 3, "তৃতীয়": 3, "চতুর্থ": 4, "পঞ্চম": 5, "ষষ্ঠ": 6, "সপ্তম": 7, "অষ্টম": 8, "নবম": 9, "দশম": 10,
+  "একাদশ": 11, "দ্বাদশ": 12, "ত্রয়োদশ": 13, "ত্রয়োদশ": 13, "চতুর্দশ": 14, "পঞ্চদশ": 15, "ষোড়শ": 16, "ষোড়শ": 16, "সপ্তদশ": 17
+};
+
 export function extractChapterNum(raw) {
   if (!raw) return null;
-  const toEn = s => String(s).replace(/[০-৯]/g, d => "০১২৩৪৫৬৭৮৯".indexOf(d));
-  const s = toEn(raw).toLowerCase();
-  const m = s.match(/(?:অধ্যায়|অধ্যায়|chapter|ch)?\s*(\d+)/i);
-  return m ? m[1] : null;
+  const norm = String(raw).normalize('NFC').toLowerCase();
+
+  // 1. Check Bengali words like 'একাদশ', 'দশম', '১১শ'
+  for (const [word, num] of Object.entries(BENGALI_ORDINALS)) {
+    const re = new RegExp(`(?:^|\\s)${word}(?:\\s|$)`, 'i');
+    if (re.test(norm)) return String(num);
+  }
+
+  // 2. Check digits with 'ch', 'chapter', 'অধ্যায়', 'অধ্যায়'
+  const converted = norm.replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d);
+  const m = converted.match(/(?:অধ্যায়|অধ্যায়|chapter|ch)\s*(\d{1,2})/i) || 
+            converted.match(/(?:^|\s)(\d{1,2})\s*(?:নং|তম|শ|ম|র্থ|st|nd|rd|th)?\s*(?:অধ্যায়|অধ্যায়|chapter|ch)/i) ||
+            converted.match(/(?:^|\s)(?:অধ্যায়|অধ্যায়|chapter|ch)?\s*(\d{1,2})\b/i);
+  if (m) {
+    const num = parseInt(m[1], 10);
+    if (num >= 1 && num <= 25) return String(num);
+  }
+
+  return null;
 }
 
 export function normalizeTopic(raw) {
@@ -389,6 +412,97 @@ export async function getAllChaptersCached() {
 // Background preload
 getAllChaptersCached().catch(() => {});
 
+export const DISCRIMINATOR_RULES = {
+  // --- CHEMISTRY ---
+  // Ch 10: খনিজ সম্পদঃ ধাতু-অধাতু vs Ch 11: খনিজ সম্পদঃ জীবাশ্ম
+  "ch_0051": {
+    positives: ["ধাতু", "অধাতু", "নিষ্কাশন", "আকরিক", "মরিচা", "ক্ষয়রোধ", "হেমাটাইট", "বক্সাইট", "ক্যালামাইন", "গ্যালেনা", "সিন্নাবার", "ধাতব", "খনিজ মল", "ঝালাই", "খনিজ সম্পদ ধাতু অধাতু"],
+    negatives: ["জীবাশ্ম", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "পলিমার", "জৈব এসিড", "জৈব যৌগ", "ইথানল", "ইথানয়িক", "পেট্রোলিয়াম", "প্লাস্টিক", "ইউরিয়া"]
+  },
+  "ch_0052": {
+    positives: ["জীবাশ্ম", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "পলিমার", "প্লাস্টিক", "জৈব এসিড", "জৈব যৌগ", "ইথানল", "ইথানয়িক", "পেট্রোলিয়াম", "কয়লা", "প্রাকৃতিক গ্যাস", "ফ্যাটি এসিড", "মনোমার", "ডিকার্বক্সিলেশন", "খনিজ সম্পদ জীবাশ্ম"],
+    negatives: ["ধাতু", "অধাতু", "নিষ্কাশন", "আকরিক", "ক্ষয়রোধ", "মরিচা", "হেমাটাইট", "বক্সাইট", "ক্যালামাইন", "সিন্নাবার", "গ্যালেনা"]
+  },
+  // Ch 2: পদার্থের অবস্থা vs Ch 3: পদার্থের গঠন
+  "ch_0042": {
+    positives: ["অবস্থা", "কণার গতিতত্ত্ব", "ব্যাপন", "নিঃসরণ", "গলনাঙ্ক", "স্ফুটনাঙ্ক", "ঊর্ধ্বপাতন", "শীতলীকরণ"],
+    negatives: ["পরমাণু", "প্রোটন", "নিউট্রন", "ইলেকট্রন বিন্যাস", "আইসোটোপ", "রাদারফোর্ড", "বোর মডেল", "আপেক্ষিক পারমাণবিক ভর"]
+  },
+  "ch_0044": {
+    positives: ["গঠন", "পরমাণু", "প্রোটন", "নিউট্রন", "ইলেকট্রন বিন্যাস", "আইসোটোপ", "রাদারফোর্ড", "বোর মডেল", "আপেক্ষিক পারমাণবিক ভর", "কোয়ান্টাম", "শক্তিস্তর"],
+    negatives: ["ব্যাপন", "নিঃসরণ", "গলনাঙ্ক", "স্ফুটনাঙ্ক", "ঊর্ধ্বপাতন"]
+  },
+
+  // --- PHYSICS ---
+  // Ch 8: আলোর প্রতিফলন vs Ch 9: আলোর প্রতিসরণ
+  "ch_0008": {
+    positives: ["প্রতিফলন", "দর্পণ", "অবতল দর্পণ", "উত্তল দর্পণ", "বিম্ব", "প্রতিবিম্ব", "বক্রতার ব্যাসার্ধ", "ফোকাস দূরত্ব", "দর্পণে"],
+    negatives: ["প্রতিসরণ", "লেন্স", "প্রতিসরাঙ্ক", "সংকট কোণ", "ক্রান্তি কোণ", "পূর্ণ অভ্যন্তরীণ প্রতিফলন", "ডায়োপ্টার", "মরীচিকা"]
+  },
+  "ch_0009": {
+    positives: ["প্রতিসরণ", "লেন্স", "প্রতিসরাঙ্ক", "সংকট কোণ", "ক্রান্তি কোণ", "পূর্ণ অভ্যন্তরীণ প্রতিফলন", "ডায়োপ্টার", "মরীচিকা", "উত্তল লেন্স", "অবতল লেন্স", "দৃষ্টির ত্রুটি", "মায়োপিয়া"],
+    negatives: ["প্রতিফলন", "দর্পণ", "অবতল দর্পণ", "উত্তল দর্পণ"]
+  },
+  // Ch 10: স্থির বিদ্যুৎ vs Ch 11: চল বিদ্যুৎ
+  "ch_0010": {
+    positives: ["স্থির বিদ্যুৎ", "স্থিরতড়িৎ", "কুলম্ব", "তড়িৎ আবেশ", "ইলেকট্রোস্কোপ", "তড়িৎ তীব্রতা", "আধান", "ধারক", "ধারকত্ব", "তড়িৎ বিভব"],
+    negatives: ["চল বিদ্যুৎ", "চলতড়িৎ", "ওহম", "রোধ", "তুল্য রোধ", "বর্তনী", "সার্কিট", "অ্যামিটার", "ভোল্টমিটার", "আপেক্ষিক রোধ"]
+  },
+  "ch_0011": {
+    positives: ["চল বিদ্যুৎ", "চলতড়িৎ", "ওহম", "রোধ", "তুল্য রোধ", "বর্তনী", "সার্কিট", "তড়িৎ প্রবাহ", "তড়িৎ ক্ষমতা", "আপেক্ষিক রোধ", "ফিউজ", "অ্যামিটার", "ভোল্টমিটার", "রোধের সূত্র"],
+    negatives: ["স্থির বিদ্যুৎ", "স্থিরতড়িৎ", "কুলম্ব", "ইলেকট্রোস্কোপ", "তড়িৎ আবেশ"]
+  },
+  // Ch 2: গতি vs Ch 3: বল
+  "ch_0002": {
+    positives: ["গতি", "ত্বরণ", "বেগ", "দ্রুতি", "সরণ", "মন্দন", "প্রাস", "পরন্ত বস্তু", "গতির সমীকরণ"],
+    negatives: ["ঘর্ষণ", "জড়তা", "ভরবেগের সংরক্ষণ", "ক্রিয়া প্রতিক্রিয়া"]
+  },
+  "ch_0003": {
+    positives: ["বল", "নিউটনের সূত্র", "ভরবেগ", "ঘর্ষণ", "জড়তা", "ভরবেগের সংরক্ষণ", "ক্রিয়া প্রতিক্রিয়া", "নিউটনের ৩য় সূত্র"],
+    negatives: ["পরন্ত বস্তু", "প্রাস"]
+  },
+
+  // --- BIOLOGY ---
+  "ch_0029": {
+    positives: ["টিস্যু", "মাইটোকন্ড্রিয়া", "প্লাস্টিড", "গলগি", "রাইবোজোম", "লাইসোজোম", "জাইলেম", "ফ্লোয়েম", "প্যারেনকাইমা", "কোলেনকাইমা", "স্ক্লেরেনকাইমা"],
+    negatives: ["কোষ বিভাজন", "মাইটোসিস", "মিয়োসিস", "অ্যামাইটোসিস", "প্রোফেজ", "মেটাফেজ", "অ্যানাফেজ", "টেলোফেজ", "ক্রসিং ওভার"]
+  },
+  "ch_0030": {
+    positives: ["কোষ বিভাজন", "মাইটোসিস", "মিয়োসিস", "অ্যামাইটোসিস", "প্রোফেজ", "মেটাফেজ", "অ্যানাফেজ", "টেলোফেজ", "ক্রসিং ওভার", "স্পিন্ডল তন্তু"],
+    negatives: ["জাইলেম", "ফ্লোয়েম", "প্যারেনকাইমা", "কোলেনকাইমা", "স্ক্লেরেনকাইমা"]
+  },
+  "ch_0031": {
+    positives: ["জীবনীশক্তি", "সালোকসংশ্লেষণ", "শ্বসন", "এটিপি", "ATP", "ক্যালভিন চক্র", "ক্রেবস চক্র", "গ্লাইকোলাইসিস", "ফার্মেন্টেশন", "ক্লোরোফিল", "হ্যাস ও স্ল্যাক"],
+    negatives: ["পরিপাক", "পাকস্থলী", "যকৃৎ", "অগ্ন্যাশয়", "বিএমআই", "BMI"]
+  },
+  "ch_0032": {
+    positives: ["খাদ্য", "পুষ্টি", "পরিপাক", "পাকস্থলী", "যকৃৎ", "অগ্ন্যাশয়", "ক্ষুদ্রান্ত্র", "বৃহদান্ত্র", "ভিটামিন", "বিএমআই", "BMI", "ক্যালোরি", "দাঁত", "আন্ত্রিক রস"],
+    negatives: ["সালোকসংশ্লেষণ", "ক্যালভিন চক্র", "গ্লাইকোলাইসিস", "ক্রেবস চক্র"]
+  },
+  "ch_0033": {
+    positives: ["জীবে পরিবহণ", "রক্ত", "হৃদপিণ্ড", "ধমনী", "শিরা", "রক্তরস", "লোহিত", "শ্বেত", "অনুচক্রিকা", "হিমোগ্লোবিন", "রক্তচাপ", "প্রস্বেদন"],
+    negatives: ["রেচন", "বৃক্ক", "নেফ্রন", "ইউরেটার", "মূত্রথলি", "ডায়ালাইসিস", "গ্লোমেরুলাস"]
+  },
+  "ch_0035": {
+    positives: ["রেচন", "বৃক্ক", "নেফ্রন", "ইউরেটার", "মূত্রথলি", "ডায়ালাইসিস", "গ্লোমেরুলাস", "রেনাল", "ইউরিয়া", "ইউরিক এসিড"],
+    negatives: ["রক্তরস", "হিমোগ্লোবিন", "প্রস্বেদন", "হৃদপিণ্ড"]
+  },
+
+  // --- BGS ---
+  "ch_0082": {
+    positives: ["নদ নদী", "পদ্মা", "মেঘনা", "যমুনা", "প্রাকৃতিক সম্পদ", "পানি সম্পদ", "নদী"],
+    negatives: ["পুঁজিবাদ", "সমাজতন্ত্র", "জিডিপি", "GDP", "মাথাপিছু আয়"]
+  },
+  "ch_0087": {
+    positives: ["জাতীয় সম্পদ", "অর্থনৈতিক ব্যবস্থা", "পুঁজিবাদী", "সমাজতান্ত্রিক", "মিশ্র অর্থব্যবস্থা", "ইসলামী অর্থব্যবস্থা", "সম্পদের বণ্টন"],
+    negatives: ["নদ নদী", "জিডিপি", "GDP", "মাথাপিছু আয়", "অর্থনৈতিক নির্দেশক"]
+  },
+  "ch_0088": {
+    positives: ["অর্থনৈতিক নির্দেশক", "জিডিপি", "GDP", "GNP", "মাথাপিছু আয়", "জাতীয় আয়", "অর্থনীতির প্রকৃতি"],
+    negatives: ["নদ নদী", "পানি সম্পদ", "পুঁজিবাদী", "সমাজতান্ত্রিক"]
+  }
+};
+
 export async function findChapterCached(rawTopicOrCh, subjId = null) {
   if (!rawTopicOrCh) return null;
   const all = await getAllChaptersCached();
@@ -400,87 +514,107 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     return String(str)
       .toLowerCase()
       .normalize('NFC')
-      .replace(/[ঃ:–—\-_,।/|]/g, ' ')
+      .replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d)
+      .replace(/[\u0982\u0983:;,\–\—\-_।/\\()\[\]{}'"`?*!+~@#$%^&=|]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   };
 
-  const rawClean = normalizeClean(rawTopicOrCh);
-  const chNum = extractChapterNum(rawTopicOrCh);
+  // Extract all available textual signals from string or object
+  let fullContext = "";
+  let targetSubj = subjId;
 
-  // If chapter number is explicitly provided and subject is known
-  if (chNum && subjId) {
-    const found = all.find(c => c.subject_id === subjId && String(c.order_num) === String(chNum));
-    if (found) return found;
+  if (typeof rawTopicOrCh === "object" && rawTopicOrCh !== null) {
+    const parts = [
+      rawTopicOrCh.chapter,
+      rawTopicOrCh.topic,
+      rawTopicOrCh.query,
+      rawTopicOrCh.userMessage
+    ].filter(Boolean);
+    fullContext = parts.join(" ");
+    targetSubj = rawTopicOrCh.subject || subjId || normalizeSubject(fullContext);
+  } else {
+    fullContext = String(rawTopicOrCh);
+    targetSubj = subjId || normalizeSubject(fullContext);
   }
 
-  // 1. Strict full name match (normalized without punctuation mismatch)
-  if (subjId) {
-    const exactSubj = all.find(c => c.subject_id === subjId && (normalizeClean(c.name) === rawClean || normalizeClean(c.name).includes(rawClean) || rawClean.includes(normalizeClean(c.name))));
-    if (exactSubj) return exactSubj;
-  }
+  const rawClean = normalizeClean(fullContext);
+  const extractedNum = extractChapterNum(fullContext);
 
-  // Also check across ALL subjects if full name matches
-  const exactAny = all.find(c => normalizeClean(c.name) === rawClean || normalizeClean(c.name).includes(rawClean) || rawClean.includes(normalizeClean(c.name)));
-  if (exactAny) return exactAny;
+  let bestMatch = null;
+  let highestScore = -99999;
 
-  // 2. Best-matching words scoring (highest word overlap wins, NOT just any random word!)
-  const stopWords = new Set(['অধ্যায়', 'অধ্যায়', 'এর', 'থেকে', 'chapter', 'ch', 'এবং', 'ও', 'সম্পর্কিত', 'theke', 'theika', 'dio', 'dao', 'ekta', 'akta', 'mcq', 'cq', 'prosno']);
-  const queryWords = rawClean.split(' ').filter(w => w.length > 1 && !stopWords.has(w));
+  for (const c of all) {
+    let score = 0;
+    const normChName = normalizeClean(c.name);
+    const chNum = parseInt(c.order_num, 10);
+    const isSameSubj = targetSubj && c.subject_id === targetSubj;
 
-  if (queryWords.length > 0) {
-    let bestMatch = null;
-    let highestScore = 0;
+    // 1. Exact normalized name match (Punctuation Invariant)
+    if (rawClean === normChName) {
+      score += 3500;
+    } else if (rawClean.includes(normChName)) {
+      score += 2500 + (normChName.length * 10);
+    } else if (normChName.includes(rawClean) && rawClean.length >= 4) {
+      score += 1800 + (rawClean.length * 10);
+    }
 
-    // First search in target subject
-    const candidates = subjId ? all.filter(c => c.subject_id === subjId) : all;
-    for (const c of candidates) {
-      const cWords = normalizeClean(c.name).split(' ').filter(w => w.length > 1 && !stopWords.has(w));
-      let score = 0;
-      for (const qw of queryWords) {
-        if (cWords.some(cw => cw === qw || cw.includes(qw) || qw.includes(cw))) {
-          score += 2; // Exact word match
-        }
-      }
-      if (score > highestScore) {
-        highestScore = score;
-        bestMatch = c;
+    // 2. Explicit chapter number match
+    if (extractedNum && chNum === parseInt(extractedNum, 10)) {
+      if (isSameSubj) {
+        score += 2200;
+      } else {
+        score += 600;
       }
     }
 
-    if (bestMatch && highestScore >= 2) return bestMatch;
+    // 3. Concept Map matching
+    const concepts = CHAPTER_CONCEPTS_MAP[c.subject_id]?.[String(c.order_num)] || [];
+    for (const con of concepts) {
+      const normCon = normalizeClean(con);
+      if (normCon.length >= 2 && rawClean.includes(normCon)) {
+        score += 800;
+      }
+    }
 
-    // If subject was wrong or null, search across ALL subjects for best match
-    if (!subjId || highestScore < 2) {
-      let globalBest = null;
-      let globalHighest = 0;
-      for (const c of all) {
-        const cWords = normalizeClean(c.name).split(' ').filter(w => w.length > 1 && !stopWords.has(w));
-        let score = 0;
-        for (const qw of queryWords) {
-          if (cWords.some(cw => cw === qw || cw.includes(qw) || qw.includes(cw))) {
-            score += 2;
-          }
-        }
-        if (score > globalHighest) {
-          globalHighest = score;
-          globalBest = c;
+    // 4. Discriminator and Anti-Collision Rules
+    const rules = DISCRIMINATOR_RULES[c.id];
+    if (rules) {
+      for (const pos of rules.positives) {
+        if (rawClean.includes(normalizeClean(pos))) {
+          score += 1000;
         }
       }
-      if (globalBest && globalHighest >= 2) return globalBest;
+      for (const neg of rules.negatives) {
+        if (rawClean.includes(normalizeClean(neg))) {
+          score -= 2500; // Mutual exclusion penalty
+        }
+      }
+    }
+
+    // 5. Token overlap
+    const chTokens = normChName.split(' ').filter(t => t.length >= 2);
+    const queryTokens = rawClean.split(' ').filter(t => t.length >= 2);
+    for (const qt of queryTokens) {
+      if (chTokens.includes(qt)) {
+        score += 80;
+      }
+    }
+
+    // 6. Subject Alignment Bonus
+    if (isSameSubj) {
+      score += 120;
+    }
+
+    if (score > highestScore) {
+      highestScore = score;
+      bestMatch = c;
     }
   }
 
-  // 3. Match against CHAPTER_CONCEPTS_MAP
-  const checkSubjects = subjId ? [subjId] : Object.keys(CHAPTER_CONCEPTS_MAP);
-  for (const sId of checkSubjects) {
-    if (!CHAPTER_CONCEPTS_MAP[sId]) continue;
-    for (const [cNum, concepts] of Object.entries(CHAPTER_CONCEPTS_MAP[sId])) {
-      if (concepts.some(con => rawClean.includes(normalizeClean(con)) || normalizeClean(con).includes(rawClean))) {
-        const found = all.find(ch => ch.subject_id === sId && String(ch.order_num) === cNum);
-        if (found) return found;
-      }
-    }
+  // If match confidence is solid, return chapter
+  if (bestMatch && highestScore >= 300) {
+    return bestMatch;
   }
 
   return null;
@@ -985,8 +1119,7 @@ export async function executeAgentTool(toolName, args) {
       const topic = (args.topic || "").replace(/'/g, "''").trim();
       
       // Check if topic matches an official chapter
-      const chRes = await executeRawSql(`SELECT id, name, subject_id FROM chapters WHERE name LIKE '%${topic}%' LIMIT 1;`);
-      const matchedChapter = chRes.rows[0];
+      const matchedChapter = await findChapterCached({ topic, chapter: topic, subject: args.subject }, args.subject);
       const whereClause = matchedChapter 
         ? `(chapter_id = '${matchedChapter.id}' OR question_text LIKE '%${topic}%')`
         : `question_text LIKE '%${topic}%'`;
@@ -1089,24 +1222,8 @@ export async function executeAgentTool(toolName, args) {
     case "get_creative_question": {
       let subjId = normalizeSubject(args.subject);
 
-      const candidateStrings = [];
-      if (args.chapter && args.topic) candidateStrings.push(`${args.chapter} ${args.topic}`);
-      if (args.chapter) candidateStrings.push(args.chapter);
-      if (args.topic) candidateStrings.push(args.topic);
-      if (args.query) candidateStrings.push(args.query);
-
-      let matchedChapterInfo = null;
-      let rawT = "";
-      for (const cand of candidateStrings) {
-        matchedChapterInfo = await findChapterCached(cand, subjId);
-        if (matchedChapterInfo) {
-          rawT = cand;
-          break;
-        }
-      }
-      if (!rawT && candidateStrings.length > 0) {
-        rawT = candidateStrings[0];
-      }
+      const matchedChapterInfo = await findChapterCached(args, subjId);
+      const rawT = [args.chapter, args.topic, args.query].filter(Boolean).join(" ");
       if (matchedChapterInfo && matchedChapterInfo.subject_id) {
         subjId = matchedChapterInfo.subject_id;
       }
@@ -1303,24 +1420,8 @@ export async function executeAgentTool(toolName, args) {
       // Year matching (supports ranges like '2020-2025')
       const years = parseYearFilter(args.year);
 
-      const candidateStrings = [];
-      if (args.chapter && args.topic) candidateStrings.push(`${args.chapter} ${args.topic}`);
-      if (args.chapter) candidateStrings.push(args.chapter);
-      if (args.topic) candidateStrings.push(args.topic);
-      if (args.query) candidateStrings.push(args.query);
-
-      let matchedChapterInfo = null;
-      let rawT = "";
-      for (const cand of candidateStrings) {
-        matchedChapterInfo = await findChapterCached(cand, subjId);
-        if (matchedChapterInfo) {
-          rawT = cand;
-          break;
-        }
-      }
-      if (!rawT && candidateStrings.length > 0) {
-        rawT = candidateStrings[0];
-      }
+      const matchedChapterInfo = await findChapterCached(args, subjId);
+      const rawT = [args.chapter, args.topic, args.query].filter(Boolean).join(" ");
       if (matchedChapterInfo && matchedChapterInfo.subject_id) {
         subjId = matchedChapterInfo.subject_id;
       }
@@ -1683,16 +1784,11 @@ export async function executeAgentTool(toolName, args) {
     }
 
     case "analyze_chapter_patterns": {
-      const subjId = normalizeSubject(args.subject) || "ssc_physics";
-      const chapKw = normalizeTopic(args.chapter) || args.chapter;
-
-      // Find chapter row
-      const chapRes = await executeRawSql(`
-        SELECT id, name, order_num FROM chapters 
-        WHERE subject_id = '${subjId}' AND (name LIKE '%${chapKw}%' OR order_num = '${chapKw}') 
-        LIMIT 1;
-      `);
-      const chapter = chapRes.rows[0];
+      let subjId = normalizeSubject(args.subject) || "ssc_physics";
+      const chapter = await findChapterCached({ chapter: args.chapter, subject: subjId }, subjId);
+      if (chapter && chapter.subject_id) {
+        subjId = chapter.subject_id;
+      }
       const chapIdClause = chapter ? `AND chapter_id = '${chapter.id}'` : "";
 
       // Count total questions in chapter
