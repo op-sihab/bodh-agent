@@ -111,21 +111,29 @@ export function normalizeBoard(raw) {
 export function normalizeSubject(raw) {
   if (!raw) return null;
   const s = String(raw).toLowerCase().trim();
-  if (s === "ssc_bangla_2nd" || s.includes("bangla_2") || s.includes("bangla 2") || s.includes("bangla-2") || s.includes("বাংলা ২") || s.includes("বাংলা ২য়") || s.includes("বাংলা ২য়") || s.includes("ব্যাকরণ") || s.includes("byakoron")) return "ssc_bangla_2nd";
-  if (s === "ssc_english_2nd" || s.includes("english_2") || s.includes("english 2") || s.includes("english-2") || s.includes("eng 2") || s.includes("eng_2") || s.includes("ইংরেজি ২") || s.includes("ইংরেজি ২য়") || s.includes("ইংরেজি ২য়") || s.includes("grammar")) return "ssc_english_2nd";
-  if (s.includes("suva") || s.includes("সুভা") || s.includes("শুভা") || s.includes("কাকতাড়ুয়া") || s.includes("kaktarua") || s.includes("বহিপীর") || s.includes("bohipir") || s.includes("বই পড়া") || s.includes("boi pora")) return "ssc_bangla_1st";
-  if (s === "ssc_bangla_1st" || s.includes("goddo") || s.includes("gotto") || s.includes("গদ্য") || s.includes("kobita") || s.includes("কবিতা") || s.includes("sahitto") || s.includes("সাহিত্য") || s.includes("সহপাঠ") || s.includes("sohopath") || s.includes("bangla") || s.includes("বাংলা")) return "ssc_bangla_1st";
-  if (s === "ssc_english_1st" || s.includes("english") || s.includes("ইংরেজি") || s.includes("eng")) return "ssc_english_1st";
-  if (s.includes("higher") || s.includes("উচ্চতর") || s.includes("হায়ার") || s.includes("hm")) return "ssc_higher_math";
-  if (s.includes("math") || s.includes("গণিত") || s.includes("গনিত") || s.includes("gm")) return "ssc_general_math";
-  if (s.includes("phys") || s.includes("পদার্থ") || s.includes("fiji") || s.includes("fizi")) return "ssc_physics";
-  if (s.includes("chem") || s.includes("রসায়ন") || s.includes("রসায়ন") || s.includes("kemi")) return "ssc_chemistry";
-  if (s.includes("bio") || s.includes("bilo") || s.includes("baio") || s.includes("জীববিজ্ঞান") || s.includes("বায়োলজি")) return "ssc_biology";
-  if (s.includes("ict") || s.includes("তথ্য") || s.includes("আইসিটি")) return "ssc_ict";
-  if (s.includes("bgs") || s.includes("সমাজ") || s.includes("বাংলাদেশ ও বিশ্ব") || s.includes("বিজিএস")) return "ssc_bgs";
-  if (s.includes("islam") || s.includes("ধর্ম") || s.includes("ইসলাম")) return "ssc_islam";
-  if (s.includes("hindu") || s.includes("হিন্দু")) return "ssc_hindu";
-  if (s.includes("agri") || s.includes("কৃষি")) return "ssc_agriculture";
+
+  // Fast direct ID match
+  if (s.startsWith("ssc_")) return s;
+
+  if (/bangla\s*2|বাংলা\s*২|ব্যাকরণ|byakoron/i.test(s)) return 'ssc_bangla_2nd';
+  if (/english\s*2|ইংরেজি\s*২|eng\s*2/i.test(s)) return 'ssc_english_2nd';
+  if (/suva|সুভা|শুভা|কাকতাড়ুয়া|kaktarua|বহিপীর|bohipir|বই\s*পড়া|boi\s*pora|goddo|gotto|গদ্য|kobita|কবিতা|সাহিত্য|সহপাঠ/i.test(s)) return 'ssc_bangla_1st';
+  if (/bangla\s*1|বাংলা\s*১|bangla|বাংলা/i.test(s)) return 'ssc_bangla_1st';
+  if (/english\s*1|ইংরেজি\s*১|english|ইংরেজি|\beng\b/i.test(s)) return 'ssc_english_1st';
+  
+  if (/উচ্চতর|হায়ার|হায়ার|\b(?:hm|hmath|higher)\b/i.test(s)) return 'ssc_higher_math';
+  if (/গণিত|গনিত|\b(?:math|maths|gonit|gm)\b/i.test(s)) return 'ssc_general_math';
+  
+  if (/পদার্থবিজ্ঞান|পদার্থবিদ্য|পদার্থ|\b(?:physics|physic|phys|fijiks|fizix|fiji|fizi|fyziks)\b/i.test(s)) return 'ssc_physics';
+  if (/রসায়ন|রসায়ন|কেমিস্ট্রি|\b(?:chem|chemistry|kemi|kemistri|chemi)\b/i.test(s)) return 'ssc_chemistry';
+  if (/জীববিজ্ঞান|বায়োলজি|বায়োলজি|(?:^|\s)জীব(?:\s|$)|\b(?:bio|biology|bilogoy|bilogy|bology|bioloy|biolgy|baio|boilogy)\b/i.test(s)) return 'ssc_biology';
+  
+  if (/আইসিটি|\bict\b|তথ্য\s*ও\s*যোগাযোগ/i.test(s)) return 'ssc_ict';
+  if (/বিজিএস|\bbgs\b|বাংলাদেশ\s*ও\s*বিশ্ব|সমাজ/i.test(s)) return 'ssc_bgs';
+  if (/ইসলাম|ধর্ম|\bislam\b/i.test(s)) return 'ssc_islam';
+  if (/হিন্দু|\bhindu\b/i.test(s)) return 'ssc_hindu';
+  if (/কৃষি|\bagri\b|agriculture/i.test(s)) return 'ssc_agriculture';
+
   return null;
 }
 

@@ -161,8 +161,12 @@ const SYSTEM_PROMPT = `
       * উদাহরণ: যদি প্রশ্ন করে "পদার্থের কোন অধ্যায় থেকে বোর্ডে সবচেয়ে বেশি প্রশ্ন আসে এবং ওই অধ্যায় থেকে একটা বোর্ড সৃজনশীল প্রশ্ন দাও":
         - **ধাপ ১ (Step 1):** আগে get_chapter_importance_ranking(subject: "ssc_physics") কল করে সবচেয়ে বেশি প্রশ্ন আসা শীর্ষ অধ্যায়ের নাম জানবে (যেমন: গতি বা চল তড়িৎ)।
         - **ধাপ ২ (Step 2):** ১ম টুলের প্রাপ্ত ফলাফল (most_important_chapter) থেকে শীর্ষ অধ্যায়ের নাম নিয়ে get_creative_question(subject: "ssc_physics", chapter: "<প্রাপ্ত শীর্ষ অধ্যায়ের নাম>") কল করবে।
-        - **ধাপ ৩ (Final Synthesis):** সব তথ্য পাওয়ার পর শিক্ষার্থীকে বড় ভাইয়ার মতো শীর্ষ অধ্যায়ের বোর্ড গুরুত্ব/পরিসংখ্যান এবং সৃজনশীল প্রশ্নটি সুন্দরভাবে সাজিয়ে দেবে।
       * ভুলেও ১ম টুলের ফলাফল পাওয়ার আগেই অনুমান করে বা অধ্যায়ের নাম ফাঁকা/ভুল রেখে ২য় টুল কল করবে না!
+১৮. অপ্রয়োজনীয় বিতর্ক, আত্মপক্ষ সমর্থন ও কৈফিয়ত সম্পূর্ণ নিষিদ্ধ (Zero Meta-Debate, Defense & Excuses):
+    - শিক্ষার্থী যদি তোমার কোনো পূর্ববর্তী বক্তব্য নিয়ে প্রশ্ন বা আপত্তি তোলে (যেমন: "কবে চেয়েছিলাম পদার্থবিজ্ঞান?", "তুমি ফিজিক্স কই দেখতে পাচ্ছ?", "কিসের ওপর ভিত্তি করে বললে?", "কেন বললে?", "বেশি বোঝো"):
+    - কখনোই পূর্বের চ্যাটের ভুল ব্যাখ্যা নিয়ে বিতর্ক, যুক্তিতর্ক বা আত্মপক্ষ সমর্থন (Self-Defense / Meta-Debate) করবে না!
+    - ভুলেও "তোমার অমুক বার্তার ওপর ভিত্তি করে বলেছিলাম", "আমার ভুল হয়েছিল", "আমি ভেবেছিলাম..." জাতীয় কোনো আত্মপক্ষ সমর্থনমূলক বিশ্লেষণ দেওয়া কঠোরভাবে নিষিদ্ধ।
+    - সাথে সাথে অপ্রাসঙ্গিক বিতর্ক বাদ দিয়ে বিনয়ের সাথে ১ লাইনে ভুল শুধরে সরাসরি চলমান বিষয়ের মূল অ্যাকাডেমিক পড়া ও প্রশ্নে ফিরে আসবে।
 `;
 
 function isConversational(msg) {
@@ -374,23 +378,84 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   );
 
   // Extract active subject and chapter from conversation history for unbreakable continuity
-  let activeSubject = null;
-  let activeChapter = null;
+  let pastSubject = null;
+  let pastChapter = null;
 
   for (const turn of pastHistory.slice().reverse()) {
     const text = typeof turn.content === "string" ? turn.content : "";
-    if (!activeSubject) {
-      activeSubject = normalizeSubject(text);
+    if (!pastSubject) {
+      pastSubject = normalizeSubject(text);
     }
-    if (!activeChapter) {
+    if (!pastChapter) {
       const chNum = extractChapterNum(text);
-      if (chNum) activeChapter = chNum;
+      if (chNum) pastChapter = chNum;
     }
-    if (activeSubject && activeChapter) break;
+    if (pastSubject && pastChapter) break;
+  }
+
+  const isMetaDebate = /(?:kobe|কবে|kiser|কিসের|koi|কই|kothay|কোথায়|keno|কেন)\s*(?:bollam|chaicilam|cheye|dekhte|vitti|ভিত্তি|dekhso|bolle|boltesile)|(?:vul|ভুল)\s*bolso|besi\s*bujo|বেশি\s*বোঝ|faltu|ফালতু|to\s*boli\s*nai|তো\s*বলি\s*নাই|চাই\s*নাই|chai\s*nai/i.test(userMessage);
+  const isSubjectRejection = /(?:na|না|নাই|নি|not|no)\b/i.test(userMessage) && !/(?:porbo|পড়ব|start|dao|দাও)/i.test(userMessage);
+  const isQuestioningSubject = /(?:kobe|কবে|kiser|কিসের|koi|কই|kothay|কোথায়|keno|কেন)\b/i.test(userMessage);
+
+  let activeSubject = pastSubject;
+  let activeChapter = pastChapter;
+
+  // Only allow current message to switch subject if it is an intentional, non-debate, non-negated switch
+  const currentMsgSubject = normalizeSubject(userMessage);
+  if (currentMsgSubject && !isMetaDebate && !isSubjectRejection && !isQuestioningSubject) {
+    activeSubject = currentMsgSubject;
+  }
+
+  const currentMsgChapter = extractChapterNum(userMessage);
+  if (currentMsgChapter && !isMetaDebate) {
+    activeChapter = currentMsgChapter;
+  }
+
+  // Always inject Active Academic Subject Lock Directive when an active subject is established
+  if (activeSubject) {
+    const chDisplay = activeChapter ? `অধ্যায় ${activeChapter}` : "চলমান অধ্যায়";
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: `ACTIVE ACADEMIC CONTEXT: Subject is '${activeSubject}' (${chDisplay}).
+STRICT SUBJECT & CHAPTER PERSISTENCE DIRECTIVE:
+1. You are actively tutoring the student in '${activeSubject}', ${chDisplay}.
+2. DO NOT change or switch to any other subject (such as physics, chemistry, biology, or math) based on ambiguous words, typos, short comments, or Banglish slang (like 'dohhay', 'arekta', 'next', 'ei type er', 'onno').
+3. You may ONLY change subjects if the student explicitly and unambiguously writes the name of a new subject (e.g., 'এখন রসায়ন পড়ব' or 'physics start koro').
+4. If the student makes a comment or typo regarding the chapter (e.g. 'dohhay er bollam' = অধ্যায়ের বললাম), understand that they are referring to '${activeSubject}', ${chDisplay}.
+5. NEVER hallucinate that the student wanted another subject, and NEVER apologize or debate past turns. Keep all focus strictly anchored on '${activeSubject}'.`
+    });
+  }
+
+  if (isMetaDebate) {
+    const subjNameMap = {
+      'ssc_biology': 'জীববিজ্ঞান',
+      'ssc_physics': 'পদার্থবিজ্ঞান',
+      'ssc_chemistry': 'রসায়ন',
+      'ssc_general_math': 'সাধারণ গণিত',
+      'ssc_higher_math': 'উচ্চতর গণিত',
+      'ssc_bangla_1st': 'বাংলা ১ম পত্র',
+      'ssc_bangla_2nd': 'বাংলা ২য় পত্র',
+      'ssc_english_1st': 'ইংরেজি ১ম পত্র',
+      'ssc_english_2nd': 'ইংরেজি ২য় পত্র',
+      'ssc_ict': 'আইসিটি',
+      'ssc_bgs': 'বাংলাদেশ ও বিশ্বপরিচয়'
+    };
+    const activeSubjBn = subjNameMap[activeSubject] || activeSubject || "চলমান বিষয়";
+    const chDisplay = activeChapter ? `অধ্যায় ${activeChapter}` : "";
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: `CRITICAL DIRECTIVE (ZERO META-DEBATE & IMMEDIATE PIVOT):
+The student is questioning or challenging why you mentioned another subject or made a previous statement.
+1. DO NOT DEFEND YOURSELF: Absolutely DO NOT explain past reasoning, do not say "তোমার আগের বার্তার ওপর ভিত্তি করে", and do not debate!
+2. NO LONG EXCUSES: Give a warm, humble 1-line pivot acknowledgment stating that you made a mistake and that you are staying with ${activeSubjBn} ${chDisplay} (e.g., "তুমি একদম ঠিক বলেছ ভাইয়া, ভুল বোঝাবুঝির জন্য আন্তরিকভাবে দুঃখিত! চলো কোনো বিভ্রান্তি ছাড়া সরাসরি ${activeSubjBn} ${chDisplay}-এর মূল পড়ায় ফিরি।").
+3. IMMEDIATELY RETURN TO THE ACADEMIC TASK: Provide an authentic question or proceed with ${activeSubjBn} ${chDisplay}.`
+    });
   }
 
   const isQuestionCommentOrFollowUp = wasLastTurnMcq && !isUserAnswering && (
-    /type|টাইপ|আরেকটা|আরো|আর\s*নেই|r\s*nai|ar\s*nai|r\s*ki\s*nai|emon|এমন|এইরকম|এই\s*ধরনের|পরের|next|বোর্ড|board|কঠিন|সহজ|গাণিতিক|math|বহুপদী|বিবৃতি|dekhi|দেখি/i.test(userMessage)
+    /type|টাইপ|আরেকটা|আরো|আর\s*নেই|r\s*nai|ar\s*nai|r\s*ki\s*nai|emon|এমন|এইরকম|এই\s*ধরনের|পরের|next|বোর্ড|board|কঠিন|সহজ|গাণিতিক|math|বহুপদী|বিবৃতি|dekhi|দেখি|dohhay|odhay|অধ্যায়|অধ্যায়|chapter/i.test(userMessage)
   );
 
   const isFollowUpMcq = wasLastTurnMcq && !isUserAnswering && (
@@ -410,10 +475,10 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
 1. STRICT EVALUATION ONLY: Compare the student's answer against the correct answer [ans: ...] from the previous message.
 2. If correct: enthusiastically praise the student in 1 line, then provide a 2-3 line clear scientific reason/explanation.
 3. If incorrect: gently explain why in 2-3 lines with the correct scientific principle and state the right option.
-4. ZERO CHAPTER/SYLLABUS DOUBT:
+4. ZERO CHAPTER/SYLLABUS DOUBT & ZERO APOLOGY:
    - NEVER criticize the previous question or doubt its chapter!
    - NEVER say "তবে আগের প্রশ্নটি অমুক অধ্যায়ের সঙ্গে সামঞ্জস্যপূর্ণ ছিল না" or "সঠিক অধ্যায় অনুসরণ করে দেব" or apologize!
-   - All questions in BODH database are 100% verified and authentic board questions. Do not debate syllabus or chapter boundaries.
+   - NEVER claim the student wanted a different subject. All questions in BODH database are 100% verified and authentic board questions. Do not debate syllabus or chapter boundaries.
 5. End with an encouraging 1-line invite for the next challenge.`
     });
   } else if (isMcqIntent) {
