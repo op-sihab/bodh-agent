@@ -364,10 +364,14 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
     }
   }
 
-  const isUserAnswering = /^(ক|খ|গ|ঘ|a|b|c|d|১|২|৩|৪)$|^উত্তর\s*[:ঃ]?\s*(ক|খ|গ|ঘ|a|b|c|d)|^ans\s*[:ঃ]?\s*(ক|খ|গ|ঘ|a|b|c|d)/i.test(userMessage.trim());
   const lastAssistantMsg = pastHistory.slice().reverse().find(m => m.role === "assistant")?.content || "";
   const wasLastTurnMcq = /\[ans:\s*[ক-ঘa-d]\]|\(ক\)|\(খ\)|\(গ\)|\(ঘ\)/i.test(lastAssistantMsg);
   const wasLastTurnCq = /ক\s*\)\s*|খ\s*\)\s*|গ\s*\)\s*|ঘ\s*\)/i.test(lastAssistantMsg) && !wasLastTurnMcq;
+
+  const isUserAnswering = (
+    /^(?:আমার\s*উত্তর\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?|[ক-ঘa-dA-D১-৪]$|^\(?([ক-ঘa-dA-D১-৪])\)$|^উত্তর\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?|^ans\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?|^amar\s*(?:uttor|ans)\s*[:ঃ]?\s*\(?([ক-ঘa-dA-D১-৪])\)?)/i.test(userMessage.trim()) ||
+    (wasLastTurnMcq && /^(?:হবে\s*[ক-ঘa-d]|[ক-ঘa-d]\s*হবে|mone\s*hoy\s*[ক-ঘa-d]|মনে\s*হয়\s*[ক-ঘa-d])/i.test(userMessage.trim()))
+  );
 
   // Extract active subject and chapter from conversation history for unbreakable continuity
   let activeSubject = null;
@@ -398,7 +402,21 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   const isMcqIntent = !isUserAnswering && (isFollowUpMcq || /mcq|বহুনির্বাচন|quiz|নৈর্ব্যক্তিক|নৈর্বাচনিক|একটি mcq|এক্টা mcq|ekta mcq|আরেকটা দাও|নতুন mcq|board\s*standard/i.test(userMessage) || (/(প্রশ্ন দাও|test dao|কুইজ|board question)/i.test(userMessage) && !/সৃজনশীল|cq/i.test(userMessage)));
   const isCqIntent = !isUserAnswering && (isFollowUpCq || /cq|সৃজনশীল|উদ্দীপক/i.test(userMessage));
 
-  if (isMcqIntent) {
+  if (isUserAnswering) {
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: `IMPORTANT ACADEMIC DIRECTIVE (QUIZ EVALUATION & GRADING): The student is answering the previous MCQ (${userMessage}).
+1. STRICT EVALUATION ONLY: Compare the student's answer against the correct answer [ans: ...] from the previous message.
+2. If correct: enthusiastically praise the student in 1 line, then provide a 2-3 line clear scientific reason/explanation.
+3. If incorrect: gently explain why in 2-3 lines with the correct scientific principle and state the right option.
+4. ZERO CHAPTER/SYLLABUS DOUBT:
+   - NEVER criticize the previous question or doubt its chapter!
+   - NEVER say "তবে আগের প্রশ্নটি অমুক অধ্যায়ের সঙ্গে সামঞ্জস্যপূর্ণ ছিল না" or "সঠিক অধ্যায় অনুসরণ করে দেব" or apologize!
+   - All questions in BODH database are 100% verified and authentic board questions. Do not debate syllabus or chapter boundaries.
+5. End with an encouraging 1-line invite for the next challenge.`
+    });
+  } else if (isMcqIntent) {
     const subjectHint = activeSubject ? `for subject '${activeSubject}'` : "";
     const chapterHint = activeChapter ? `and chapter '${activeChapter}'` : "";
     inputHistory.push({

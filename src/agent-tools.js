@@ -118,9 +118,9 @@ export function normalizeSubject(raw) {
   if (s === "ssc_english_1st" || s.includes("english") || s.includes("ইংরেজি") || s.includes("eng")) return "ssc_english_1st";
   if (s.includes("higher") || s.includes("উচ্চতর") || s.includes("হায়ার") || s.includes("hm")) return "ssc_higher_math";
   if (s.includes("math") || s.includes("গণিত") || s.includes("গনিত") || s.includes("gm")) return "ssc_general_math";
-  if (s.includes("phys") || s.includes("পদার্থ")) return "ssc_physics";
-  if (s.includes("chem") || s.includes("রসায়ন") || s.includes("রসায়ন")) return "ssc_chemistry";
-  if (s.includes("bio") || s.includes("জীববিজ্ঞান") || s.includes("বায়োলজি")) return "ssc_biology";
+  if (s.includes("phys") || s.includes("পদার্থ") || s.includes("fiji") || s.includes("fizi")) return "ssc_physics";
+  if (s.includes("chem") || s.includes("রসায়ন") || s.includes("রসায়ন") || s.includes("kemi")) return "ssc_chemistry";
+  if (s.includes("bio") || s.includes("bilo") || s.includes("baio") || s.includes("জীববিজ্ঞান") || s.includes("বায়োলজি")) return "ssc_biology";
   if (s.includes("ict") || s.includes("তথ্য") || s.includes("আইসিটি")) return "ssc_ict";
   if (s.includes("bgs") || s.includes("সমাজ") || s.includes("বাংলাদেশ ও বিশ্ব") || s.includes("বিজিএস")) return "ssc_bgs";
   if (s.includes("islam") || s.includes("ধর্ম") || s.includes("ইসলাম")) return "ssc_islam";
