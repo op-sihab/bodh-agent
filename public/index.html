@@ -608,13 +608,6 @@
                 <div id="resTimeText" class="text-base sm:text-lg font-bold text-amber-400 font-mono">০১:৪৫</div>
               </div>
             </div>
-
-            <div class="pt-3">
-              <button type="button" onclick="requestAiExamDiagnostic()" class="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 text-xs sm:text-sm font-bold shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 transition-all cursor-pointer inline-flex items-center justify-center gap-2">
-                <span>🤖 AI শিক্ষক থেকে বিস্তারিত সামারি ও গাইড নাও</span>
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-              </button>
-            </div>
           </div>
 
           <!-- Question-by-Question Review List -->
@@ -645,19 +638,13 @@
           </div>
         </div>
 
-        <div id="examResultFooterControls" class="hidden flex flex-wrap items-center justify-between gap-2.5 w-full">
-          <div class="flex items-center gap-2">
-            <button type="button" onclick="restartCurrentExam()" class="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white text-xs font-medium border border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer">
-              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-              <span>পুনরায় পরীক্ষা দাও</span>
-            </button>
-            <button type="button" onclick="closeExamModal()" class="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white text-xs font-medium border border-white/[0.08] transition cursor-pointer">
-              <span>বন্ধ করো</span>
-            </button>
-          </div>
-          <button type="button" onclick="requestAiExamDiagnostic()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 text-xs font-bold shadow-[0_0_16px_rgba(16,185,129,0.3)] active:scale-95 transition-all cursor-pointer flex items-center gap-2">
-            <span>🤖 AI শিক্ষক থেকে বিস্তারিত সামারি ও গাইড নাও</span>
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        <div id="examResultFooterControls" class="hidden flex items-center justify-between w-full">
+          <button type="button" onclick="restartCurrentExam()" class="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white text-xs font-medium border border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>পুনরায় পরীক্ষা দাও</span>
+          </button>
+          <button type="button" onclick="closeExamModal()" class="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shadow transition cursor-pointer">
+            <span>চ্যাটে ফিরে যাও</span>
           </button>
         </div>
       </div>
@@ -1558,8 +1545,6 @@
       sendMessage(text);
     }
 
-    let currentActiveToolDone = null;
-
     function normLetter(ch) {
       if (!ch) return '';
       const c = ch.trim().toLowerCase();
@@ -1570,13 +1555,10 @@
       return c;
     }
 
-    // Interactive MCQ Selection (High-contrast Red/Green Feedback with Strict One-Time Answer Locking)
+    // Interactive MCQ Selection (High-contrast Red/Green Feedback)
     function handleOptionClick(btn, letter) {
       if (isProcessing) return;
       const cardWrapper = btn.closest('.mcq-wrapper');
-      if (cardWrapper && cardWrapper.getAttribute('data-answered') === 'true') return;
-      if (cardWrapper) cardWrapper.setAttribute('data-answered', 'true');
-
       let correct = cardWrapper ? cardWrapper.getAttribute('data-correct') : null;
       if (correct) correct = correct.trim();
 
@@ -1588,7 +1570,6 @@
       if (grid) {
         grid.querySelectorAll('.mcq-opt').forEach(opt => {
           opt.classList.add('pointer-events-none');
-          opt.disabled = true;
           const optL = (opt.getAttribute('data-letter') || '').trim();
           const optLNorm = normLetter(optL);
           const badge = opt.querySelector('.opt-badge');
@@ -1659,19 +1640,36 @@
         return "";
       }
 
-      // 1. Extract Global Board Reference Tag
-      let globalBoardTagsHtml = "";
+      // 1. Extract Board Reference Tag (cleanly removes tag from text without leaking placeholder)
+      let boardTagsHtml = "";
       clean = clean.replace(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/gi, (match, tag) => {
         const formatted = formatFullBoardTags(tag);
         const tags = formatted.split(',').map(x => x.trim()).filter(Boolean);
-        globalBoardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
-        return match; // keep in text for per-cluster parsing then clean
+        boardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
+        return '';
       });
+      clean = clean.replace(/%%%BOARD_CONTAINER%%%/gi, '');
 
-      if (!globalBoardTagsHtml && extraBoardTag) {
+      if (!boardTagsHtml && extraBoardTag) {
         const formatted = formatFullBoardTags(extraBoardTag);
         const tags = formatted.split(',').map(x => x.trim()).filter(Boolean);
-        globalBoardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
+        boardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
+      }
+
+      // 2. Extract detected answer tag and optional question ID
+      let detectedAns = null;
+      let detectedQid = null;
+      clean = clean.replace(/\[ans:\s*([ক-ঘa-dA-D])\]/gi, (m, g) => {
+        detectedAns = g;
+        return '';
+      });
+      clean = clean.replace(/\[(?:qid|id):\s*(q_\d+)\]/gi, (m, g) => {
+        detectedQid = g;
+        return '';
+      });
+      if (!detectedAns && extraAns) {
+        const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
+        detectedAns = toBnAns[extraAns] || extraAns;
       }
 
       // 3. Protect KaTeX Display Math ($$...$$ and \[...\])
@@ -1690,7 +1688,7 @@
         return '%%%MATH_I_' + (inlineMath.length - 1) + '%%%';
       });
 
-      // 4b. Eliminate redundant double numbering in chapter lists
+      // 4b. Eliminate redundant double numbering in chapter lists (e.g. "8. **অধ্যায় ৮: আলোর প্রতিফলন**" -> "- **অধ্যায় ৮: আলোর প্রতিফলন**")
       clean = clean.replace(/^(\s*)[০-৯0-9]+[\.\)]\s+(\*{0,2}(?:অধ্যায়|অধ্যায়)\s*[০-৯0-9]+(?::|\*{1,2}|\s))/gim, (m, g1, g2) => g1 + '- ' + g2);
 
       // 5. Robust Raw-Text MCQ Option Extraction (Handles blank lines, bullets, bolding, multi-MCQs)
@@ -1702,6 +1700,7 @@
 
       function isCreativeQuestionCluster(cluster, fullText) {
         if (!cluster || !cluster.items || cluster.items.length === 0) return false;
+        // If explicitly tagged as MCQ or Quiz, it is NEVER a Creative Question
         if (/\bMCQ\b|নৈর্ব্যক্তিক|বহুনির্বাচনী|কুইজ/i.test(fullText)) {
           return false;
         }
@@ -1741,155 +1740,21 @@
         clusters.push(currentCluster);
       }
 
-      // Collect questions for Global Active Exam Popup
-      const extractedExamQuestions = [];
-      const toolQuizList = (typeof currentActiveToolDone !== 'undefined' && currentActiveToolDone?.tool === 'get_mcq_quiz' && Array.isArray(currentActiveToolDone.result?.quiz)) ? currentActiveToolDone.result.quiz : [];
-
-      for (let c = 0; c < clusters.length; c++) {
-        const cluster = clusters[c];
-        
-        // Find question stem preceding the cluster
-        let sIdx = cluster.startIndex - 1;
-        while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === '') sIdx--;
-        const stemLine = (sIdx >= 0 && lines[sIdx]) ? lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d]\s*/gi, '').trim() : `প্রশ্ন ${c + 1}`;
-
-        // Find per-cluster answer tag, qid, board tag and explanation
-        let clusterAns = null;
-        let clusterQid = null;
-        let clusterBoard = null;
-
-        // Check lines around this cluster (up to 4 lines before and 4 lines after)
-        const checkRangeStart = Math.max(0, cluster.startIndex - 3);
-        const checkRangeEnd = Math.min(lines.length - 1, cluster.endIndex + 4);
-        for (let li = checkRangeStart; li <= checkRangeEnd; li++) {
-          const lText = lines[li] || '';
-          const ansM = lText.match(/\[ans:\s*([ক-ঘa-dA-D])\]/i);
-          if (ansM) clusterAns = normLetter(ansM[1]);
-
-          const qidM = lText.match(/\[(?:qid|id):\s*(q_\d+)\]/i);
-          if (qidM) clusterQid = qidM[1];
-
-          const bM = lText.match(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/i);
-          if (bM) clusterBoard = bM[1];
-        }
-
-        const optAText = cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '';
-        const optBText = cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '';
-        const optCText = cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '';
-        const optDText = cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '';
-
-        let correctText = optBText;
-        if (finalAns === 'ক') correctText = optAText;
-        else if (finalAns === 'খ') correctText = optBText;
-        else if (finalAns === 'গ') correctText = optCText;
-        else if (finalAns === 'ঘ') correctText = optDText;
-
-        const dbSol = (fallbackToolQ?.solution || fallbackToolQ?.explanation || '').trim();
-        const finalSolution = (dbSol && dbSol.length > 20 && !dbSol.includes('বিকল্পের সঠিক'))
-          ? dbSol
-          : `সঠিক উত্তর: (${finalAns}) **${correctText}**\n\n**অ্যাকাডেমিক ব্যাখ্যা:** এনসিটিবি পাঠ্যবইয়ের প্রামাণিক তথ্যানুযায়ী, '${stemLine.replace(/^#+\s*|\d+[\.\)]\s*/, '').trim()}'—এর জন্য (${finalAns}) বিকল্পটি নির্ভুল। অন্য বিকল্পগুলো বিভ্রান্তিকর ফাঁদ হিসেবে রাখা হয়েছে।`;
-
-        cluster.targetAns = finalAns;
-        cluster.qid = finalQid;
-        cluster.boardTag = finalBoardTag;
-        cluster.solution = finalSolution;
-        cluster.stemLine = stemLine;
-
-        extractedExamQuestions.push({
-          id: finalQid,
-          question_text: stemLine,
-          stem: stemLine,
-          option_a: optAText,
-          option_b: optBText,
-          option_c: optCText,
-          option_d: optDText,
-          options: [optAText, optBText, optCText, optDText],
-          answer: finalAns,
-          correct_answer_bn: finalAns,
-          solution: finalSolution,
-          tags: finalBoardTag,
-          formatted_source: formatFullBoardTags(finalBoardTag)
-        });
-      }
-
-      if (toolQuizList && toolQuizList.length >= 2) {
-        globalActiveExamQuestions = toolQuizList.map((q, idx) => {
-          const stem = q.question_text || q.stem || `প্রশ্ন ${idx + 1}`;
-          const finalAns = normLetter(q.correct_answer_bn || q.answer || 'খ');
-          const optA = q.option_a || '';
-          const optB = q.option_b || '';
-          const optC = q.option_c || '';
-          const optD = q.option_d || '';
-          let correctText = optB;
-          if (finalAns === 'ক') correctText = optA;
-          else if (finalAns === 'খ') correctText = optB;
-          else if (finalAns === 'গ') correctText = optC;
-          else if (finalAns === 'ঘ') correctText = optD;
-
-          const dbSol = (q.solution || q.explanation || '').trim();
-          const finalSolution = (dbSol && dbSol.length > 20 && !dbSol.includes('বিকল্পের সঠিক'))
-            ? dbSol
-            : `সঠিক উত্তর: (${finalAns}) **${correctText}**\n\n**অ্যাকাডেমিক ব্যাখ্যা:** এনসিটিবি পাঠ্যবইয়ের প্রামাণিক তথ্যানুযায়ী, '${stem.replace(/^#+\s*|\d+[\.\)]\s*/, '').trim()}'—এর জন্য (${finalAns}) বিকল্পটি নির্ভুল। অন্য বিকল্পগুলো বিভ্রান্তিকর ফাঁদ হিসেবে রাখা হয়েছে।`;
-
-          return {
-            id: q.id || `q_${idx + 1}`,
-            question_text: stem,
-            stem: stem,
-            option_a: optA,
-            option_b: optB,
-            option_c: optC,
-            option_d: optD,
-            options: [optA, optB, optC, optD],
-            answer: finalAns,
-            correct_answer_bn: finalAns,
-            solution: finalSolution,
-            tags: q.tags || q.formatted_source || '',
-            formatted_source: formatFullBoardTags(q.tags || q.formatted_source || '')
-          };
-        });
-      } else if (clusters.length >= 2) {
-        globalActiveExamQuestions = extractedExamQuestions;
-      }
-
       const cards = [];
       for (let c = clusters.length - 1; c >= 0; c--) {
         const cluster = clusters[c];
-        let cardStartIdx = cluster.startIndex;
+        const firstLineIdx = cluster.startIndex;
         let lastLineIdx = cluster.endIndex;
 
-        // Scan backward to find question stem, board tag, and heading
-        let sIdx = cluster.startIndex - 1;
-        while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === "") sIdx--;
-
-        let detectedStem = "";
-        let detectedBoard = cluster.boardTag || "";
-
-        // Check if preceding line is a board tag
-        if (sIdx >= 0 && lines[sIdx] && /\[(?:বোর্ড|Board):?\s*([^\]]+)\]/i.test(lines[sIdx].trim())) {
-          const bMatch = lines[sIdx].trim().match(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/i);
-          if (bMatch) detectedBoard = bMatch[1];
-          cardStartIdx = sIdx;
-          sIdx--;
-          while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === "") sIdx--;
-        }
-
-        // Preceding line is the question stem
-        if (sIdx >= 0 && lines[sIdx]) {
-          detectedStem = lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d০-৯0-9]\s*/gi, '').trim();
-          cardStartIdx = sIdx;
-          let hIdx = sIdx - 1;
-          while (hIdx >= 0 && lines[hIdx] && lines[hIdx].trim() === "") hIdx--;
-          if (hIdx >= 0 && /^(?:#{1,4}\s+|[\d০-৯0-9]+[\.\)]\s*|প্রশ্ন\s*[:\d০-৯0-9])/i.test(lines[hIdx].trim())) {
-            cardStartIdx = hIdx;
-          }
-        }
-        const finalStem = detectedStem || cluster.stemLine || `প্রশ্ন ${c + 1}`;
-        const finalBoard = detectedBoard || cluster.boardTag || "";
-
         let explanationLines = [];
+        let foundAnsInExp = null;
         let scanIdx = lastLineIdx + 1;
-        while (scanIdx < lines.length && lines[scanIdx].trim() === "") scanIdx++;
 
+        while (scanIdx < lines.length && lines[scanIdx].trim() === "") {
+          scanIdx++;
+        }
+
+        // Cleanly strip any trailing answer/explanation lines to prevent spoiler leaks
         while (scanIdx < lines.length && /^\s*(?:\*{0,2}(?:সঠিক উত্তর|Answer|Ans|ব্যাখ্যা|Explanation):)/i.test(lines[scanIdx])) {
           explanationLines.push(lines[scanIdx]);
           lastLineIdx = scanIdx;
@@ -1903,8 +1768,12 @@
               if (consecutiveBlanks >= 2) break;
               explanationLines.push(expLine);
             } else {
-              if (/^(?:#{1,4}\s+|MCQ:|\d+[\.\)]|প্রশ্ন\s*[:\d])/i.test(expLine.trim())) break;
-              if (/^\s*(?:\*{0,2}(?:সঠিক উত্তর|Answer|Ans|ব্যাখ্যা|Explanation):)/i.test(expLine)) break;
+              if (/^(?:#{1,4}\s+|MCQ:|\d+[\.\)]|প্রশ্ন\s*[:\d])/i.test(expLine.trim())) {
+                break;
+              }
+              if (/^\s*(?:\*{0,2}(?:সঠিক উত্তর|Answer|Ans|ব্যাখ্যা|Explanation):)/i.test(expLine)) {
+                break;
+              }
               consecutiveBlanks = 0;
               explanationLines.push(expLine);
             }
@@ -1913,8 +1782,15 @@
           }
         }
 
-        const qBadge = `<span class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold tracking-wide bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">প্রশ্ন ${toBnDigits(c + 1)}</span>`;
-        const clusterBoardHtml = finalBoard ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(formatFullBoardTags(finalBoard))}</span>` : '';
+        const explanationText = explanationLines.join('\n').trim();
+        if (explanationText) {
+          const expAnsM = explanationText.match(/(?:সঠিক উত্তর|Answer|Ans)[:\s]*\(([ক-ঘa-dA-D])\)|(?:সঠিক উত্তর|Answer|Ans)[:\s]*([ক-ঘa-dA-D])/i);
+          if (expAnsM) {
+            foundAnsInExp = expAnsM[1] || expAnsM[2];
+          }
+        }
+
+        const targetAns = detectedAns || foundAnsInExp || '';
 
         const optionsHtml = cluster.items.map(it => `
           <button type="button" 
@@ -1933,24 +1809,13 @@
 
         const placeholder = `%%%MCQ_PLACEHOLDER_${c}%%%`;
         const cardHtml = `
-          <div class="mcq-wrapper my-4 bg-gradient-to-b from-[#14151a] to-[#0f1014] border border-white/[0.10] rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl shadow-black/40" data-correct="${cluster.targetAns}">
-            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
-              <div class="flex items-center gap-2">
-                ${qBadge}
-                ${clusterBoardHtml}
-              </div>
-            </div>
-
-            <div class="text-[14px] sm:text-[15px] font-medium text-white leading-relaxed select-text pt-0.5">
-              ${escapeHtml(finalStem)}
-            </div>
-
-            <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          <div class="mcq-wrapper my-3.5 bg-gradient-to-b from-[#14141a] to-[#0f0f14] border border-white/[0.10] rounded-2xl p-4 space-y-3.5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]" data-correct="${targetAns}">
+            ${boardTagsHtml ? `<div class="flex flex-wrap items-center gap-1.5 pb-2.5 border-b border-white/[0.06]">${boardTagsHtml}</div>` : ''}
+            <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               ${optionsHtml}
             </div>
-
-            <div class="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
-              <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন অনুশীলন করতে চাই' + (' [ID: ${cluster.qid || ''}]'))" 
+            <div class="pt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
+              <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন অনুশীলন করতে চাই' + (typeof detectedQid !== 'undefined' && detectedQid ? ' [ID: ' + detectedQid + ']' : ''))" 
                 class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 hover:text-emerald-300 border border-emerald-500/25 hover:border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
                 <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -1969,14 +1834,33 @@
           </div>
         `;
 
-        lines.splice(cardStartIdx, (lastLineIdx - cardStartIdx + 1), placeholder);
+        lines.splice(firstLineIdx, (lastLineIdx - firstLineIdx + 1), placeholder);
         cards.push({ placeholder, cardHtml });
       }
 
+      if (clusters.length >= 2) {
+        const extractedExamQuestions = [];
+        for (let c = 0; c < clusters.length; c++) {
+          const cluster = clusters[c];
+          let sIdx = cluster.startIndex - 1;
+          while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === '') sIdx--;
+          const stemLine = (sIdx >= 0 && lines[sIdx]) ? lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d]\s*/gi, '').trim() : `প্রশ্ন ${c + 1}`;
+          
+          extractedExamQuestions.push({
+            question_text: stemLine,
+            option_a: cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '',
+            option_b: cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '',
+            option_c: cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '',
+            option_d: cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '',
+            answer: detectedAns || 'ক',
+            solution: 'বোর্ড স্ট্যান্ডার্ড সমাধান ও নির্ভুল বিশ্লেষণ',
+            tags: extraBoardTag || ''
+          });
+        }
+        globalActiveExamQuestions = extractedExamQuestions;
+      }
+
       clean = lines.join('\n');
-      clean = clean.replace(/\[ans:\s*[ক-ঘa-dA-D]\]/gi, '');
-      clean = clean.replace(/\[(?:qid|id):\s*q_\d+\]/gi, '');
-      clean = clean.replace(/\[(?:বোর্ড|Board):?\s*[^\]]+\]/gi, '');
 
       // 6. Parse Markdown
       let html = "";
@@ -1986,65 +1870,28 @@
         html = escapeHtml(clean);
       }
 
-      const isMockExamSession = (clusters.length >= 2) || (toolQuizList && toolQuizList.length >= 2);
-
-      if (isMockExamSession) {
-        const qCount = Math.max(clusters.length, toolQuizList ? toolQuizList.length : 0);
-        const mockTestCardHtml = `
-          <div class="my-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#13141a] via-[#111319] to-[#0d1615] border border-emerald-500/35 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(16,185,129,0.10)] space-y-4">
-            <div class="flex items-center justify-between gap-3 border-b border-white/[0.08] pb-3.5">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-lg shadow-[0_0_16px_rgba(16,185,129,0.25)]">
-                  🎯
-                </div>
-                <div>
-                  <h3 class="text-sm sm:text-base font-bold text-white tracking-wide">মক টেস্ট মূল্যায়ন পরীক্ষা প্রস্তুত</h3>
-                  <p class="text-xs text-emerald-300/80 font-normal">${toBnDigits(qCount)}টি প্রামাণিক বহুনির্বাচনী প্রশ্ন • টাইমার ও লাইভ সমাধান সহ</p>
-                </div>
-              </div>
-              <span class="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-semibold">
-                ⏱️ ${toBnDigits(qCount)} মিনিট
-              </span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-zinc-300">
-              <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-2">
-                <span class="text-emerald-400 font-bold">✓</span>
-                <span>কাউন্টডাউন টাইমার ও ইন্টারঅ্যাক্টিভ প্যালেট</span>
-              </div>
-              <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-2">
-                <span class="text-emerald-400 font-bold">✓</span>
-                <span>প্রতিটি উত্তরের পর তাৎক্ষণিক নিখুঁত এআই ব্যাখ্যা</span>
+      if (clusters.length >= 2) {
+        const launchBannerHtml = `
+          <div class="my-3.5 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/[0.14] via-teal-500/[0.10] to-indigo-500/[0.14] border border-emerald-500/30 flex items-center justify-between gap-3 shadow-[0_4px_24px_rgba(16,185,129,0.12)] backdrop-blur-md">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-500/30 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.2)]">🎯</span>
+              <div class="min-w-0">
+                <h4 class="text-xs sm:text-sm font-bold text-white tracking-wide truncate">মক টেস্ট মোড প্রস্তুত (${toBnDigits(clusters.length)}টি প্রশ্ন)</h4>
+                <p class="text-[11px] text-emerald-300/80 truncate">কাউন্টডাউন টাইমার ও পূর্ণাঙ্গ সমাধানসহ লাইভ পরীক্ষা দাও</p>
               </div>
             </div>
-
-            <div class="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span class="text-[11.5px] text-zinc-400">পরীক্ষা শেষ করলে AI শিক্ষক চ্যাটে পূর্ণাঙ্গ পারফরম্যান্স সামারি দেবে।</span>
-              <button type="button" onclick="launchActiveChatExam()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-95 transition-all duration-150 cursor-pointer flex items-center justify-center gap-2 shrink-0">
-                <span>পরীক্ষা শুরু করো 🚀</span>
-              </button>
-            </div>
+            <button type="button" onclick="launchActiveChatExam()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs shadow-[0_0_14px_rgba(16,185,129,0.4)] active:scale-95 transition-all duration-150 cursor-pointer shrink-0">
+              পরীক্ষা শুরু করো
+            </button>
           </div>
         `;
+        html = launchBannerHtml + html;
+      }
 
-        if (cards.length > 0) {
-          for (let i = 0; i < cards.length; i++) {
-            const reg = new RegExp(`<p>\\s*${cards[i].placeholder}\\s*<\\/p>|${cards[i].placeholder}`, 'g');
-            if (i === 0) {
-              html = html.replace(reg, mockTestCardHtml);
-            } else {
-              html = html.replace(reg, '');
-            }
-          }
-        } else {
-          html += mockTestCardHtml;
-        }
-      } else {
-        // In Single Question mode, inject the single interactive card
-        for (const card of cards) {
-          const reg = new RegExp(`<p>\\s*${card.placeholder}\\s*<\\/p>|${card.placeholder}`, 'g');
-          html = html.replace(reg, card.cardHtml);
-        }
+      // 7. Inject MCQ Cards
+      for (const card of cards) {
+        const reg = new RegExp(`<p>\\s*${card.placeholder}\\s*<\\/p>|${card.placeholder}`, 'g');
+        html = html.replace(reg, card.cardHtml);
       }
 
       // 7b. Format Examiner Traps & Master Tricks inside blockquotes into glowing glassmorphic cards
@@ -2300,15 +2147,6 @@
       let pendingDeltas = [];
       let pendingDone = null;
 
-      function renderLoadingSkeleton(toolName, count = 5) {
-        return `
-          <div class="py-2.5 px-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-2.5 select-none animate-pulse my-2" id="skeletonCard_${msgId}">
-            <div class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-            <span class="thinking-shimmer text-zinc-300 font-medium tracking-wide text-xs">প্রশ্নপত্র ও কনসেপ্ট সাজানো হচ্ছে...</span>
-          </div>
-        `;
-      }
-
       function startSequentialExecution(startEvt, doneEvt, stepIdx) {
         step1Locked = true;
         streamContent = "";
@@ -2317,14 +2155,6 @@
         if (statusEl) statusEl.classList.add('hidden');
         const toolContainer = document.getElementById(toolContainerId);
         if (toolContainer) toolContainer.classList.remove('hidden');
-
-        // Show immediate skeleton in content container
-        const contentEl = document.getElementById(contentId);
-        if (contentEl) {
-          contentEl.classList.remove('hidden');
-          const countNum = parseInt(startEvt.args?.count) || (text.includes('৫') || text.includes('5') ? 5 : 1);
-          contentEl.innerHTML = renderLoadingSkeleton(startEvt.tool, countNum);
-        }
 
         const treeEl = document.getElementById(treeId);
         if (!treeEl) return;
@@ -2406,6 +2236,20 @@
 
           isToolExecutionDone = true;
 
+          // Step 4: Show writing pulse and start streaming markdown deltas
+          const contentEl = document.getElementById(contentId);
+          if (contentEl) {
+            contentEl.classList.remove('hidden');
+            if (pendingDeltas.length === 0 && !pendingDone) {
+              contentEl.innerHTML = `
+                <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
+                </div>
+              `;
+            }
+          }
+
           // Flush queued deltas
           if (pendingDeltas.length > 0) {
             streamContent += pendingDeltas.join('');
@@ -2469,6 +2313,8 @@
               const contentEl = document.getElementById(contentId);
               if (contentEl) {
                 contentEl.classList.remove('hidden');
+                const wp = document.getElementById(`writingPulse_${msgId}`);
+                if (wp) wp.remove();
                 const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
                 const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
                 contentEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extraBoardTag, extraAns);
@@ -2485,6 +2331,8 @@
             const contentEl = document.getElementById(contentId);
             if (contentEl) {
               contentEl.classList.remove('hidden');
+              const wp = document.getElementById(`writingPulse_${msgId}`);
+              if (wp) wp.remove();
               const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
               const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
               contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extraBoardTag, extraAns);
@@ -2502,6 +2350,8 @@
             const contentEl = document.getElementById(contentId);
             if (contentEl) {
               contentEl.classList.remove('hidden');
+              const wp = document.getElementById(`writingPulse_${msgId}`);
+              if (wp) wp.remove();
               const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
               const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
               contentEl.innerHTML = renderFormattedContentWithCursor(cleanAnswer, true, extraBoardTag, extraAns);
@@ -2560,26 +2410,14 @@
           .replace(/^<\/?[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
           .trim();
 
-        // Fallback: If cleanFinal is empty or missing questions, auto-synthesize from tool result!
-        if (!cleanFinal && toolDoneEvt?.tool === 'get_mcq_quiz' && Array.isArray(toolDoneEvt.result?.quiz) && toolDoneEvt.result.quiz.length > 0) {
-          const quiz = toolDoneEvt.result.quiz;
-          let synth = `এখানে ${toBnDigits(quiz.length)}টি বহুনির্বাচনী প্রশ্ন (MCQ) দেওয়া হলো:\n\n`;
-          for (let i = 0; i < quiz.length; i++) {
-            const q = quiz[i];
-            const bTag = q.formatted_source || q.tags || '';
-            synth += `### প্রশ্ন ${toBnDigits(i + 1)}\n${q.question_text || q.stem}\n`;
-            if (bTag) synth += `[বোর্ড: ${bTag}]\n`;
-            synth += `(ক) ${q.option_a}\n(খ) ${q.option_b}\n(গ) ${q.option_c}\n(ঘ) ${q.option_d}\n`;
-            synth += `[ans: ${q.correct_answer_bn || q.answer}] [qid: ${q.id}]\n\n`;
-          }
-          cleanFinal = synth;
-        }
-
         const statusEl = document.getElementById(statusId);
         if (statusEl) statusEl.classList.add('hidden');
 
         const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
         if (cur1) cur1.remove();
+
+        const wp = document.getElementById(`writingPulse_${msgId}`);
+        if (wp) wp.remove();
 
         const contentEl = document.getElementById(contentId);
         if (contentEl) {
@@ -2715,7 +2553,6 @@
               // 2. Tool Done -> Buffer or update
               if (data.type === "tool_done") {
                 toolDoneEvt = data;
-                currentActiveToolDone = data;
                 hasTool = true;
                 pendingToolDone = data;
               }
@@ -3039,7 +2876,6 @@
 
     function selectExamOption(optLetter) {
       const idx = currentExamState.currentIndex;
-      if (currentExamState.userAnswers[idx] !== undefined) return;
       currentExamState.userAnswers[idx] = optLetter;
       renderExamQuestion(idx);
     }
@@ -3136,35 +2972,6 @@
       document.getElementById('examResultView').classList.remove('hidden');
       document.getElementById('examActiveFooterControls').classList.add('hidden');
       document.getElementById('examResultFooterControls').classList.remove('hidden');
-    }
-
-    function requestAiExamDiagnostic() {
-      closeExamModal();
-      const total = currentExamState.questions.length;
-      let correct = 0;
-      const wrongItems = [];
-      currentExamState.questions.forEach((q, idx) => {
-        const userAns = currentExamState.userAnswers[idx];
-        const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
-        if (userAns === correctAns) {
-          correct++;
-        } else {
-          wrongItems.push({
-            num: idx + 1,
-            stem: (q.question_text || q.stem || '').replace(/\s+/g, ' ').slice(0, 90),
-            userAns: userAns || 'উত্তর দেওয়া হয়নি',
-            correctAns: correctAns
-          });
-        }
-      });
-      const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-      let prompt = `আমি ${currentExamState.subjectName} বিষয়ের ${currentExamState.topicName} মক টেস্ট সম্পন্ন করেছি।\nফলাফল: ${toBnDigits(correct)}/${toBnDigits(total)} (সঠিকতার হার: ${toBnDigits(accuracy)}%)।\n`;
-      if (wrongItems.length > 0) {
-        prompt += `\nভুল হওয়া প্রশ্নসমূহ:\n` + wrongItems.map(w => `- প্রশ্ন ${toBnDigits(w.num)}: ${w.stem} (আমার উত্তর: ${w.userAns}, সঠিক উত্তর: ${w.correctAns})`).join('\n') + `\n`;
-      }
-      prompt += `\nআমার এই পারফরম্যান্সের ওপর ভিত্তি করে ভুল হওয়া প্রশ্নগুলোর গভীর কনসেপ্ট বিশ্লেষণ, পরীক্ষকের ফাঁদ এবং পরবর্তী রিভিশনের জন্য একটি সম্পূর্ণ এআই ডায়াগনস্টিক রিপোর্ট দাও।`;
-      activateChatView();
-      sendMessage(prompt);
     }
 
     function restartCurrentExam() {
