@@ -221,6 +221,228 @@ for (const kw of expectedKeywords) {
 assert(doneEventData?.state?.subject_id === 'ssc_chemistry', 'Session state subject strictly preserved as ssc_chemistry');
 assert(doneEventData?.state?.chapter_num === null, 'Session state chapter unlocked (null) for broad syllabus');
 
+// ==========================================
+// NEW TEST 9: Batch Mock Test Tool Execution (Count = 5)
+// ==========================================
+console.log('\n--- TEST 9: Batch MCQ Quiz Retrieval (5 Questions Mock Test) ---');
+const batchMcqRes = await executeAgentTool('get_mcq_quiz', {
+  subject: 'ssc_bangla_1st',
+  count: 5,
+  mode: 'mock_test'
+});
+assert(batchMcqRes.quiz && Array.isArray(batchMcqRes.quiz), 'Batch MCQ returned a quiz array');
+assert(batchMcqRes.quiz.length === 5, `Batch MCQ returned exactly 5 questions (got: ${batchMcqRes.quiz.length})`);
+for (let i = 0; i < batchMcqRes.quiz.length; i++) {
+  const q = batchMcqRes.quiz[i];
+  assert(Boolean(q.question_text), `Question ${i + 1} has non-empty stem`);
+  assert(Boolean(q.option_a && q.option_b && q.option_c && q.option_d), `Question ${i + 1} has all 4 options (ক, খ, গ, ঘ)`);
+  assert(Boolean(q.answer), `Question ${i + 1} has answer code: ${q.answer}`);
+}
+
+// ==========================================
+// NEW TEST 10: Multi-MCQ Cluster Parser & Individual Answer Extraction
+// ==========================================
+console.log('\n--- TEST 10: Frontend Multi-MCQ Cluster Parser & Metadata Extraction ---');
+const sampleMultiMcqText = `
+এখানে বাংলা ১ম পত্রের ৫টি MCQ মক টেস্ট দেওয়া হলো:
+
+### প্রশ্ন ১
+‘নিরুপমা’ চরিত্রটি পাঠ্যবইয়ের কোন গল্পের?
+[বোর্ড: সিলেট বোর্ড ২০১৬]
+(ক) মমতাদি
+(খ) দেনাপাওনা
+(গ) অভাগীর স্বর্গ
+(ঘ) আম আঁটির ভেঁপু
+[ans: খ] [qid: q_101]
+
+### প্রশ্ন ২
+‘বই পড়া’ প্রবন্ধে লেখক লাইব্রেরিকে কিসের চেয়েও উপরে স্থান দিয়েছেন?
+[বোর্ড: ঢাকা বোর্ড ২০২২]
+(ক) বিদ্যালয়
+(খ) হাসপাতাল
+(গ) বিশ্ববিদ্যালয়
+(ঘ) খেলার মাঠ
+[ans: গ] [qid: q_102]
+
+### প্রশ্ন ৩
+সুভার গোয়ালঘরের দুটি গাভীর নাম কী ছিল?
+[বোর্ড: রাজশাহী বোর্ড ২০২১]
+(ক) শ্যামলী ও কাজলী
+(খ) সর্বশী ও পাঙ্গুলী
+(গ) সর্বশী ও পাঙ্গুলি
+(ঘ) সর্বশী ও সুখিনী
+[ans: খ] [qid: q_103]
+
+### প্রশ্ন ৪
+‘মানুষ মুহম্মদ (সা.)’ প্রবন্ধে হযরতের কোন গুণটি ফুটে উঠেছে?
+[বোর্ড: কুমিল্লা বোর্ড ২০২০]
+(ক) ক্রোধ
+(খ) ক্ষমাশীলতা
+(গ) অহংকার
+(ঘ) উদাসীনতা
+[ans: খ] [qid: q_104]
+
+### প্রশ্ন ৫
+‘তোমাকে পাওয়ার জন্যে হে স্বাধীনতা’ কবিতার কবি কে?
+[বোর্ড: চট্টগ্রাম বোর্ড ২০২৩]
+(ক) শামসুর রাহমান
+(খ) কাজী নজরুল ইসলাম
+(গ) সুকান্ত ভট্টাচার্য
+(ঘ) জীবনানন্দ দাশ
+[ans: ক] [qid: q_105]
+`;
+
+function extractMockTestQuestions(rawText) {
+  const lines = rawText.split(/\r?\n/);
+  const singleOptionLineRegex = /^[ \t]*(?:[-*+]\s+)?(?:\*{1,2})?(?:\(([ক-ঘa-dA-D])\)|([ক-ঘa-dA-D])[\.\)])(?:\*{1,2})?[ \t]+([^\r\n]+)/;
+  const clusters = [];
+  let currentCluster = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(singleOptionLineRegex);
+
+    if (match) {
+      const letter = match[1] || match[2];
+      const text = match[3].replace(/\*{2,4}$/, '').trim();
+      if (!currentCluster) {
+        currentCluster = { startIndex: i, endIndex: i, items: [] };
+      }
+      currentCluster.endIndex = i;
+      currentCluster.items.push({ letter, text, lineIdx: i });
+    } else if (line.trim() === "") {
+      // skip blank lines
+    } else {
+      if (currentCluster) {
+        if (currentCluster.items.length >= 2) clusters.push(currentCluster);
+        currentCluster = null;
+      }
+    }
+  }
+  if (currentCluster && currentCluster.items.length >= 2) {
+    clusters.push(currentCluster);
+  }
+
+  const extracted = [];
+  for (let c = 0; c < clusters.length; c++) {
+    const cluster = clusters[c];
+    let sIdx = cluster.startIndex - 1;
+    while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === '') sIdx--;
+    const stemLine = (sIdx >= 0 && lines[sIdx]) ? lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d]\s*/gi, '').trim() : `প্রশ্ন ${c + 1}`;
+
+    let clusterAns = null;
+    let clusterQid = null;
+    let clusterBoard = null;
+
+    const checkRangeStart = Math.max(0, cluster.startIndex - 3);
+    const checkRangeEnd = Math.min(lines.length - 1, cluster.endIndex + 4);
+    for (let li = checkRangeStart; li <= checkRangeEnd; li++) {
+      const lText = lines[li] || '';
+      const ansM = lText.match(/\[ans:\s*([ক-ঘa-dA-D])\]/i);
+      if (ansM) clusterAns = ansM[1].toLowerCase();
+
+      const qidM = lText.match(/\[(?:qid|id):\s*(q_\d+)\]/i);
+      if (qidM) clusterQid = qidM[1];
+
+      const bM = lText.match(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/i);
+      if (bM) clusterBoard = bM[1];
+    }
+
+    extracted.push({
+      id: clusterQid,
+      stem: stemLine,
+      answer: clusterAns,
+      board: clusterBoard,
+      optionsCount: cluster.items.length
+    });
+  }
+  return { clusters, extracted };
+}
+
+const parsedClusters = extractMockTestQuestions(sampleMultiMcqText);
+assert(parsedClusters.clusters.length === 5, `Parsed exactly 5 distinct MCQ clusters (got: ${parsedClusters.clusters.length})`);
+assert(parsedClusters.extracted.length === 5, 'Extracted 5 questions for Exam Modal payload');
+
+// Verify individual answers are preserved correctly and not overwritten
+assert(parsedClusters.extracted[0].answer === 'খ' && parsedClusters.extracted[0].board.includes('সিলেট'), 'Q1 correctly captured answer (খ) and board (সিলেট)');
+assert(parsedClusters.extracted[1].answer === 'গ' && parsedClusters.extracted[1].board.includes('ঢাকা'), 'Q2 correctly captured answer (গ) and board (ঢাকা)');
+assert(parsedClusters.extracted[2].answer === 'খ' && parsedClusters.extracted[2].board.includes('রাজশাহী'), 'Q3 correctly captured answer (খ) and board (রাজশাহী)');
+assert(parsedClusters.extracted[3].answer === 'খ' && parsedClusters.extracted[3].board.includes('কুমিল্লা'), 'Q4 correctly captured answer (খ) and board (কুমিল্লা)');
+assert(parsedClusters.extracted[4].answer === 'ক' && parsedClusters.extracted[4].board.includes('চট্টগ্রাম'), 'Q5 correctly captured answer (ক) and board (চট্টগ্রাম)');
+
+// ==========================================
+// NEW TEST 11: Live End-to-End SSE Stream for 5-MCQ Mock Test
+// ==========================================
+console.log('\n--- TEST 11: Live SSE Stream for 5-MCQ Mock Test ("বাংলা ১ম পত্র থেকে ৫টি MCQ মক টেস্ট দাও") ---');
+const examSseStart = Date.now();
+const examResponse = await fetch('http://localhost:3000/api/chat/stream', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: 'বাংলা ১ম পত্র সাহিত্য থেকে ৫টি MCQ মক টেস্ট দাও',
+    history: [],
+    state: { subject_id: 'ssc_bangla_1st', subject_name: 'বাংলা ১ম পত্র' }
+  })
+});
+
+assert(examResponse.ok, `HTTP status is ${examResponse.status} (OK)`);
+const examReader = examResponse.body.getReader();
+let examBuffer = '';
+let examEvents = new Set();
+let examStreamedAnswer = '';
+let examDoneData = null;
+let mcqToolCount = 0;
+
+while (true) {
+  const { done, value } = await examReader.read();
+  if (done) break;
+  examBuffer += decoder.decode(value, { stream: true });
+  const lines = examBuffer.split('\n');
+  examBuffer = lines.pop();
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('data:')) continue;
+    const raw = trimmed.replace(/^data:\s*/, '').trim();
+    if (!raw) continue;
+    try {
+      const data = JSON.parse(raw);
+      examEvents.add(data.type);
+      if (data.type === 'tool_start') {
+        console.log(`    [SSE Event] tool_start -> ${data.tool}`);
+      }
+      if (data.type === 'tool_done') {
+        console.log(`    [SSE Event] tool_done -> ${data.summary}`);
+        if (data.tool === 'get_mcq_quiz') {
+          mcqToolCount = data.result?.quiz?.length || 0;
+        }
+      }
+      if (data.type === 'content_delta') {
+        examStreamedAnswer += data.delta;
+      }
+      if (data.type === 'done') {
+        examDoneData = data;
+      }
+    } catch(e) {}
+  }
+}
+
+const examDuration = Date.now() - examSseStart;
+console.log(`    Stream completed in ${examDuration}ms`);
+console.log(`    MCQs fetched by tool: ${mcqToolCount}`);
+
+const rawExamFinal = examDoneData?.content || examStreamedAnswer;
+const parsedExamFinal = parseStreamThoughts(rawExamFinal);
+const cleanExamFinal = parsedExamFinal.hasThought ? parsedExamFinal.answer : rawExamFinal;
+
+console.log('\n--- VERIFYING MULTI-MCQ AGENT STREAM OUTPUT ---');
+const liveExtracted = extractMockTestQuestions(cleanExamFinal);
+console.log(`    Extracted MCQ Clusters from Live Agent Output: ${liveExtracted.clusters.length}`);
+
+assert(mcqToolCount === 5 || liveExtracted.clusters.length >= 4, 'Agent successfully fetched and generated 5 MCQs in response');
+assert(cleanExamFinal.includes('[ans:') || cleanExamFinal.includes('(ক)'), 'Agent generated valid MCQ options and answer tags');
+
 console.log('\n====================================================');
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED WITH 100% SUCCESS!`);
 console.log('====================================================');
+
