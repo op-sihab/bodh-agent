@@ -329,14 +329,12 @@
     
     <!-- Top: Brand & Action Buttons -->
     <div class="pt-4 px-3.5 pb-2 space-y-3">
-      <!-- Brand Row with Logo & Collapse Toggle -->
+      <!-- Brand Row with Logo & Collapse Toggle (Clean Gemini Style) -->
       <div class="flex items-center justify-between px-0.5">
-        <div class="flex items-center gap-2.5 cursor-pointer group py-0.5" onclick="resetToHome()" title="বোধ (BODH AI)">
-          <div class="w-8 h-8 rounded-xl bg-gradient-to-b from-white/[0.12] to-white/[0.03] p-1 border border-white/[0.14] shadow-[0_0_12px_rgba(255,255,255,0.06)] flex items-center justify-center group-hover:border-white/30 transition">
-            <img src="/assets/bodh-tight.png" alt="বোধ" class="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(255,255,255,0.3)]" />
-          </div>
-          <span class="text-base font-bold tracking-tight text-white flex items-center gap-1.5 font-sans">
-            বোধ <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AI</span>
+        <div class="flex items-center gap-2 cursor-pointer group py-0.5" onclick="resetToHome()" title="বোধ (BODH AI)">
+          <img src="/assets/bodh-tight.png" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] group-hover:scale-105 transition-transform" />
+          <span class="text-[15px] font-semibold tracking-tight text-white flex items-center gap-1.5 font-sans">
+            বোধ <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AI</span>
           </span>
         </div>
 
@@ -406,14 +404,15 @@
     <header class="h-14 border-b border-white/[0.07] flex items-center justify-between px-4 shrink-0 bg-app-bg/90 backdrop-blur-md z-20">
       <div class="flex items-center gap-3">
         <button onclick="toggleSidebar()" class="text-zinc-400 hover:text-white p-2 rounded-xl hover:bg-white/[0.06] transition cursor-pointer" title="সাইডবার টগল">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
         </button>
-        <div class="flex items-center gap-2.5 cursor-pointer group py-0.5" onclick="resetToHome()" title="হোমপেজে ফিরুন">
-          <div class="w-8 h-8 rounded-xl bg-gradient-to-b from-white/[0.12] to-white/[0.03] p-1 border border-white/[0.14] shadow-[0_0_12px_rgba(255,255,255,0.06)] flex items-center justify-center group-hover:border-white/30 transition">
-            <img src="/assets/bodh-tight.png" alt="বোধ" class="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(255,255,255,0.3)]" />
-          </div>
-          <span class="text-base font-bold tracking-tight text-white flex items-center gap-1.5 font-sans">
-            বোধ <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AI</span>
+        <div class="flex items-center gap-2 cursor-pointer group py-0.5" onclick="resetToHome()" title="হোমপেজে ফিরুন">
+          <img src="/assets/bodh-tight.png" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] group-hover:scale-105 transition-transform" />
+          <span class="text-[15px] font-semibold tracking-tight text-white flex items-center gap-1.5 font-sans">
+            বোধ <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">AI</span>
           </span>
         </div>
       </div>
@@ -436,12 +435,10 @@
       <!-- HERO VIEW (Centered Home) -->
       <div id="heroView" class="w-full max-w-3xl mx-auto my-auto flex flex-col items-center text-center space-y-5">
         
-        <!-- Clean, Compact Emblem with subtle ambient glow -->
-        <div class="flex items-center justify-center">
-          <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-b from-white/[0.12] to-white/[0.03] p-2.5 border border-white/[0.18] shadow-[0_0_30px_rgba(255,255,255,0.08)] flex items-center justify-center">
-            <img src="/assets/bodh-tight.png" alt="বোধ" 
-              class="w-full h-full object-contain select-none pointer-events-none opacity-95 drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] transition-transform duration-200" />
-          </div>
+        <!-- Clean, Standalone Emblem (No Box, No Background, Pure Transparent) -->
+        <div class="flex items-center justify-center pt-2">
+          <img src="/assets/bodh-tight.png" alt="বোধ" 
+            class="w-12 h-14 sm:w-14 sm:h-16 object-contain select-none pointer-events-none filter drop-shadow-[0_0_18px_rgba(255,255,255,0.45)] hover:scale-105 transition-transform duration-300" />
         </div>
 
         <div class="space-y-1 text-center -mt-1">
