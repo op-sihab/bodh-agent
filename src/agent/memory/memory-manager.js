@@ -153,8 +153,11 @@ export class MemoryManager {
         const chName = toolResult.actual_chapter?.display || toolResult.actual_chapter?.name || toolArgs?.chapter || state.chapter_name || "";
 
         state.active_question = {
+          id: q.id,
           type: "mcq",
           stem: q.question_text,
+          question: q.question_text,
+          chapter_id: q.chapter_id || toolResult.actual_chapter?.id,
           options: {
             "ক": q.option_a,
             "খ": q.option_b,
@@ -166,6 +169,7 @@ export class MemoryManager {
           status: "PENDING",
           timestamp: Date.now()
         };
+        state.last_served_question = { ...state.active_question };
 
         if (chName && !state.chapter_name) {
           state.chapter_name = chName;
@@ -179,8 +183,11 @@ export class MemoryManager {
         const chName = toolResult.actual_chapter?.display || toolResult.actual_chapter?.name || toolResult.chapter_name || toolArgs?.chapter || state.chapter_name || "";
 
         state.active_question = {
+          id: toolResult.id || toolResult.qid,
           type: "cq",
           stem,
+          question: stem,
+          chapter_id: toolResult.chapter_id || toolResult.actual_chapter?.id,
           part_ka: toolResult.part_ka,
           part_kha: toolResult.part_kha,
           part_ga: toolResult.part_ga,
@@ -189,11 +196,25 @@ export class MemoryManager {
           status: "PENDING",
           timestamp: Date.now()
         };
+        state.last_served_question = { ...state.active_question };
 
         if (chName && !state.chapter_name) {
           state.chapter_name = chName;
         }
         state.active_mode = "CQ";
+      }
+    } else if (toolName === "find_similar_type_questions") {
+      const sim = toolResult.similar_type_questions?.[0];
+      if (sim) {
+        state.last_served_question = {
+          id: sim.id,
+          type: "mcq",
+          stem: sim.question,
+          question: sim.question,
+          board_tag: sim.board || "বোর্ড অনুরূপ প্রশ্ন",
+          status: "PENDING",
+          timestamp: Date.now()
+        };
       }
     }
 

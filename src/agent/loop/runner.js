@@ -336,13 +336,16 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
         const isPatternRequest = /মাস্টার\s*টাইপ|পরীক্ষকের\s*ফাঁদ|অধ্যায়ের\s*টাইপ|ব্লুপ্রিন্ট|chapter\s*pattern/i.test(userMessage);
 
         if (isSimilarRequest) {
+          const targetQ = state.active_question || state.last_served_question;
+          const idMatch = userMessage.match(/\[ID:\s*(q_\d+)\]/i);
+          const qId = idMatch ? idMatch[1] : (targetQ?.id || undefined);
           toolCall = {
             id: `call_${Date.now()}`,
             name: "find_similar_type_questions",
             input: {
               subject: activeSubject || undefined,
-              question_id: state.active_question?.id || undefined,
-              query_text: state.active_question?.question || userMessage,
+              question_id: qId,
+              query_text: targetQ?.question || targetQ?.stem || userMessage,
               academic_intent: "শিক্ষার্থীর অনুরোধ অনুযায়ী ভেক্টর সার্চ ব্যবহার করে একই সূত্রের অনুরূপ প্রশ্ন অনুসন্ধান করছি..."
             }
           };

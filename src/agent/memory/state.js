@@ -10,6 +10,7 @@ export function createInitialState(overrides = {}) {
     active_topic: overrides.active_topic || null,
     active_mode: overrides.active_mode || "GENERAL",
     active_question: overrides.active_question || null,
+    last_served_question: overrides.last_served_question || null,
     quiz_metrics: {
       attempted: overrides.quiz_metrics?.attempted || 0,
       correct: overrides.quiz_metrics?.correct || 0,

@@ -1460,10 +1460,15 @@
         boardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
       }
 
-      // 2. Extract detected answer tag
+      // 2. Extract detected answer tag and optional question ID
       let detectedAns = null;
+      let detectedQid = null;
       clean = clean.replace(/\[ans:\s*([ক-ঘa-dA-D])\]/gi, (m, g) => {
         detectedAns = g;
+        return '';
+      });
+      clean = clean.replace(/\[(?:qid|id):\s*(q_\d+)\]/gi, (m, g) => {
+        detectedQid = g;
         return '';
       });
       if (!detectedAns && extraAns) {
@@ -1614,7 +1619,7 @@
               ${optionsHtml}
             </div>
             <div class="pt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
-              <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন দাও')" 
+              <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন অনুশীলন করতে চাই' + (typeof detectedQid !== 'undefined' && detectedQid ? ' [ID: ' + detectedQid + ']' : ''))" 
                 class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 hover:text-emerald-300 border border-emerald-500/25 hover:border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
                 <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>

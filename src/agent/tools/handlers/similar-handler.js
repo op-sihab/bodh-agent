@@ -1,7 +1,7 @@
-// Tool Handler: find_similar_type_questions
 import { getSimilarQuestionsByVector } from "../../../core/db/queries/vector.js";
 import { normalizeSubject } from "../../../config/subject-map.js";
 import { formatTag } from "../../../config/tag-map.js";
+import { detectCognitiveArchetype } from "./cognitive-archetypes.js";
 
 export async function handleFindSimilarQuestions(args) {
   const subjId = normalizeSubject(args.subject);
@@ -20,18 +20,34 @@ export async function handleFindSimilarQuestions(args) {
     };
   }
 
+  const seedOptions = [res.seed.option_a, res.seed.option_b, res.seed.option_c, res.seed.option_d].filter(Boolean);
+  const archetype = detectCognitiveArchetype(res.seed.question_text, seedOptions, subjId || res.seed.subject_id);
+
+  // Check quality of database matches
+  const topMatches = (res.similar || []).filter(q => {
+    const scoreNum = parseInt(q.similarity_score) || 0;
+    return scoreNum >= 65;
+  });
+
+  const hasDirectDatabaseTwin = topMatches.length > 0;
+
   return {
-    mode: "vector_similarity_match",
-    model: "kazalbrur/bangla-embed-e5-small (1024-d)",
+    mode: "cognitive_master_type_match",
+    archetype: {
+      type_id: archetype.type,
+      title: archetype.title,
+      description: archetype.description
+    },
     target_concept: res.seed.question_text.slice(0, 100),
     seed_question: {
       id: res.seed.id,
       question: res.seed.question_text,
       board: formatTag(res.seed.tags),
       raw_tag: res.seed.tags,
-      options: [res.seed.option_a, res.seed.option_b, res.seed.option_c, res.seed.option_d].filter(Boolean),
+      options: seedOptions,
       answer: res.seed.answer
     },
+    has_direct_database_twin: hasDirectDatabaseTwin,
     similar_type_questions: res.similar.map(q => ({
       id: q.id,
       similarity_score: q.similarity_score,
@@ -42,6 +58,8 @@ export async function handleFindSimilarQuestions(args) {
       answer: q.answer,
       solution: q.solution
     })),
-    mentor_instructions: "শিক্ষার্থীকে প্রথমে জানাও যে এই প্রশ্নটি কোন মূল সূত্রে এবং কোন মাস্টার টাইপে পড়ে। তারপর ভেক্টর সার্চ থেকে পাওয়া অন্য বোর্ডের অনুরূপ প্রশ্নটি উপস্থাপন করো। দেখাও যে পরীক্ষক কীভাবে সংখ্যা বা ভাষা ঘুরিয়ে একই টাইপের প্রশ্ন অন্য বোর্ডে দিয়েছে।"
+    mentor_instructions: hasDirectDatabaseTwin
+      ? `শিক্ষার্থীকে প্রথমে জানাও যে এই প্রশ্নটি কোন মাস্টার টাইপে পড়ে (${archetype.title})। তারপর ডেটাবেসের অন্য বোর্ডের আসল অনুরূপ প্রশ্নটি উপস্থাপন করো। দেখিয়ে দাও পরীক্ষক কীভাবে সংখ্যা বা ভাষা ঘুরিয়ে (Examiner Twist) একই টাইপ দিয়েছে।`
+      : `এই প্রশ্নের মাস্টার টাইপ হলো: ${archetype.title}। ডেটাবেসে যদি হুবহু একই জটিল সূত্রের কোনো প্রশ্ন না থাকে, তবে মূল প্রশ্নের গাণিতিক ও কগনিটিভ ডেরিভেশন কাঠামো (যেমন একই সূত্র বা লজিক্যাল চেইন) অক্ষুণ্ণ রেখে শুধু সংখ্যা বা পদার্থের নাম বদলে শিক্ষার্থীকে সমমানের একটি খাঁটি প্রশ্ন প্রদান করো। প্রথমে শুধু প্রশ্ন দেবে, উত্তর দেবে না!`
   };
 }
