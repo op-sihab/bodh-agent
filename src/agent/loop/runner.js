@@ -5,6 +5,7 @@ import { SUBJECT_DISPLAY_NAMES, toBnDigits } from "../../config/subject-map.js";
 import { ENV } from "../../config/env.js";
 import { SYSTEM_PROMPT } from "../prompts/system-prompt.js";
 import { compactToolResult } from "./compaction.js";
+import { classifyIntent, getScopedTools, pruneHistoryForContext, INTENT_TYPES } from "./router.js";
 
 // Helpers for student-friendly, empathetic tool progress labels
 function getToolHumanLabel(tool, args) {
@@ -112,10 +113,12 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   const isAnswering = memoryReconciliation.isAnswering;
   const isMetaDebate = memoryReconciliation.isMetaDebate;
 
+  // 2. Classify Intent via Orchestrator Decision Router (Big Boss Router)
+  const classifiedIntent = classifyIntent(userMessage, state, isAnswering);
   const activeSubject = state.subject_id;
   const activeChapter = state.chapter_num;
 
-  // Build input history with system prompt, memory blocks, and past chat turns
+  // Build input history with high-density system prompt, memory blocks, and pruned past turns
   const inputHistory = [
     { type: "message", role: "system", content: SYSTEM_PROMPT }
   ];
@@ -130,21 +133,10 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
     });
   }
 
-  // Token & Structure Optimization: Keep last 6 turns with structure-preserving truncator
-  for (const item of pastHistory.slice(-6)) {
-    if (item.role === "user" || item.role === "assistant") {
-      let content = item.content;
-      if (typeof content === "string") {
-        content = item.role === "assistant"
-          ? MemoryManager.preserveStructuredContent(content, 1200)
-          : content.replace(/<[\s]*(?:thought|thinking)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking)[\s]*>/gi, '').trim();
-      }
-      inputHistory.push({
-        type: "message",
-        role: item.role,
-        content
-      });
-    }
+  // Token & Structure Optimization: Prune history (strip historical thoughts, limit to recent 4 clean turns)
+  const prunedHistory = pruneHistoryForContext(pastHistory, 4);
+  for (const item of prunedHistory) {
+    inputHistory.push(item);
   }
 
   // Always inject Active Academic Subject Lock Directive when an active subject is established
@@ -156,10 +148,10 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
       content: `ACTIVE ACADEMIC CONTEXT: Subject is '${activeSubject}' (${chDisplay}).
 STRICT ACADEMIC PERSISTENCE DIRECTIVE:
 1. You are actively tutoring the student in '${activeSubject}'.
-2. DO NOT change or switch to any other subject (such as physics, chemistry, biology, or math) based on ambiguous words, typos, short comments, or Banglish slang (like 'dohhay', 'arekta', 'next', 'ei type er', 'onno').
-3. You may ONLY change subjects if the student explicitly and unambiguously writes the name of a new subject (e.g., 'এখন রসায়ন পড়ব' or 'physics start koro').
-4. The active chapter context is ${chDisplay}. If the student asks about the whole syllabus, all chapter list, or a different chapter in ${activeSubject}, answer freely and accurately for that chapter or the entire subject without being restricted to a past chapter.
-5. NEVER hallucinate that the student wanted another subject, and NEVER apologize or debate past turns. Keep all focus strictly anchored on '${activeSubject}'.`
+2. DO NOT change or switch to any other subject based on ambiguous words, typos, short comments, or Banglish slang.
+3. You may ONLY change subjects if the student explicitly writes the name of a new subject.
+4. The active chapter context is ${chDisplay}. If the student asks about the whole syllabus or a different chapter in ${activeSubject}, answer freely for ${activeSubject}.
+5. Keep all focus strictly anchored on '${activeSubject}'.`
     });
   }
 
@@ -170,9 +162,8 @@ STRICT ACADEMIC PERSISTENCE DIRECTIVE:
       type: "message",
       role: "system",
       content: `CRITICAL DIRECTIVE (ZERO META-DEBATE & IMMEDIATE PIVOT):
-The student is questioning or challenging why you mentioned another subject or made a previous statement.
-1. DO NOT DEFEND YOURSELF: Absolutely DO NOT explain past reasoning, do not say "তোমার আগের বার্তার ওপর ভিত্তি করে", and do not debate!
-2. NO LONG EXCUSES: Give a warm, humble 1-line pivot acknowledgment stating that you made a mistake and that you are staying with ${activeSubjBn} ${chDisplay} (e.g., "তুমি একদম ঠিক বলেছ ভাইয়া, ভুল বোঝাবুঝির জন্য আন্তরিকভাবে দুঃখিত! চলো কোনো বিভ্রান্তি ছাড়া সরাসরি ${activeSubjBn} ${chDisplay}-এর মূল পড়ায় ফিরি।").
+1. DO NOT DEFEND YOURSELF: No excuses or debate.
+2. Give a warm, humble 1-line pivot acknowledgment stating that you are staying with ${activeSubjBn} ${chDisplay}.
 3. IMMEDIATELY RETURN TO THE ACADEMIC TASK: Provide an authentic question or proceed with ${activeSubjBn} ${chDisplay}.`
     });
   }
@@ -224,20 +215,27 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
   reactLoop: while (currentStep < MAX_STEPS) {
     currentStep++;
 
+    // Dynamic Focused Tool Scoping (Only send necessary tool schemas on step 1, 0 tool overhead on step 2+)
+    const activeTools = (currentStep === 1) ? getScopedTools(classifiedIntent) : undefined;
+
+    const requestPayload = {
+      input: inputHistory,
+      model: modelName,
+      vendor: "openai",
+      stream: true,
+      include_routing_metadata: true
+    };
+    if (activeTools && activeTools.length > 0) {
+      requestPayload.tools = activeTools;
+    }
+
     const res = await fetch(mergeUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${mergeKey}`
       },
-      body: JSON.stringify({
-        input: inputHistory,
-        tools: AGENT_TOOLS,
-        model: modelName,
-        vendor: "openai",
-        stream: true,
-        include_routing_metadata: true
-      })
+      body: JSON.stringify(requestPayload)
     });
 
     if (!res.ok) {
