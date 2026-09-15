@@ -14,7 +14,7 @@ export async function handleSearchQuestionBank(args) {
   const years = parseYearFilter(args.year);
 
   const whereClauses = [
-    `(question_text LIKE '%${query}%' OR solution LIKE '%${query}%')`
+    `(question_text LIKE '%${query}%' OR question_html LIKE '%${query}%' OR solution LIKE '%${query}%')`
   ];
 
   if (subjId) whereClauses.push(`subject_id = '${subjId}'`);
@@ -32,12 +32,12 @@ export async function handleSearchQuestionBank(args) {
   }
 
   const limit = Math.min(parseInt(args.limit) || 2, 5);
-  let sql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id FROM questions WHERE ${whereClauses.join(" AND ")} ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
+  let sql = `SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id, chapter_id FROM questions WHERE ${whereClauses.join(" AND ")} ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
   let res = await executeRawSql(sql);
 
   // Fallback if combination is too strict
   if (res.rows.length === 0) {
-    const fallbackSql = `SELECT question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id FROM questions WHERE (question_text LIKE '%${query}%' OR solution LIKE '%${query}%') ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
+    const fallbackSql = `SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id, chapter_id FROM questions WHERE (question_text LIKE '%${query}%' OR question_html LIKE '%${query}%' OR solution LIKE '%${query}%') ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
     res = await executeRawSql(fallbackSql);
   }
 
@@ -53,8 +53,10 @@ export async function handleSearchQuestionBank(args) {
     search_query: query,
     total_found: res.rows.length,
     results: res.rows.map(r => ({
+      id: r.id,
       type: r.type,
-      stem_or_question: r.question_text,
+      stem_or_question: r.question_text || r.question_html,
+      question_text: r.question_text || r.question_html,
       option_a: r.option_a,
       option_b: r.option_b,
       option_c: r.option_c,
@@ -62,9 +64,10 @@ export async function handleSearchQuestionBank(args) {
       answer: r.answer,
       solution: r.solution,
       exam_source: formatTag(r.tags),
+      board_tag: formatTag(r.tags),
       raw_tag: r.tags
     })),
-    mentor_instructions: "প্রাপ্ত আসল প্রশ্ন ও সমাধান নির্ভুলভাবে উপস্থাপন করো। শিক্ষার্থীকে প্রাসঙ্গিক সূত্র ও সমাধান পদ্ধতি প্রাঞ্জলভাবে বুঝিয়ে দাও।"
+    mentor_instructions: "প্রাপ্ত আসল প্রশ্ন ও সমাধান নির্ভুলভাবে উপস্থাপন করো। শিক্ষার্থীকে প্রাসঙ্গিক সূত্র ও সমাধান পদ্ধতি প্রাঞ্জলভাবে বুঝিয়ে দাও। কুইজের ক্ষেত্রে শুরুতে উত্তর গোপন রাখবে।"
   };
 }
 
