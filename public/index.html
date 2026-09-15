@@ -496,6 +496,163 @@
   </main>
 
   <!-- ========================================================= -->
+  <!-- 2B. INTERACTIVE EXAM MODAL (মক টেস্ট ও পরীক্ষা মোড)      -->
+  <!-- ========================================================= -->
+  <div id="examModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div class="relative w-full max-w-3xl bg-[#111116] border border-white/[0.12] rounded-3xl shadow-[0_24px_70px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.1)] flex flex-col max-h-[92vh] overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 id="examModalTitle" class="text-sm sm:text-base font-semibold text-white">লাইভ মক টেস্ট</h3>
+              <span id="examSubjectBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 border border-white/[0.08]">রসায়ন</span>
+            </div>
+            <p id="examTopicSubtitle" class="text-xs text-zinc-400 font-normal">অধ্যায়ভিত্তিক মূল্যায়ন পরীক্ষা</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Live Timer Badge -->
+          <div id="examTimerBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+            <svg class="w-3.5 h-3.5 animate-spin" style="animation-duration: 4s;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span id="examTimerText">০৫:০০</span>
+          </div>
+
+          <!-- Close Modal Button -->
+          <button type="button" onclick="closeExamModal()" class="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white flex items-center justify-center transition cursor-pointer border border-white/[0.06]">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Question Palette (1 to N Grid) -->
+      <div id="examPaletteArea" class="px-5 py-3 border-b border-white/[0.06] bg-black/20 flex items-center justify-between gap-3 overflow-x-auto">
+        <div class="flex items-center gap-2" id="examPaletteButtons">
+          <!-- Dynamic bubbles -->
+        </div>
+        <div class="text-[11px] font-mono text-zinc-400 shrink-0">
+          উত্তর সম্পন্ন: <span id="examAnsweredCount" class="text-emerald-400 font-semibold">০</span>/<span id="examTotalCount">৫</span>
+        </div>
+      </div>
+
+      <!-- Scrollable Main Exam Body -->
+      <div id="examMainBody" class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        
+        <!-- ACTIVE QUESTION VIEW -->
+        <div id="examQuestionView" class="space-y-4">
+          <!-- Question Stem & Board source -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <span id="examQNumBadge" class="text-xs font-mono font-semibold text-zinc-400">প্রশ্ন ১</span>
+              <div id="examQBoardTags" class="flex flex-wrap gap-1"></div>
+            </div>
+            <h4 id="examQStem" class="text-sm sm:text-[15.5px] font-medium text-white leading-relaxed"></h4>
+          </div>
+
+          <!-- 4 Options Grid -->
+          <div id="examOptionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+            <!-- Dynamic option buttons -->
+          </div>
+
+          <!-- Hidden / Revealed Explanation Card -->
+          <div id="examExplanationCard" class="hidden rounded-2xl border border-indigo-500/30 bg-indigo-500/[0.08] p-4 text-xs text-zinc-200 shadow-[0_0_24px_rgba(99,102,241,0.08)] backdrop-blur-md space-y-2 transition-all duration-300">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 font-bold text-indigo-300 text-[13px]">
+                <svg class="w-4 h-4 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>ব্যাখ্যা ও বিশ্লেষণ</span>
+              </div>
+              <span id="examCorrectAnsBadge" class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-semibold text-[11px]">
+                সঠিক উত্তর: ক
+              </span>
+            </div>
+            <div id="examExplanationContent" class="leading-relaxed text-zinc-300 pt-1"></div>
+          </div>
+        </div>
+
+        <!-- EXAM RESULT / SCORECARD VIEW (Hidden initially) -->
+        <div id="examResultView" class="hidden space-y-6">
+          <div class="text-center p-6 rounded-3xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.5)] space-y-3">
+            <div class="inline-flex p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+              <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg sm:text-xl font-bold text-white">পরীক্ষা সম্পন্ন হয়েছে!</h3>
+            <p id="examResultRemark" class="text-xs sm:text-sm text-zinc-300">চমৎকার প্রস্তুতি! তোমার ধারণাগত দক্ষতা খুব ভালো।</p>
+            
+            <div class="grid grid-cols-3 gap-2.5 max-w-md mx-auto pt-2">
+              <div class="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                <div class="text-[10px] font-mono text-zinc-400">মোট স্কোর</div>
+                <div id="resScoreText" class="text-base sm:text-lg font-bold text-emerald-400 font-mono">৪ / ৫</div>
+              </div>
+              <div class="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                <div class="text-[10px] font-mono text-zinc-400">সঠিকতার হার</div>
+                <div id="resAccuracyText" class="text-base sm:text-lg font-bold text-sky-400 font-mono">৮০%</div>
+              </div>
+              <div class="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                <div class="text-[10px] font-mono text-zinc-400">সময় লেগেছে</div>
+                <div id="resTimeText" class="text-base sm:text-lg font-bold text-amber-400 font-mono">০১:৪৫</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question-by-Question Review List -->
+          <div class="space-y-3">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 px-1">উত্তরপত্র ও বিস্তারিত বিশ্লেষণ রিভিউ</h4>
+            <div id="examReviewList" class="space-y-3"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer Controls -->
+      <div class="px-5 py-4 border-t border-white/[0.08] flex items-center justify-between bg-white/[0.02]">
+        <div id="examActiveFooterControls" class="flex items-center justify-between w-full">
+          <button type="button" id="examPrevBtn" onclick="navigateExamQuestion(-1)" class="px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white text-xs font-medium border border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer disabled:opacity-30 disabled:pointer-events-none">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            <span>পূর্ববর্তী</span>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="submitExam(false)" class="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 text-xs font-medium border border-rose-500/20 transition cursor-pointer">
+              <span>পরীক্ষা শেষ করো</span>
+            </button>
+            <button type="button" id="examNextBtn" onclick="navigateExamQuestion(1)" class="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shadow flex items-center gap-1.5 transition cursor-pointer active:scale-95">
+              <span id="examNextBtnText">পরবর্তী প্রশ্ন</span>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="examResultFooterControls" class="hidden flex items-center justify-between w-full">
+          <button type="button" onclick="restartCurrentExam()" class="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white text-xs font-medium border border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>পুনরায় পরীক্ষা দাও</span>
+          </button>
+          <button type="button" onclick="closeExamModal()" class="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shadow transition cursor-pointer">
+            <span>চ্যাটে ফিরে যাও</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
   <!-- 3. SCRIPT ENGINE & LOGIC                                  -->
   <!-- ========================================================= -->
   <script>
@@ -592,7 +749,7 @@
         hoverBorder: 'hover:border-emerald-500/35',
         dotBg: 'bg-emerald-400',
         placeholder: 'রসায়ন বিষয়ের যেকোনো প্রশ্ন, অধ্যায় তালিকা বা কনসেপ্ট লিখো...', 
-        quickPrompts: ['রসায়ন বিষয়ের সবগুলো অধ্যায়ের নাম দাও', 'রসায়ন বিষয়ের সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো এবং কেন?', 'মোলের ধারণা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'খনিজ সম্পদ ও জীবাশ্ম থেকে একটি CQ দাও'] 
+        quickPrompts: ['৫টি গুরুত্বপূর্ণ বহুনির্বাচনী মক টেস্ট দাও', 'রসায়ন বিষয়ের সবগুলো অধ্যায়ের নাম দাও', 'মোলের ধারণা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'খনিজ সম্পদ ও জীবাশ্ম থেকে একটি CQ দাও'] 
       },
       { 
         id: 'ssc_physics', 
@@ -607,7 +764,7 @@
         hoverBorder: 'hover:border-amber-500/35',
         dotBg: 'bg-amber-400',
         placeholder: 'পদার্থবিজ্ঞান গতি, বল, কাজ-ক্ষমতা বা তড়িৎ নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['পদার্থবিজ্ঞান সবগুলো অধ্যায়ের নাম ও তালিকা দাও', 'পদার্থবিজ্ঞান গতি অধ্যায়ের মাস্টার টাইপ ও সূত্র দাও', 'চল বিদ্যুৎ থেকে একটি বোর্ড স্ট্যান্ডার্ড CQ দাও', 'কাজ ক্ষমতা ও শক্তি থেকে একটি কঠিন MCQ দাও'] 
+        quickPrompts: ['পদার্থবিজ্ঞান গতি ও বল থেকে ৫টি MCQ মক টেস্ট নাও', 'পদার্থবিজ্ঞান গতি অধ্যায়ের মাস্টার টাইপ ও সূত্র দাও', 'চল বিদ্যুৎ থেকে একটি বোর্ড স্ট্যান্ডার্ড CQ দাও', 'কাজ ক্ষমতা ও শক্তি থেকে একটি কঠিন MCQ দাও'] 
       },
       { 
         id: 'ssc_biology', 
@@ -622,7 +779,7 @@
         hoverBorder: 'hover:border-rose-500/35',
         dotBg: 'bg-rose-400',
         placeholder: 'জীববিজ্ঞান কোষ, বংশগতি বা বাস্তুতন্ত্র নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['জীববিজ্ঞান সব অধ্যায়ের নাম ও সিলেবাস দাও', 'জীবকোষ ও টিস্যু অধ্যায়ের গুরুত্বপূর্ণ চিত্র ও CQ দাও', 'জীবের বংশগতি ও বিবর্তন থেকে একটি MCQ দাও', 'জীববিজ্ঞানে ৮০/২০ নিয়মে সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো?'] 
+        quickPrompts: ['জীববিজ্ঞান সব অধ্যায় থেকে ৫টি MCQ মক টেস্ট দাও', 'জীবকোষ ও টিস্যু অধ্যায়ের গুরুত্বপূর্ণ চিত্র ও CQ দাও', 'জীবের বংশগতি ও বিবর্তন থেকে একটি MCQ দাও', 'জীববিজ্ঞানে ৮০/২০ নিয়মে সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো?'] 
       },
       { 
         id: 'ssc_general_math', 
@@ -637,7 +794,7 @@
         hoverBorder: 'hover:border-sky-500/35',
         dotBg: 'bg-sky-400',
         placeholder: 'সাধারণ গণিত বীজগণিত, জ্যামিতি বা ত্রিকোণমিতি নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['সাধারণ গণিত সম্পূর্ণ অধ্যায় তালিকা ও মানবণ্টন দাও', 'কম পড়ে সাধারণ গণিতে নিশ্চিত ৭০ এ ৭০ পাওয়ার রোডম্যাপ দাও', 'ত্রিকোণমিতিক অনুপাত থেকে একটি বোর্ড CQ দাও', 'সসীম ধারা অধ্যায় থেকে একটি ট্রিকি MCQ দাও'] 
+        quickPrompts: ['ত্রিকোণমিতি ও সসীম ধারা থেকে ৫টি MCQ মক টেস্ট দাও', 'কম পড়ে সাধারণ গণিতে নিশ্চিত ৭০ এ ৭০ পাওয়ার রোডম্যাপ দাও', 'ত্রিকোণমিতিক অনুপাত থেকে একটি বোর্ড CQ দাও', 'সসীম ধারা অধ্যায় থেকে একটি ট্রিকি MCQ দাও'] 
       },
       { 
         id: 'ssc_higher_math', 
@@ -652,7 +809,7 @@
         hoverBorder: 'hover:border-purple-500/35',
         dotBg: 'bg-purple-400',
         placeholder: 'উচ্চতর গণিত স্থানাঙ্ক জ্যামিতি, ভেক্টর বা সম্ভাবনা নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['উচ্চতর গণিত সব অধ্যায়ের পূর্ণাঙ্গ তালিকা দাও', 'দ্বিপদী বিস্তৃতি ও স্থানাঙ্ক জ্যামিতি থেকে CQ দাও', 'সম্ভাবনা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'উচ্চতর গণিতে এ-প্লাস পাওয়ার চ্যাপ্টার প্রায়োরিটি রুটম্যাপ দাও'] 
+        quickPrompts: ['উচ্চতর গণিত স্থানাঙ্ক ও সম্ভাবনা থেকে ৫টি MCQ মক টেস্ট নাও', 'দ্বিপদী বিস্তৃতি ও স্থানাঙ্ক জ্যামিতি থেকে CQ দাও', 'সম্ভাবনা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'উচ্চতর গণিতে এ-প্লাস পাওয়ার চ্যাপ্টার প্রায়োরিটি রুটম্যাপ দাও'] 
       },
       { 
         id: 'ssc_bangla_1st', 
@@ -667,7 +824,7 @@
         hoverBorder: 'hover:border-teal-500/35',
         dotBg: 'bg-teal-400',
         placeholder: 'বাংলা ১ম পত্রের গদ্য, কবিতা বা সহপাঠ নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['বাংলা ১ম পত্রের নির্ধারিত সকল গদ্য ও কবিতার তালিকা দাও', 'সুভা ও বই পড়া গল্প থেকে একটি বোর্ড CQ দাও', 'কপোতাক্ষ নদ কবিতা থেকে একটি MCQ দাও', 'কাকতাড়ুয়া উপন্যাস ও বহিপীর নাটকের সারসংক্ষেপ দাও'] 
+        quickPrompts: ['বাংলা ১ম পত্র সাহিত্য থেকে ৫টি MCQ মক টেস্ট নাও', 'সুভা ও বই পড়া গল্প থেকে একটি বোর্ড CQ দাও', 'কপোতাক্ষ নদ কবিতা থেকে একটি MCQ দাও', 'কাকতাড়ুয়া উপন্যাস ও বহিপীর নাটকের সারসংক্ষেপ দাও'] 
       },
       { 
         id: 'ssc_bangla_2nd', 
@@ -682,7 +839,7 @@
         hoverBorder: 'hover:border-orange-500/35',
         dotBg: 'bg-orange-400',
         placeholder: 'বাংলা ২য় পত্র ব্যাকরণ ও নির্মিতি নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['বাংলা ২য় পত্রের ব্যাকরণ সিলেবাস ও নম্বর বণ্টন দাও', 'সমাস ও সন্ধি থেকে গুরুত্বপূর্ণ বোর্ড MCQ দাও', 'ণ-ত্ব ও ষ-ত্ব বিধানের নিয়মগুলো বুঝিয়ে দাও', 'প্রতিবেদন ও ভাব-সম্প্রসারণ লেখার নিয়ম দাও'] 
+        quickPrompts: ['বাংলা ২য় পত্র ব্যাকরণ অংশ থেকে ৫টি MCQ টেস্ট নাও', 'সমাস ও সন্ধি থেকে গুরুত্বপূর্ণ বোর্ড MCQ দাও', 'ণ-ত্ব ও ষ-ত্ব বিধানের নিয়মগুলো বুঝিয়ে দাও', 'প্রতিবেদন ও ভাব-সম্প্রসারণ লেখার নিয়ম দাও'] 
       },
       { 
         id: 'ssc_ict', 
@@ -697,7 +854,7 @@
         hoverBorder: 'hover:border-cyan-500/35',
         dotBg: 'bg-cyan-400',
         placeholder: 'আইসিটি ডেটাবেস, মাল্টিমিডিয়া বা নিরাপত্তা নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['আইসিটি বিষয়ের ৬টি অধ্যায়ের নাম ও তালিকা দাও', 'কম্পিউটার ও তথ্য নিরাপত্তা থেকে বোর্ড MCQ দাও', 'স্প্রেডশিট ও ডেটাবেস ব্যবহারের মূল ধারণা বুঝিয়ে দাও', 'আইসিটিতে পূর্ণ নম্বর পাওয়ার সাজেশন দাও'] 
+        quickPrompts: ['আইসিটি বিষয়ের গুরুত্বপূর্ণ ৫টি MCQ মক টেস্ট দাও', 'কম্পিউটার ও তথ্য নিরাপত্তা থেকে বোর্ড MCQ দাও', 'স্প্রেডশিট ও ডেটাবেস ব্যবহারের মূল ধারণা বুঝিয়ে দাও', 'আইসিটিতে পূর্ণ নম্বর পাওয়ার সাজেশন দাও'] 
       },
       { 
         id: 'ssc_bgs', 
@@ -712,7 +869,7 @@
         hoverBorder: 'hover:border-emerald-500/35',
         dotBg: 'bg-emerald-400',
         placeholder: 'বাংলাদেশ ও বিশ্বপরিচয় ইতিহাস, ভূগোল বা অর্থনীতি নিয়ে প্রশ্ন করো...', 
-        quickPrompts: ['বাংলাদেশ ও বিশ্বপরিচয় সব অধ্যায়ের তালিকা দাও', 'স্বাধীন বাংলাদেশ ও মুক্তিযুদ্ধের অধ্যায় থেকে CQ দাও', 'বাংলাদেশের সম্পদ ও শিল্প থেকে একটি MCQ দাও', 'বিজিএস-এ সর্বোচ্চ নম্বর তোলার কৌশল বলো'] 
+        quickPrompts: ['বাংলাদেশ ও বিশ্বপরিচয় থেকে ৫টি MCQ পরীক্ষা নাও', 'স্বাধীন বাংলাদেশ ও মুক্তিযুদ্ধের অধ্যায় থেকে CQ দাও', 'বাংলাদেশের সম্পদ ও শিল্প থেকে একটি MCQ দাও', 'বিজিএস-এ সর্বোচ্চ নম্বর তোলার কৌশল বলো'] 
       },
       { 
         id: 'ssc_islam', 
@@ -1681,6 +1838,28 @@
         cards.push({ placeholder, cardHtml });
       }
 
+      if (clusters.length >= 2) {
+        const extractedExamQuestions = [];
+        for (let c = 0; c < clusters.length; c++) {
+          const cluster = clusters[c];
+          let sIdx = cluster.startIndex - 1;
+          while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === '') sIdx--;
+          const stemLine = (sIdx >= 0 && lines[sIdx]) ? lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d]\s*/gi, '').trim() : `প্রশ্ন ${c + 1}`;
+          
+          extractedExamQuestions.push({
+            question_text: stemLine,
+            option_a: cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '',
+            option_b: cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '',
+            option_c: cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '',
+            option_d: cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '',
+            answer: detectedAns || 'ক',
+            solution: 'বোর্ড স্ট্যান্ডার্ড সমাধান ও নির্ভুল বিশ্লেষণ',
+            tags: extraBoardTag || ''
+          });
+        }
+        globalActiveExamQuestions = extractedExamQuestions;
+      }
+
       clean = lines.join('\n');
 
       // 6. Parse Markdown
@@ -1689,6 +1868,24 @@
         html = marked.parse(clean);
       } catch (e) {
         html = escapeHtml(clean);
+      }
+
+      if (clusters.length >= 2) {
+        const launchBannerHtml = `
+          <div class="my-3.5 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/[0.14] via-teal-500/[0.10] to-indigo-500/[0.14] border border-emerald-500/30 flex items-center justify-between gap-3 shadow-[0_4px_24px_rgba(16,185,129,0.12)] backdrop-blur-md">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-500/30 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.2)]">🎯</span>
+              <div class="min-w-0">
+                <h4 class="text-xs sm:text-sm font-bold text-white tracking-wide truncate">মক টেস্ট মোড প্রস্তুত (${toBnDigits(clusters.length)}টি প্রশ্ন)</h4>
+                <p class="text-[11px] text-emerald-300/80 truncate">কাউন্টডাউন টাইমার ও পূর্ণাঙ্গ সমাধানসহ লাইভ পরীক্ষা দাও</p>
+              </div>
+            </div>
+            <button type="button" onclick="launchActiveChatExam()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs shadow-[0_0_14px_rgba(16,185,129,0.4)] active:scale-95 transition-all duration-150 cursor-pointer shrink-0">
+              পরীক্ষা শুরু করো
+            </button>
+          </div>
+        `;
+        html = launchBannerHtml + html;
       }
 
       // 7. Inject MCQ Cards
@@ -2458,6 +2655,350 @@
     if (hInp) hInp.addEventListener('focus', triggerPrewarm, { once: true });
     const dInp = document.getElementById('dockedInput');
     if (dInp) dInp.addEventListener('focus', triggerPrewarm, { once: true });
+
+    // =========================================================
+    // 4. PREMIUM EXAM ENGINE & LIVE MOCK TEST MODAL
+    // =========================================================
+    let currentExamState = {
+      questions: [],
+      currentIndex: 0,
+      userAnswers: {},
+      timerInterval: null,
+      timeLeft: 300,
+      totalTime: 300,
+      isSubmitted: false,
+      subjectName: '',
+      topicName: ''
+    };
+
+    let globalActiveExamQuestions = [];
+
+    function openExamModal(data) {
+      if (!data || !data.questions || data.questions.length === 0) return;
+      
+      if (currentExamState.timerInterval) {
+        clearInterval(currentExamState.timerInterval);
+        currentExamState.timerInterval = null;
+      }
+
+      currentExamState.questions = data.questions;
+      currentExamState.currentIndex = 0;
+      currentExamState.userAnswers = {};
+      currentExamState.isSubmitted = false;
+      currentExamState.subjectName = data.subjectName || currentSelectedSubject?.name || 'সাধারণ';
+      currentExamState.topicName = data.topicName || 'অধ্যায়ভিত্তিক মূল্যায়ন পরীক্ষা';
+      
+      const qCount = data.questions.length;
+      currentExamState.totalTime = Math.max(qCount * 60, 120); // At least 2 mins or 1 min/question
+      currentExamState.timeLeft = currentExamState.totalTime;
+
+      document.getElementById('examModalTitle').innerText = `${currentExamState.subjectName} লাইভ মক টেস্ট`;
+      document.getElementById('examSubjectBadge').innerText = currentExamState.subjectName;
+      document.getElementById('examTopicSubtitle').innerText = currentExamState.topicName;
+      document.getElementById('examTotalCount').innerText = toBnDigits(qCount);
+
+      document.getElementById('examQuestionView').classList.remove('hidden');
+      document.getElementById('examResultView').classList.add('hidden');
+      document.getElementById('examActiveFooterControls').classList.remove('hidden');
+      document.getElementById('examResultFooterControls').classList.add('hidden');
+
+      const modal = document.getElementById('examModal');
+      if (modal) modal.classList.remove('hidden');
+
+      renderExamPalette();
+      renderExamQuestion(0);
+      startExamTimer();
+    }
+
+    function closeExamModal() {
+      if (currentExamState.timerInterval) {
+        clearInterval(currentExamState.timerInterval);
+        currentExamState.timerInterval = null;
+      }
+      const modal = document.getElementById('examModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function startExamTimer() {
+      updateTimerDisplay();
+      currentExamState.timerInterval = setInterval(() => {
+        currentExamState.timeLeft--;
+        updateTimerDisplay();
+        if (currentExamState.timeLeft <= 0) {
+          clearInterval(currentExamState.timerInterval);
+          currentExamState.timerInterval = null;
+          submitExam(true);
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const el = document.getElementById('examTimerText');
+      if (!el) return;
+      const m = Math.floor(Math.max(0, currentExamState.timeLeft) / 60);
+      const s = Math.max(0, currentExamState.timeLeft) % 60;
+      const mStr = m < 10 ? '0' + m : '' + m;
+      const sStr = s < 10 ? '0' + s : '' + s;
+      el.innerText = toBnDigits(mStr + ':' + sStr);
+
+      const badge = document.getElementById('examTimerBadge');
+      if (badge) {
+        if (currentExamState.timeLeft <= 60) {
+          badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-mono font-semibold animate-pulse shadow-[0_0_16px_rgba(244,63,94,0.2)]';
+        } else {
+          badge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-mono font-semibold shadow-[0_0_12px_rgba(245,158,11,0.15)]';
+        }
+      }
+    }
+
+    function renderExamPalette() {
+      const container = document.getElementById('examPaletteButtons');
+      if (!container) return;
+
+      const answeredKeys = Object.keys(currentExamState.userAnswers);
+      const answeredCount = answeredKeys.length;
+      document.getElementById('examAnsweredCount').innerText = toBnDigits(answeredCount);
+
+      container.innerHTML = currentExamState.questions.map((q, idx) => {
+        const isCurrent = idx === currentExamState.currentIndex;
+        const isAnswered = currentExamState.userAnswers[idx] !== undefined;
+
+        let btnClass = 'w-7 h-7 sm:w-8 sm:h-8 rounded-xl font-mono text-xs font-semibold flex items-center justify-center transition-all cursor-pointer ';
+        if (isCurrent) {
+          btnClass += 'bg-white text-zinc-950 ring-2 ring-emerald-400 shadow-[0_0_12px_rgba(255,255,255,0.3)] scale-105';
+        } else if (isAnswered) {
+          btnClass += 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30';
+        } else {
+          btnClass += 'bg-white/[0.04] border border-white/[0.08] text-zinc-400 hover:bg-white/[0.08] hover:text-zinc-200';
+        }
+
+        return `
+          <button type="button" onclick="navigateExamQuestion(${idx - currentExamState.currentIndex})" class="${btnClass}">
+            ${toBnDigits(idx + 1)}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderExamQuestion(idx) {
+      if (idx < 0 || idx >= currentExamState.questions.length) return;
+      currentExamState.currentIndex = idx;
+      renderExamPalette();
+
+      const q = currentExamState.questions[idx];
+      document.getElementById('examQNumBadge').innerText = `প্রশ্ন ${toBnDigits(idx + 1)} / ${toBnDigits(currentExamState.questions.length)}`;
+
+      const boardTagsEl = document.getElementById('examQBoardTags');
+      if (boardTagsEl) {
+        if (q.tags || q.formatted_source) {
+          const formatted = formatFullBoardTags(q.tags || q.formatted_source);
+          const tags = formatted.split(',').map(x => x.trim()).filter(Boolean);
+          boardTagsEl.innerHTML = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
+        } else {
+          boardTagsEl.innerHTML = '';
+        }
+      }
+
+      // Question Stem
+      const stemEl = document.getElementById('examQStem');
+      if (stemEl) {
+        stemEl.innerHTML = renderFormattedContent(q.question_text || q.stem || '');
+      }
+
+      // Options
+      const optContainer = document.getElementById('examOptionsGrid');
+      const selectedLetter = currentExamState.userAnswers[idx];
+      const correctLetter = normLetter(q.answer || q.correct_answer_bn || 'ক');
+
+      const options = [
+        { letter: 'ক', text: q.option_a || q.options?.[0] || '' },
+        { letter: 'খ', text: q.option_b || q.options?.[1] || '' },
+        { letter: 'গ', text: q.option_c || q.options?.[2] || '' },
+        { letter: 'ঘ', text: q.option_d || q.options?.[3] || '' }
+      ];
+
+      optContainer.innerHTML = options.map(opt => {
+        let optClass = 'mcq-opt group flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl text-left w-full cursor-pointer relative overflow-hidden ';
+        let badgeHtml = '<span class="opt-badge hidden text-xs font-bold shrink-0"></span>';
+
+        if (selectedLetter !== undefined) {
+          const isThisSelected = opt.letter === selectedLetter;
+          const isThisCorrect = opt.letter === correctLetter;
+
+          if (isThisCorrect) {
+            optClass += 'correct ';
+            badgeHtml = '<span class="opt-badge text-emerald-400 text-sm font-bold shrink-0">✓</span>';
+          } else if (isThisSelected && !isThisCorrect) {
+            optClass += 'wrong ';
+            badgeHtml = '<span class="opt-badge text-rose-400 text-sm font-bold shrink-0">✕</span>';
+          } else {
+            optClass += 'opacity-40 ';
+          }
+        }
+
+        return `
+          <button type="button" onclick="selectExamOption('${opt.letter}')" class="${optClass}">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="opt-letter w-7 h-7 rounded-lg bg-white/[0.05] text-zinc-300 font-mono text-xs flex items-center justify-center font-bold shrink-0 border border-white/[0.08] transition-all group-hover:border-white/20">
+                ${opt.letter}
+              </span>
+              <span class="opt-text text-xs sm:text-[13.5px] text-zinc-200 transition-colors font-normal leading-snug">${opt.text}</span>
+            </div>
+            ${badgeHtml}
+          </button>
+        `;
+      }).join('');
+
+      // Explanation Card
+      const expCard = document.getElementById('examExplanationCard');
+      if (selectedLetter !== undefined) {
+        expCard.classList.remove('hidden');
+        document.getElementById('examCorrectAnsBadge').innerText = `সঠিক উত্তর: (${correctLetter})`;
+        const expContent = q.solution || q.explanation || 'এই প্রশ্নের মূল ধারণার সঠিক প্রয়োগ বিশ্লেষণ উপরের বিকল্পে দেখানো হয়েছে।';
+        document.getElementById('examExplanationContent').innerHTML = renderFormattedContent(expContent);
+      } else {
+        expCard.classList.add('hidden');
+      }
+
+      // Prev / Next button states
+      const prevBtn = document.getElementById('examPrevBtn');
+      if (prevBtn) prevBtn.disabled = (idx === 0);
+
+      const nextBtnText = document.getElementById('examNextBtnText');
+      if (nextBtnText) {
+        if (idx === currentExamState.questions.length - 1) {
+          nextBtnText.innerText = 'ফলাফল দেখো ✅';
+        } else {
+          nextBtnText.innerText = 'পরবর্তী প্রশ্ন';
+        }
+      }
+    }
+
+    function selectExamOption(optLetter) {
+      const idx = currentExamState.currentIndex;
+      currentExamState.userAnswers[idx] = optLetter;
+      renderExamQuestion(idx);
+    }
+
+    function navigateExamQuestion(delta) {
+      const newIdx = currentExamState.currentIndex + delta;
+      if (newIdx >= currentExamState.questions.length) {
+        submitExam(false);
+      } else if (newIdx >= 0 && newIdx < currentExamState.questions.length) {
+        renderExamQuestion(newIdx);
+      }
+    }
+
+    function submitExam(isTimeOut = false) {
+      if (currentExamState.timerInterval) {
+        clearInterval(currentExamState.timerInterval);
+        currentExamState.timerInterval = null;
+      }
+      currentExamState.isSubmitted = true;
+
+      const total = currentExamState.questions.length;
+      let correct = 0;
+      let wrong = 0;
+      let unans = 0;
+
+      currentExamState.questions.forEach((q, idx) => {
+        const userAns = currentExamState.userAnswers[idx];
+        const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+        if (userAns === undefined) {
+          unans++;
+        } else if (userAns === correctAns) {
+          correct++;
+        } else {
+          wrong++;
+        }
+      });
+
+      const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+      const timeSpent = currentExamState.totalTime - currentExamState.timeLeft;
+      const m = Math.floor(timeSpent / 60);
+      const s = timeSpent % 60;
+      const timeStr = (m < 10 ? '0' + m : '' + m) + ':' + (s < 10 ? '0' + s : '' + s);
+
+      document.getElementById('resScoreText').innerText = `${toBnDigits(correct)} / ${toBnDigits(total)}`;
+      document.getElementById('resAccuracyText').innerText = `${toBnDigits(accuracy)}%`;
+      document.getElementById('resTimeText').innerText = toBnDigits(timeStr);
+
+      let remark = "চমৎকার প্রস্তুতি! তোমার ধারণাগত স্পষ্টতা দারুণ।";
+      if (accuracy === 100) remark = "অসাধারণ! ১০০% সঠিক উত্তর দিয়েছো। পূর্ণ নম্বর নিশ্চিত!";
+      else if (accuracy >= 80) remark = "দারুণ পারফরম্যান্স! এ-প্লাস পাওয়ার জন্য একদম প্রস্তুত।";
+      else if (accuracy >= 60) remark = "ভালো চেষ্টা! যেসব প্রশ্নে ভুল হয়েছে সেগুলোর ব্যাখ্যা ও ফাঁদগুলো নিচে দেখে নাও।";
+      else remark = "আরেকটু রিভিশন প্রয়োজন। নিচের বিস্তারিত সমাধান ও কনসেপ্টগুলো মনোযোগ দিয়ে পড়ো।";
+
+      if (isTimeOut) remark += " (সময় শেষ হয়েছিল)";
+      document.getElementById('examResultRemark').innerText = remark;
+
+      // Render Review List
+      const reviewList = document.getElementById('examReviewList');
+      if (reviewList) {
+        reviewList.innerHTML = currentExamState.questions.map((q, idx) => {
+          const userAns = currentExamState.userAnswers[idx];
+          const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+          const isCorrect = userAns === correctAns;
+          const isSkipped = userAns === undefined;
+
+          let statusBadge = '';
+          if (isCorrect) {
+            statusBadge = '<span class="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-[11px] font-semibold">সঠিক (+১)</span>';
+          } else if (isSkipped) {
+            statusBadge = '<span class="px-2.5 py-0.5 rounded-full bg-zinc-500/15 border border-zinc-500/30 text-zinc-400 font-mono text-[11px] font-semibold">উত্তর দেওয়া হয়নি</span>';
+          } else {
+            statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 font-mono text-[11px] font-semibold">ভুল (${userAns})</span>`;
+          }
+
+          return `
+            <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.07] space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-mono font-semibold text-zinc-400">প্রশ্ন ${toBnDigits(idx + 1)}</span>
+                ${statusBadge}
+              </div>
+              <h5 class="text-sm font-medium text-white leading-relaxed">${renderFormattedContent(q.question_text || q.stem || '')}</h5>
+              <div class="p-3 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20 text-xs text-zinc-300 space-y-1.5">
+                <div class="flex items-center gap-2 font-semibold text-indigo-300">
+                  <span>সঠিক উত্তর: (${correctAns})</span>
+                </div>
+                <div class="leading-relaxed text-zinc-400">${renderFormattedContent(q.solution || q.explanation || 'বিকল্পের সঠিক যুক্তি প্রযোজ্য।')}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('examQuestionView').classList.add('hidden');
+      document.getElementById('examResultView').classList.remove('hidden');
+      document.getElementById('examActiveFooterControls').classList.add('hidden');
+      document.getElementById('examResultFooterControls').classList.remove('hidden');
+    }
+
+    function restartCurrentExam() {
+      openExamModal({
+        questions: currentExamState.questions,
+        subjectName: currentExamState.subjectName,
+        topicName: currentExamState.topicName
+      });
+    }
+
+    function launchActiveChatExam() {
+      if (globalActiveExamQuestions && globalActiveExamQuestions.length > 0) {
+        openExamModal({
+          questions: globalActiveExamQuestions,
+          subjectName: currentSelectedSubject?.name || 'বিষয়ভিত্তিক',
+          topicName: 'মক টেস্ট ও প্রস্তুতি পরীক্ষা'
+        });
+      }
+    }
+
+    function launchDirectExam(qCount = 5) {
+      if (isProcessing) return;
+      const subjName = currentSelectedSubject?.name || 'রসায়ন';
+      const prompt = `${subjName} বিষয় থেকে ${qCount}টি বহুনির্বাচনী প্রশ্নের একটি পূর্ণাঙ্গ মক টেস্ট পরীক্ষা নাও`;
+      activateChatView();
+      sendMessage(prompt);
+    }
 
     renderSubjectGrid();
     renderRecentChats();

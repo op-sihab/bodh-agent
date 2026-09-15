@@ -215,14 +215,28 @@ export async function handleGetCreativeQuestion(args) {
   const chObj = allChapters.find(c => c.id === q.chapter_id);
   const chName = chObj?.name || matchedChapterInfo?.name || "";
   const chOrder = chObj?.order_num || matchedChapterInfo?.order_num || "";
-  const chapterDisplay = chName ? `অধ্যায় ${toBnDigits(chOrder)}: ${chName}` : "বোর্ড সৃজনশীল প্রশ্ন";
+
+  // Detect if question contains a specific story/topic from directTopicTokens or KNOWN_TOPIC_PHRASES
+  let specificTopicName = "";
+  const qFullText = `${q.question_text || ''} ${q.question_html || ''} ${q.option_a || ''} ${q.option_b || ''} ${q.option_c || ''} ${q.option_d || ''} ${q.tags || ''}`;
+  for (const t of directTopicTokens) {
+    if (qFullText.includes(t)) {
+      specificTopicName = t;
+      break;
+    }
+  }
+
+  const effectiveChapterName = specificTopicName || chName;
+  const chapterDisplay = specificTopicName 
+    ? `'${specificTopicName}'` 
+    : (chName ? `অধ্যায় ${toBnDigits(chOrder)}: ${chName}` : "বোর্ড সৃজনশীল প্রশ্ন");
 
   return {
     question_id: q.id,
     actual_chapter: {
       id: q.chapter_id,
       order_num: chOrder,
-      name: chName,
+      name: effectiveChapterName,
       display: chapterDisplay
     },
     difficulty_level: diff === "hard" ? "কঠিন / অ্যাডভান্সড (উচ্চতর দক্ষতা)" : diff === "medium" ? "মাঝারি (বোর্ড স্ট্যান্ডার্ড)" : "সহজ (বেসিক)",
@@ -239,6 +253,8 @@ export async function handleGetCreativeQuestion(args) {
       part_ga: "প্রয়োগমূলক (৩ নম্বর): দেওয়া আছে তথ্য -> সূত্র -> মান বসানো -> হিসাব -> এককসহ উত্তর। (সতর্কতা: একক না দিলে স্যার ১ নম্বর কেটে নেন!)",
       part_gha: "উচ্চতর দক্ষতা (৪ নম্বর): গাণিতিক প্রমাণ বা যৌক্তিক বিশ্লেষণের পর স্পষ্ট সিদ্ধান্তমূলক সমাপনী বাক্য (যেমন: 'অতএব উদ্দীপকের উক্তিটি সঠিক') লেখা বাধ্যতামূলক।"
     },
-    instructions_for_mentor: `সৃজনশীল প্রশ্ন উপস্থাপনের সময় শিরোনামে এই প্রশ্নের আসল অধ্যায় [${chapterDisplay}] এবং বোর্ড/কলেজ ট্যাগ [${formatTag(q.tags)}] স্পষ্টভাবে উল্লেখ করবে। ভুলেও ভুল বা অন্য কোনো অধ্যায়ের নাম লিখবে না! সৃজনশীল প্রশ্ন কুইজ নয়, তাই কোনো অপশন নির্বাচন করতে বলবে না—বরং শিক্ষার্থীকে উদ্দীপক পড়ে ক, খ, গ, ঘ সমাধান করতে বলবে।`
+    instructions_for_mentor: specificTopicName
+      ? `এই সৃজনশীল প্রশ্নটি সুনির্দিষ্টভাবে '${specificTopicName}' অংশের। উপস্থাপনের শুরুতে স্পষ্টভাবে বলবে: "''${specificTopicName}' থেকে একটি সৃজনশীল প্রশ্ন নিচে দেওয়া হলো—"। ভুলেও অন্য কোনো অধ্যায়ের সাথে কাল্পনিক যোগসূত্র টানবে না! সৃজনশীল প্রশ্ন কুইজ নয়, শিক্ষার্থীকে উদ্দীপক পড়ে ক, খ, গ, ঘ সমাধান করতে বলবে।`
+      : `সৃজনশীল প্রশ্ন উপস্থাপনের সময় শিরোনামে এই প্রশ্নের আসল অধ্যায় [${chapterDisplay}] এবং বোর্ড/কলেজ ট্যাগ [${formatTag(q.tags)}] স্পষ্টভাবে উল্লেখ করবে। ভুলেও ভুল বা অন্য কোনো অধ্যায়ের নাম লিখবে না! সৃজনশীল প্রশ্ন কুইজ নয়, তাই কোনো অপশন নির্বাচন করতে বলবে না—বরং শিক্ষার্থীকে উদ্দীপক পড়ে ক, খ, গ, ঘ সমাধান করতে বলবে।`
   };
 }

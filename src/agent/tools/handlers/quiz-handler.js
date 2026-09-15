@@ -35,7 +35,7 @@ export async function handleGetMcqQuiz(args) {
 
   // Difficulty level
   const diff = args.difficulty || (args.board ? "standard" : "medium");
-  const count = Math.min(Math.max(parseInt(args.count) || 1, 1), 3);
+  const count = Math.min(Math.max(parseInt(args.count) || 1, 1), 10);
   const isMockTest = args.mode === "mock_test";
 
   // Extract search keywords for this chapter/topic
@@ -234,13 +234,26 @@ export async function handleGetMcqQuiz(args) {
     ? ` (সতর্কতা: শিক্ষার্থী ${args.board} বোর্ডের প্রশ্ন চেয়েছিল, ডেটাবেসে এই অধ্যায়ের ${formatTag(qTag)} প্রশ্ন পাওয়ায় তা দেওয়া হয়েছে। শিক্ষার্থীকে বলবে: "${args.board} বোর্ডের সমমানের চমৎকার একটি বোর্ড প্রশ্ন দিচ্ছি...")`
     : "";
 
+  let specificTopicName = "";
+  if (directTopicTokens.length > 0) {
+    const qText = `${res.rows[0]?.question_text || ''} ${res.rows[0]?.tags || ''}`;
+    const foundToken = directTopicTokens.find(t => qText.includes(t));
+    if (foundToken) {
+      specificTopicName = foundToken;
+    }
+  }
+
+  const topicInstruction = specificTopicName
+    ? ` এই প্রশ্নটি সুনির্দিষ্টভাবে '${specificTopicName}' অংশের। উত্তরের শুরুতে স্পষ্টভাবে বলবে: "''${specificTopicName}' থেকে একটি গুরুত্বপূর্ণ বোর্ড বহুনির্বাচনী প্রশ্ন নিচে দেওয়া হলো—"। ভুলেও অন্য কোনো অধ্যায়ের সাথে কাল্পনিক যোগসূত্র টানবে না!`
+    : "";
+
   return {
     subject: subjId || "all",
     actual_chapter: {
       id: res.rows[0]?.chapter_id || matchedMcqChapterId,
       order_num: chOrder,
-      name: chName,
-      display: chapterDisplay
+      name: specificTopicName || chName,
+      display: specificTopicName ? `'${specificTopicName}'` : chapterDisplay
     },
     board: args.board || "all",
     year: args.year || "all",
@@ -248,11 +261,14 @@ export async function handleGetMcqQuiz(args) {
     quiz: res.rows.map(r => ({
       ...r,
       formatted_source: formatTag(r.tags),
-      all_board_tags: r.tags
+      all_board_tags: r.tags,
+      correct_answer_bn: toBnAns[r.answer] || r.answer || 'খ'
     })),
     raw_answer_code: normAns,
-    instructions_for_mentor: isMockTest
-      ? `অ্যাডাপ্টিভ কুইজ মোড: এটি ১০০% আসল ও প্রামাণিক বোর্ড পরীক্ষা/ক্যাডেট কলেজের প্রশ্ন [বোর্ড: ${formatTag(qTag)}]${boardWarning}। শিক্ষার্থীর সামনে কোনো কাল্পনিক ট্যাগ ছাড়া শুধু প্রশ্ন ও ৪টি অপশন (ক, খ, গ, ঘ) তুলে ধরো এবং শেষে [ans: ${normAns}] [qid: ${res.rows[0]?.id || ''}] কোডটি দাও। ভুলেও সঠিক উত্তর ও ব্যাখ্যা লিখবে না! শিক্ষার্থী অপশন নির্বাচন করলে পরবর্তী টার্নে মূল্যায়ন করবে।`
-      : `প্র্যাকটিস কুইজ মোড: এটি ১০০% প্রামাণিক প্রশ্ন [বোর্ড: ${formatTag(qTag)}]${boardWarning}। সুন্দরভাবে উপস্থাপন করে শেষে [ans: ${normAns}] [qid: ${res.rows[0]?.id || ''}] কোডটি দাও।`
+    instructions_for_mentor: res.rows.length > 1
+      ? `মাল্টিপল বহুনির্বাচনী/এক্সাম মোড: ডেটাবেস থেকে মোট ${res.rows.length}টি প্রামাণিক বোর্ড ও ক্যাডেট প্রশ্ন পাওয়া গেছে। প্রতিটি প্রশ্ন (১, ২, ৩...) ৪টি অপশনসহ স্পষ্টভাবে উপস্থাপন করো এবং প্রতিটি প্রশ্নের শেষে নির্দিষ্ট [ans: ক/খ/গ/ঘ] ও [qid: ...] ট্যাগ দাও যাতে ইন্টারঅ্যাক্টিভ এক্সাম মোড কাজ করে।`
+      : (isMockTest
+        ? `অ্যাডাপ্টিভ কুইজ মোড: এটি ১০০% আসল ও প্রামাণিক বোর্ড পরীক্ষা/ক্যাডেট কলেজের প্রশ্ন [বোর্ড: ${formatTag(qTag)}]${boardWarning}।${topicInstruction} শিক্ষার্থীর সামনে কোনো কাল্পনিক ট্যাগ ছাড়া শুধু প্রশ্ন ও ৪টি অপশন (ক, খ, গ, ঘ) তুলে ধরো এবং শেষে [ans: ${normAns}] [qid: ${res.rows[0]?.id || ''}] কোডটি দাও। ভুলেও সঠিক উত্তর ও ব্যাখ্যা লিখবে না! শিক্ষার্থী অপশন নির্বাচন করলে পরবর্তী টার্নে মূল্যায়ন করবে।`
+        : `প্র্যাকটিস কুইজ মোড: এটি ১০০% প্রামাণিক প্রশ্ন [বোর্ড: ${formatTag(qTag)}]${boardWarning}।${topicInstruction} সুন্দরভাবে উপস্থাপন করে শেষে [ans: ${normAns}] [qid: ${res.rows[0]?.id || ''}] কোডটি দাও।`)
   };
 }
