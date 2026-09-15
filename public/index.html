@@ -1812,7 +1812,42 @@
         });
       }
 
-      if (clusters.length >= 2) {
+      if (toolQuizList && toolQuizList.length >= 2) {
+        globalActiveExamQuestions = toolQuizList.map((q, idx) => {
+          const stem = q.question_text || q.stem || `প্রশ্ন ${idx + 1}`;
+          const finalAns = normLetter(q.correct_answer_bn || q.answer || 'খ');
+          const optA = q.option_a || '';
+          const optB = q.option_b || '';
+          const optC = q.option_c || '';
+          const optD = q.option_d || '';
+          let correctText = optB;
+          if (finalAns === 'ক') correctText = optA;
+          else if (finalAns === 'খ') correctText = optB;
+          else if (finalAns === 'গ') correctText = optC;
+          else if (finalAns === 'ঘ') correctText = optD;
+
+          const dbSol = (q.solution || q.explanation || '').trim();
+          const finalSolution = (dbSol && dbSol.length > 20 && !dbSol.includes('বিকল্পের সঠিক'))
+            ? dbSol
+            : `সঠিক উত্তর: (${finalAns}) **${correctText}**\n\n**অ্যাকাডেমিক ব্যাখ্যা:** এনসিটিবি পাঠ্যবইয়ের প্রামাণিক তথ্যানুযায়ী, '${stem.replace(/^#+\s*|\d+[\.\)]\s*/, '').trim()}'—এর জন্য (${finalAns}) বিকল্পটি নির্ভুল। অন্য বিকল্পগুলো বিভ্রান্তিকর ফাঁদ হিসেবে রাখা হয়েছে।`;
+
+          return {
+            id: q.id || `q_${idx + 1}`,
+            question_text: stem,
+            stem: stem,
+            option_a: optA,
+            option_b: optB,
+            option_c: optC,
+            option_d: optD,
+            options: [optA, optB, optC, optD],
+            answer: finalAns,
+            correct_answer_bn: finalAns,
+            solution: finalSolution,
+            tags: q.tags || q.formatted_source || '',
+            formatted_source: formatFullBoardTags(q.tags || q.formatted_source || '')
+          };
+        });
+      } else if (clusters.length >= 2) {
         globalActiveExamQuestions = extractedExamQuestions;
       }
 
@@ -1951,7 +1986,10 @@
         html = escapeHtml(clean);
       }
 
-      if (clusters.length >= 2) {
+      const isMockExamSession = (clusters.length >= 2) || (toolQuizList && toolQuizList.length >= 2);
+
+      if (isMockExamSession) {
+        const qCount = Math.max(clusters.length, toolQuizList ? toolQuizList.length : 0);
         const mockTestCardHtml = `
           <div class="my-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-[#13141a] via-[#111319] to-[#0d1615] border border-emerald-500/35 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_24px_rgba(16,185,129,0.10)] space-y-4">
             <div class="flex items-center justify-between gap-3 border-b border-white/[0.08] pb-3.5">
@@ -1961,11 +1999,11 @@
                 </div>
                 <div>
                   <h3 class="text-sm sm:text-base font-bold text-white tracking-wide">মক টেস্ট মূল্যায়ন পরীক্ষা প্রস্তুত</h3>
-                  <p class="text-xs text-emerald-300/80 font-normal">${toBnDigits(clusters.length)}টি প্রামাণিক বহুনির্বাচনী প্রশ্ন • টাইমার ও লাইভ সমাধান সহ</p>
+                  <p class="text-xs text-emerald-300/80 font-normal">${toBnDigits(qCount)}টি প্রামাণিক বহুনির্বাচনী প্রশ্ন • টাইমার ও লাইভ সমাধান সহ</p>
                 </div>
               </div>
               <span class="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-semibold">
-                ⏱️ ${toBnDigits(clusters.length)} মিনিট
+                ⏱️ ${toBnDigits(qCount)} মিনিট
               </span>
             </div>
 
@@ -1989,14 +2027,17 @@
           </div>
         `;
 
-        // In Mock Test mode, replace the placeholders with the single unified Mock Test card
-        for (let i = 0; i < cards.length; i++) {
-          const reg = new RegExp(`<p>\\s*${cards[i].placeholder}\\s*<\\/p>|${cards[i].placeholder}`, 'g');
-          if (i === 0) {
-            html = html.replace(reg, mockTestCardHtml);
-          } else {
-            html = html.replace(reg, '');
+        if (cards.length > 0) {
+          for (let i = 0; i < cards.length; i++) {
+            const reg = new RegExp(`<p>\\s*${cards[i].placeholder}\\s*<\\/p>|${cards[i].placeholder}`, 'g');
+            if (i === 0) {
+              html = html.replace(reg, mockTestCardHtml);
+            } else {
+              html = html.replace(reg, '');
+            }
           }
+        } else {
+          html += mockTestCardHtml;
         }
       } else {
         // In Single Question mode, inject the single interactive card
@@ -2004,12 +2045,6 @@
           const reg = new RegExp(`<p>\\s*${card.placeholder}\\s*<\\/p>|${card.placeholder}`, 'g');
           html = html.replace(reg, card.cardHtml);
         }
-      }
-
-      // 7. Inject MCQ Cards
-      for (const card of cards) {
-        const reg = new RegExp(`<p>\\s*${card.placeholder}\\s*<\\/p>|${card.placeholder}`, 'g');
-        html = html.replace(reg, card.cardHtml);
       }
 
       // 7b. Format Examiner Traps & Master Tricks inside blockquotes into glowing glassmorphic cards

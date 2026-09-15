@@ -212,6 +212,22 @@ export async function handleGetMcqQuiz(args) {
     }
   }
 
+  if (poolToUse.length < count && subjId) {
+    const moreRes = await executeRawSql(`
+      SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+      FROM questions
+      WHERE subject_id = '${subjId}' AND type = 'MCQ' AND question_text != '' AND option_a != '' AND option_b != ''
+      ORDER BY RANDOM()
+      LIMIT 25;
+    `);
+    for (const r of (moreRes.rows || [])) {
+      if (!poolToUse.some(p => p.id === r.id)) {
+        poolToUse.push(r);
+        if (poolToUse.length >= count) break;
+      }
+    }
+  }
+
   const activePool = poolToUse.length > 0 ? poolToUse : (qRows || []);
 
   // Sample prioritizing the most recent available years in activePool
