@@ -1545,6 +1545,8 @@
       sendMessage(text);
     }
 
+    let currentActiveToolDone = null;
+
     function normLetter(ch) {
       if (!ch) return '';
       const c = ch.trim().toLowerCase();
@@ -1724,7 +1726,7 @@
 
       // Collect questions for Global Active Exam Popup
       const extractedExamQuestions = [];
-      const toolQuizList = (toolDoneEvt?.tool === 'get_mcq_quiz' && Array.isArray(toolDoneEvt.result?.quiz)) ? toolDoneEvt.result.quiz : [];
+      const toolQuizList = (typeof currentActiveToolDone !== 'undefined' && currentActiveToolDone?.tool === 'get_mcq_quiz' && Array.isArray(currentActiveToolDone.result?.quiz)) ? currentActiveToolDone.result.quiz : [];
 
       for (let c = 0; c < clusters.length; c++) {
         const cluster = clusters[c];
@@ -2635,6 +2637,7 @@
               // 2. Tool Done -> Buffer or update
               if (data.type === "tool_done") {
                 toolDoneEvt = data;
+                currentActiveToolDone = data;
                 hasTool = true;
                 pendingToolDone = data;
               }
