@@ -14,6 +14,80 @@ export async function handleGetSubjectChapters(args) {
   const cached = appCache.get(cacheKey);
   if (cached) return cached;
 
+  const subjNameRes = await executeRawSql(`SELECT name FROM subjects WHERE id = '${subj}' LIMIT 1;`);
+  const subjectName = subjNameRes.rows[0]?.name || subj;
+
+  // Custom rich syllabus for SSC Bangla 1st Paper
+  if (subj === 'ssc_bangla_1st') {
+    const totalCountRes = await executeRawSql("SELECT COUNT(*) as cnt FROM questions WHERE subject_id = 'ssc_bangla_1st';");
+    const totalQuestions = parseInt(totalCountRes.rows[0]?.cnt || 4475);
+
+    const gaddyaList = [
+      "১. সুভা — রবীন্দ্রনাথ ঠাকুর",
+      "২. বই পড়া — প্রমথ চৌধুরী",
+      "৩. আম-আঁটির ভেঁপু — বিভূতিভূষণ বন্দ্যোপাধ্যায়",
+      "৪. মানুষ মুহম্মদ (সা.) — মোহাম্মদ ওয়াজেদ আলী",
+      "৫. নিমগাছ — বনফুল (বলাইচাঁদ মুখোপাধ্যায়)",
+      "৬. শিক্ষা ও মনুষ্যত্ব — মোতাহের হোসেন চৌধুরী",
+      "৭. প্রবাস বন্ধু — সৈয়দ মুজতবা আলী",
+      "৮. মমতাদি — মানিক বন্দ্যোপাধ্যায়",
+      "৯. পহেলা বৈশাখ — কবীর চৌধুরী",
+      "১০. একাত্তরের দিনগুলি — জাহানারা ইমাম",
+      "১১. সাহিত্যের রূপ ও রীতি — হায়াত মামুদ",
+      "১২. নিয়তি — হুমায়ূন আহমেদ",
+      "১৩. উপেক্ষিত শক্তির উদ্বোধন — কাজী নজরুল ইসলাম",
+      "১৪. দেনাপাওনা — রবীন্দ্রনাথ ঠাকুর",
+      "১৫. অভাগীর স্বর্গ — শরৎচন্দ্র চট্টোপাধ্যায়"
+    ];
+
+    const kobitaList = [
+      "১. বঙ্গবাণী — আব্দুল হাকিম",
+      "২. কপোতাক্ষ নদ — মাইকেল মধুসূদন দত্ত",
+      "৩. জীবন-সঙ্গীত — হেমচন্দ্র বন্দ্যোপাধ্যায়",
+      "৪. জুতা আবিষ্কার — রবীন্দ্রনাথ ঠাকুর",
+      "৫. ঝিঙে ফুল — কাজী নজরুল ইসলাম",
+      "৬. মানুষ — কাজী নজরুল ইসলাম",
+      "৭. সেইদিন এই মাঠ — জীবনানন্দ দাশ",
+      "৮. পল্লীজননী — জসীমউদ্দীন",
+      "৯. আশা — সিকান্দার আবু জাফর",
+      "১০. আমি কোনো আগন্তুক নই — আহসান হাবীব",
+      "১১. রানার — সুকান্ত ভট্টাচার্য",
+      "১২. তোমাকে পাওয়ার জন্যে, হে স্বাধীনতা — শামসুর রাহমান",
+      "১৩. আমার পরিচয় — সৈয়দ শামসুল হক",
+      "১৪. স্বাধীনতা, এ শব্দটি কীভাবে আমাদের হলো — নির্মলেন্দু গুণ",
+      "১৫. সাহসী জননী বাংলা — কামাল চৌধুরী"
+    ];
+
+    const sahopathList = [
+      "১. উপন্যাস: কাকতাড়ুয়া — সেলিনা হোসেন",
+      "২. নাটক: বহিপীর — সৈয়দ ওয়ালীউল্লাহ"
+    ];
+
+    const finalRes = {
+      subject: subjectName,
+      subject_id: subj,
+      total_parts: 3,
+      total_gaddya: 15,
+      total_kobita: 15,
+      total_sahopath: 2,
+      total_questions_in_subject: totalQuestions,
+      sections: {
+        "গদ্য অংশ (১৫টি পাঠ)": gaddyaList,
+        "কবিতা অংশ (১৫টি পাঠ)": kobitaList,
+        "বাংলা সহপাঠ (উপন্যাস ও নাটক)": sahopathList
+      },
+      numbered_chapters: [
+        "অংশ ১: গদ্য (১৫টি নির্ধারিত গল্প/প্রবন্ধ)",
+        "অংশ ২: কবিতা (১৫টি নির্ধারিত কবিতা)",
+        "অংশ ৩: বাংলা সহপাঠ (উপন্যাস: কাকতাড়ুয়া ও নাটক: বহিপীর)"
+      ],
+      instructions_for_mentor: `এনসিটিবি (NCTB) অফিশিয়াল পাঠ্যক্রম অনুযায়ী এসএসসি বাংলা ১ম পত্রে মোট ৩টি অংশ রয়েছে: গদ্য (১৫টি পাঠ), কবিতা (১৫টি পাঠ) এবং সহপাঠ (উপন্যাস: কাকতাড়ুয়া, নাটক: বহিপীর)। আমাদের ডেটাবেসে মোট ${toBn(totalQuestions)}টি বোর্ড প্রশ্ন সংরক্ষিত। শিক্ষার্থীদের গদ্য ও কবিতার পূর্ণাঙ্গ পাঠ্যতালিকা সুন্দরভাবে উপস্থাপন করো। ভুলেও কোনো এইচএসসি পাঠ (যেমন: অপরিচিতা, বিলাসী) এর সাথে মেশাবে না!`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
   const sql = `
     SELECT c.id, c.name, c.order_num, COUNT(q.id) as question_count 
     FROM chapters c 
@@ -23,8 +97,6 @@ export async function handleGetSubjectChapters(args) {
     ORDER BY CAST(c.order_num AS INTEGER) ASC;
   `;
   const res = await executeRawSql(sql);
-  const subjNameRes = await executeRawSql(`SELECT name FROM subjects WHERE id = '${subj}' LIMIT 1;`);
-  const subjectName = subjNameRes.rows[0]?.name || subj;
 
   const numberedChapters = res.rows.map(r => {
     const ord = r.order_num ? `অধ্যায় ${toBn(r.order_num)}: ` : "";
