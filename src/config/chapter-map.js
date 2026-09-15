@@ -325,3 +325,67 @@ export function normalizeAcademicString(str) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+function normalizeBnConcept(str) {
+  if (!str) return "";
+  return String(str)
+    .normalize('NFC')
+    .replace(/\u09af\u09bc/g, '\u09df') // Normalize Bengali ya with nukta
+    .toLowerCase();
+}
+
+/**
+ * Universal Semantic Chapter Relevance Gatekeeper
+ * Automatically checks if a candidate question actually belongs to the target chapter.
+ * Rejects questions that have 0 target concepts and alien domain concepts from another chapter.
+ */
+export function isQuestionRelevantToChapter(question, subjectId, targetChapterNum) {
+  if (!subjectId || !targetChapterNum || !question) return true;
+  const conceptsMap = CHAPTER_CONCEPTS_MAP[subjectId];
+  if (!conceptsMap) return true;
+
+  const targetNumStr = String(targetChapterNum);
+  const targetConcepts = conceptsMap[targetNumStr];
+  if (!targetConcepts || targetConcepts.length === 0) return true;
+
+  const rawText = `${question.question_text || ''} ${question.question_html || ''} ${question.option_a || ''} ${question.option_b || ''} ${question.option_c || ''} ${question.option_d || ''}`;
+  const text = normalizeBnConcept(rawText);
+
+  // 1. If text matches any core concept of the target chapter, it's immediately valid!
+  const hasTargetConcept = targetConcepts.some(c => text.includes(normalizeBnConcept(c)));
+  if (hasTargetConcept) return true;
+
+  // 2. If question has zero target concepts, check if it strongly belongs to an alien chapter
+  for (const [alienNum, alienConcepts] of Object.entries(conceptsMap)) {
+    if (alienNum === targetNumStr) continue;
+
+    // Check for strong domain-specific keywords (length >= 4 or multi-word)
+    const strongAlienMatch = alienConcepts.some(c => {
+      const normC = normalizeBnConcept(c);
+      if (normC.length >= 4 || normC.includes(' ')) {
+        return text.includes(normC);
+      }
+      return false;
+    });
+
+    if (strongAlienMatch) {
+      // Strong alien concept detected with 0 target concepts -> DISQUALIFY!
+      return false;
+    }
+
+    // Or 2+ general alien keywords (length >= 3)
+    const generalMatches = alienConcepts.filter(c => {
+      const normC = normalizeBnConcept(c);
+      return normC.length >= 3 && text.includes(normC);
+    });
+
+    if (generalMatches.length >= 2) {
+      return false;
+    }
+  }
+
+  // 3. If neither positive nor strongly alien, allow through
+  return true;
+}
+
+

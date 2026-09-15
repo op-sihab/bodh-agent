@@ -58,19 +58,34 @@ export async function getSimilarQuestionsByVector({ questionId, queryText, subje
 
   const subj = subjectId || seedQ.subject_id;
   const subjClause = subj ? `AND qs.subject_id = '${subj.replace(/'/g, "''")}'` : "";
+  const chClause = seedQ.chapter_id ? `AND qs.chapter_id = '${seedQ.chapter_id.replace(/'/g, "''")}'` : "";
 
   // Vector distance query using Turso's native vector_distance_cos
   const count = Math.min(Math.max(parseInt(limit) || 3, 1), 6);
-  const sql = `
+  // Tier 1: Try finding similar questions within the exact same chapter first
+  let sql = `
     SELECT q.qid, vector_distance_cos(q.emb, (SELECT emb FROM question_vectors WHERE qid = '${targetId}')) as dist
     FROM question_vectors q
     JOIN questions qs ON q.qid = qs.id
-    WHERE q.qid != '${targetId}' ${subjClause}
+    WHERE q.qid != '${targetId}' ${subjClause} ${chClause}
     ORDER BY dist ASC
     LIMIT ${count};
   `;
 
-  const vecRes = await executeRawSql(sql);
+  let vecRes = await executeRawSql(sql);
+  // Tier 2 Fallback: If chapter has fewer than requested count, expand to entire subject
+  if (vecRes.rows.length < count && chClause) {
+    const fallbackSql = `
+      SELECT q.qid, vector_distance_cos(q.emb, (SELECT emb FROM question_vectors WHERE qid = '${targetId}')) as dist
+      FROM question_vectors q
+      JOIN questions qs ON q.qid = qs.id
+      WHERE q.qid != '${targetId}' ${subjClause}
+      ORDER BY dist ASC
+      LIMIT ${count};
+    `;
+    vecRes = await executeRawSql(fallbackSql);
+  }
+
   if (!vecRes.rows.length) {
     const res = { seed: seedQ, similar: [] };
     appCache.set(cacheKey, res, 1800);

@@ -332,8 +332,31 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
 
         const isMcqRequest = /mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|1\s*mcq|one\s*mcq|ekta\s*mcq|একটা\s*mcq|একটি\s*mcq|show\s*1\s*mcq/i.test(userMessage);
         const isCqRequest = /cq|সৃজনশীল|উদ্দীপক|1\s*cq|one\s*cq|ekta\s*cq|একটা\s*cq|একটি\s*cq/i.test(userMessage);
+        const isSimilarRequest = /এই\s*টাইপের\s*আরেক|অনুরূপ\s*প্রশ্ন|similar\s*type|একই\s*সূত্রের/i.test(userMessage);
+        const isPatternRequest = /মাস্টার\s*টাইপ|পরীক্ষকের\s*ফাঁদ|অধ্যায়ের\s*টাইপ|ব্লুপ্রিন্ট|chapter\s*pattern/i.test(userMessage);
 
-        if (isMcqRequest) {
+        if (isSimilarRequest) {
+          toolCall = {
+            id: `call_${Date.now()}`,
+            name: "find_similar_type_questions",
+            input: {
+              subject: activeSubject || undefined,
+              question_id: state.active_question?.id || undefined,
+              query_text: state.active_question?.question || userMessage,
+              academic_intent: "শিক্ষার্থীর অনুরোধ অনুযায়ী ভেক্টর সার্চ ব্যবহার করে একই সূত্রের অনুরূপ প্রশ্ন অনুসন্ধান করছি..."
+            }
+          };
+        } else if (isPatternRequest) {
+          toolCall = {
+            id: `call_${Date.now()}`,
+            name: "analyze_chapter_patterns",
+            input: {
+              subject: activeSubject || "পদার্থবিজ্ঞান",
+              chapter: activeChapter ? String(activeChapter) : (state.chapter_name || "গতি"),
+              academic_intent: "শিক্ষার্থীর অনুরোধ অনুযায়ী অধ্যায়ের বিগত বোর্ড প্রশ্নের মাস্টার টাইপ ও পরীক্ষকের ফাঁদ বিশ্লেষণ করছি..."
+            }
+          };
+        } else if (isMcqRequest) {
           toolCall = {
             id: `call_${Date.now()}`,
             name: "get_mcq_quiz",

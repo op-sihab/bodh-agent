@@ -8,6 +8,7 @@ import {
   parseYearFilter,
   buildYearSqlConditions,
   extractChapterKeywords,
+  isQuestionRelevantToChapter,
   RECENT_YEAR_ORDER_BY
 } from "../../../config/chapter-map.js";
 import { findChapterCached, getAllChaptersCached } from "../helpers.js";
@@ -51,6 +52,15 @@ export async function handleGetCreativeQuestion(args) {
     const baseConditions = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`];
     if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
     if (chapterConditionSql) baseConditions.push(chapterConditionSql);
+
+    // Chapter-level concept guards for collision-prone chapters (e.g. Physics Optics Reflection vs Refraction)
+    if (subjId === 'ssc_physics') {
+      if (matchedCqChapterId === 'ch_0009' || rawT.includes('প্রতিসরণ')) {
+        baseConditions.push(`(question_text NOT LIKE '%অবতল দর্পণ%' AND question_text NOT LIKE '%উত্তল দর্পণ%' AND question_text NOT LIKE '%সমতল দর্পণ%')`);
+      } else if (matchedCqChapterId === 'ch_0008' || rawT.includes('প্রতিফলন')) {
+        baseConditions.push(`(question_text NOT LIKE '%উত্তল লেন্স%' AND question_text NOT LIKE '%অবতল লেন্স%' AND question_text NOT LIKE '%লেন্সের ক্ষমতা%')`);
+      }
+    }
 
     let whereClauses = [...baseConditions];
 
@@ -163,8 +173,16 @@ export async function handleGetCreativeQuestion(args) {
     }
   }
 
-  // Sample prioritizing the most recent available years in qRows
-  const topCqSlice = qRows ? qRows.slice(0, Math.min(qRows.length, 6)) : [];
+  // Universal Semantic Chapter Relevance Filter:
+  // Discard candidate CQs that have zero target concepts and multiple alien concepts from another chapter
+  const targetOrder = matchedChapterInfo?.order_num;
+  const verifiedCqRows = (qRows && targetOrder)
+    ? qRows.filter(r => isQuestionRelevantToChapter(r, subjId, targetOrder))
+    : (qRows || []);
+  const activeCqPool = verifiedCqRows.length > 0 ? verifiedCqRows : (qRows || []);
+
+  // Sample prioritizing the most recent available years in activeCqPool
+  const topCqSlice = activeCqPool.slice(0, Math.min(activeCqPool.length, 6));
   const q = topCqSlice.length > 0 ? topCqSlice[Math.floor(Math.random() * topCqSlice.length)] : null;
   if (!q) return { error: "কোনো সৃজনশীল প্রশ্ন পাওয়া যায়নি" };
 

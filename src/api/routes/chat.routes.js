@@ -64,3 +64,14 @@ chatRoutes.post("/chat", async (c) => {
     return c.json({ success: false, error: err.message }, 500);
   }
 });
+
+// 3. Ultra-Fast Background Pre-warm Endpoint (Eliminates 1st Message Handshake Latency)
+chatRoutes.post("/chat/prewarm", async (c) => {
+  try {
+    const mergeUrl = process.env.MERGE_API_URL || "https://api.mergegateway.com";
+    fetch(mergeUrl, { method: "HEAD" }).catch(() => {});
+    return c.json({ status: "warmed", timestamp: Date.now() });
+  } catch(e) {
+    return c.json({ status: "ok" });
+  }
+});

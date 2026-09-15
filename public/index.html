@@ -176,6 +176,21 @@
       border-bottom: none;
     }
 
+    /* Examiner Trap & Callout Alert Styling */
+    .markdown-body blockquote {
+      margin: 0.85rem 0;
+      padding: 0.75rem 1rem;
+      border-left: 3px solid #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+      border-radius: 0 0.75rem 0.75rem 0;
+      color: #fef3c7;
+      font-size: 0.92em;
+      line-height: 1.6;
+      border: 1px solid rgba(245, 158, 11, 0.15);
+      border-left-width: 3.5px;
+    }
+    .markdown-body blockquote p { margin: 0; }
+
     /* Inline Streaming Cursor (Zero floating/orphan pipes) */
     .streaming-cursor {
       display: inline-block;
@@ -372,20 +387,22 @@
         </div>
 
         <!-- 1. MANDATORY SUBJECT SELECTION SECTION -->
-        <div class="w-full space-y-2.5 text-left">
+        <div class="w-full space-y-3 text-left">
           <div class="flex items-center justify-between px-1">
-            <span class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>১. প্রথমে বিষয় নির্বাচন করো</span>
-              <span class="text-[11px] text-rose-400/90 font-mono bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">বাধ্যতামূলক</span>
-            </span>
-            <span id="selectedSubjectStatus" class="text-[11.5px] font-mono text-emerald-400 flex items-center gap-1">
-              <span>⚛️</span> <span>রসায়ন সক্রিয়</span>
-            </span>
+            <div class="flex items-center gap-2">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span class="text-xs font-semibold text-zinc-200 tracking-wide">১. বিষয় নির্বাচন করো</span>
+              <span class="text-[10px] font-mono text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">১০টি এনসিটিবি বিষয়</span>
+            </div>
+            <div id="selectedSubjectStatus" class="flex items-center gap-2 text-xs font-mono px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.08] text-zinc-300 shadow-sm backdrop-blur-sm">
+            </div>
           </div>
 
           <!-- Subject Cards Grid (10 NCTB Subjects) -->
-          <div id="subjectGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2"></div>
+          <div id="subjectGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5"></div>
         </div>
 
         <!-- 2. Central Input Box -->
@@ -465,18 +482,215 @@
       chatSessions = [];
     }
 
-    // Comprehensive NCTB Subjects Catalog
+    // Bespoke Lucide-style Vector SVG Icons for NCTB Academic Subjects
+    const SUBJECT_SVGS = {
+      chemistry: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
+        <path d="M8.5 2h7"/>
+        <path d="M7 16h10"/>
+        <circle cx="10" cy="18.5" r=".5" fill="currentColor"/>
+        <circle cx="14" cy="18" r=".5" fill="currentColor"/>
+      </svg>`,
+      physics: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>`,
+      biology: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m2 15 6-6m-6 0 6 6m6-6 6 6m-6 0 6-6"/>
+        <circle cx="5" cy="12" r="2.5"/>
+        <circle cx="19" cy="12" r="2.5"/>
+        <path d="M12 2a10 10 0 0 0-4 1.5M12 22a10 10 0 0 1-4-1.5M12 2a10 10 0 0 1 4 1.5M12 22a10 10 0 0 0 4-1.5"/>
+      </svg>`,
+      math: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19h16"/>
+        <path d="M4 5h4"/>
+        <path d="M6 3v4"/>
+        <path d="M16 5h4"/>
+        <path d="M16 13h4"/>
+        <path d="M16 17h4"/>
+        <path d="m5 13 4 4m0-4-4 4"/>
+      </svg>`,
+      higher_math: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 3c-2 0-3 1.5-3 3.5v11c0 2 1 3.5 3 3.5s3-1.5 3-3.5"/>
+        <path d="M14 8h6m-3-3v6"/>
+        <path d="m14 19 6-6m-6 0 6 6"/>
+      </svg>`,
+      bangla_1st: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+        <path d="M6 6h10m-10 4h10m-10 4h6"/>
+      </svg>`,
+      bangla_2nd: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
+        <line x1="16" y1="8" x2="2" y2="22"/>
+        <line x1="17.5" y1="15" x2="9" y2="15"/>
+      </svg>`,
+      ict: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect width="20" height="14" x="2" y="3" rx="2"/>
+        <line x1="8" x2="16" y1="21" y2="21"/>
+        <line x1="12" x2="12" y1="17" y2="21"/>
+        <path d="m7 8 2 2-2 2m4 0h3"/>
+      </svg>`,
+      bgs: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/>
+      </svg>`,
+      islam: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.5 5.5 0 0 1-7.54-7.54A9 9 0 0 0 12 3Z"/>
+        <polygon points="18 4 19 6.5 21.5 6.5 19.5 8 20.5 10.5 18 9 15.5 10.5 16.5 8 14.5 6.5 17 6.5 18 4" fill="currentColor" stroke="none"/>
+      </svg>`
+    };
+
+    // Comprehensive NCTB Subjects Catalog with Handcrafted SVG Vectors & Tailored Palettes
     const SUBJECTS_LIST = [
-      { id: 'ssc_chemistry', name: 'রসায়ন', icon: '⚛️', tag: '১২ অধ্যায়', placeholder: 'রসায়ন বিষয়ের যেকোনো প্রশ্ন, অধ্যায় তালিকা বা কনসেপ্ট লিখো...', quickPrompts: ['রসায়ন বিষয়ের সবগুলো অধ্যায়ের নাম দাও', 'রসায়ন বিষয়ের সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো এবং কেন?', 'মোলের ধারণা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'খনিজ সম্পদ ও জীবাশ্ম থেকে একটি CQ দাও'] },
-      { id: 'ssc_physics', name: 'পদার্থবিজ্ঞান', icon: '⚡', tag: '১৪ অধ্যায়', placeholder: 'পদার্থবিজ্ঞান গতি, বল, কাজ-ক্ষমতা বা তড়িৎ নিয়ে প্রশ্ন করো...', quickPrompts: ['পদার্থবিজ্ঞান সবগুলো অধ্যায়ের নাম ও তালিকা দাও', 'পদার্থবিজ্ঞান গতি অধ্যায়ের মাস্টার টাইপ ও সূত্র দাও', 'চল বিদ্যুৎ থেকে একটি বোর্ড স্ট্যান্ডার্ড CQ দাও', 'কাজ ক্ষমতা ও শক্তি থেকে একটি কঠিন MCQ দাও'] },
-      { id: 'ssc_biology', name: 'জীববিজ্ঞান', icon: '🧬', tag: '১৪ অধ্যায়', placeholder: 'জীববিজ্ঞান কোষ, বংশগতি বা বাস্তুতন্ত্র নিয়ে প্রশ্ন করো...', quickPrompts: ['জীববিজ্ঞান সব অধ্যায়ের নাম ও সিলেবাস দাও', 'জীবকোষ ও টিস্যু অধ্যায়ের গুরুত্বপূর্ণ চিত্র ও CQ দাও', 'জীবের বংশগতি ও বিবর্তন থেকে একটি MCQ দাও', 'জীববিজ্ঞানে ৮০/২০ নিয়মে সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো?'] },
-      { id: 'ssc_general_math', name: 'সাধারণ গণিত', icon: '📐', tag: '১৭ অধ্যায়', placeholder: 'সাধারণ গণিত বীজগণিত, জ্যামিতি বা ত্রিকোণমিতি নিয়ে প্রশ্ন করো...', quickPrompts: ['সাধারণ গণিত সম্পূর্ণ অধ্যায় তালিকা ও মানবণ্টন দাও', 'কম পড়ে সাধারণ গণিতে নিশ্চিত ৭০ এ ৭০ পাওয়ার রোডম্যাপ দাও', 'ত্রিকোণমিতিক অনুপাত থেকে একটি বোর্ড CQ দাও', 'সসীম ধারা অধ্যায় থেকে একটি ট্রিকি MCQ দাও'] },
-      { id: 'ssc_higher_math', name: 'উচ্চতর গণিত', icon: '∫', tag: '১৪ অধ্যায়', placeholder: 'উচ্চতর গণিত স্থানাঙ্ক জ্যামিতি, ভেক্টর বা সম্ভাবনা নিয়ে প্রশ্ন করো...', quickPrompts: ['উচ্চতর গণিত সব অধ্যায়ের পূর্ণাঙ্গ তালিকা দাও', 'দ্বিপদী বিস্তৃতি ও স্থানাঙ্ক জ্যামিতি থেকে CQ দাও', 'সম্ভাবনা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'উচ্চতর গণিতে এ-প্লাস পাওয়ার চ্যাপ্টার প্রায়োরিটি রুটম্যাপ দাও'] },
-      { id: 'ssc_bangla_1st', name: 'বাংলা ১ম পত্র', icon: '📖', tag: 'সাহিত্য ও সহপাঠ', placeholder: 'বাংলা ১ম পত্রের গদ্য, কবিতা বা সহপাঠ নিয়ে প্রশ্ন করো...', quickPrompts: ['বাংলা ১ম পত্রের নির্ধারিত সকল গদ্য ও কবিতার তালিকা দাও', 'সুভা ও বই পড়া গল্প থেকে একটি বোর্ড CQ দাও', 'কপোতাক্ষ নদ কবিতা থেকে একটি MCQ দাও', 'কাকতাড়ুয়া উপন্যাস ও বহিপীর নাটকের সারসংক্ষেপ দাও'] },
-      { id: 'ssc_bangla_2nd', name: 'বাংলা ২য় পত্র', icon: '✍️', tag: 'ব্যাকরণ ও নির্মিতি', placeholder: 'বাংলা ২য় পত্র ব্যাকরণ ও নির্মিতি নিয়ে প্রশ্ন করো...', quickPrompts: ['বাংলা ২য় পত্রের ব্যাকরণ সিলেবাস ও নম্বর বণ্টন দাও', 'সমাস ও সন্ধি থেকে গুরুত্বপূর্ণ বোর্ড MCQ দাও', 'ণ-ত্ব ও ষ-ত্ব বিধানের নিয়মগুলো বুঝিয়ে দাও', 'প্রতিবেদন ও ভাব-সম্প্রসারণ লেখার নিয়ম দাও'] },
-      { id: 'ssc_ict', name: 'তথ্য ও যোগাযোগ প্রযুক্তি', icon: '💻', tag: '৬ অধ্যায়', placeholder: 'আইসিটি ডেটাবেস, মাল্টিমিডিয়া বা নিরাপত্তা নিয়ে প্রশ্ন করো...', quickPrompts: ['আইসিটি বিষয়ের ৬টি অধ্যায়ের নাম ও তালিকা দাও', 'কম্পিউটার ও তথ্য নিরাপত্তা থেকে বোর্ড MCQ দাও', 'স্প্রেডশিট ও ডেটাবেস ব্যবহারের মূল ধারণা বুঝিয়ে দাও', 'আইসিটিতে পূর্ণ নম্বর পাওয়ার সাজেশন দাও'] },
-      { id: 'ssc_bgs', name: 'বাংলাদেশ ও বিশ্বপরিচয়', icon: '🌍', tag: '১৫ অধ্যায়', placeholder: 'বাংলাদেশ ও বিশ্বপরিচয় ইতিহাস, ভূগোল বা অর্থনীতি নিয়ে প্রশ্ন করো...', quickPrompts: ['বাংলাদেশ ও বিশ্বপরিচয় সব অধ্যায়ের তালিকা দাও', 'স্বাধীন বাংলাদেশ ও মুক্তিযুদ্ধের অধ্যায় থেকে CQ দাও', 'বাংলাদেশের সম্পদ ও শিল্প থেকে একটি MCQ দাও', 'বিজিএস-এ সর্বোচ্চ নম্বর তোলার কৌশল বলো'] },
-      { id: 'ssc_islam', name: 'ইসলাম শিক্ষা', icon: '🌙', tag: '৫ অধ্যায়', placeholder: 'ইসলাম ও নৈতিক শিক্ষার আকাইদ, ইবাদত বা চরিত্র নিয়ে প্রশ্ন করো...', quickPrompts: ['ইসলাম ও নৈতিক শিক্ষা সব অধ্যায়ের তালিকা দাও', 'আকাইদ ও নৈতিক জীবন থেকে একটি CQ দাও', 'হাদিস ও শরিয়ত অংশ থেকে গুরুত্বপূর্ণ MCQ দাও', 'ইসলাম শিক্ষায় ৪ স্তরের সৃজনশীল লেখার নিয়ম দাও'] }
+      { 
+        id: 'ssc_chemistry', 
+        name: 'রসায়ন', 
+        tag: '১২ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.chemistry,
+        iconColor: 'text-emerald-400',
+        iconBg: 'bg-emerald-500/10',
+        activeBorder: 'border-emerald-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(16,185,129,0.16)]',
+        activeRing: 'ring-emerald-500/30',
+        hoverBorder: 'hover:border-emerald-500/35',
+        dotBg: 'bg-emerald-400',
+        placeholder: 'রসায়ন বিষয়ের যেকোনো প্রশ্ন, অধ্যায় তালিকা বা কনসেপ্ট লিখো...', 
+        quickPrompts: ['রসায়ন বিষয়ের সবগুলো অধ্যায়ের নাম দাও', 'রসায়ন বিষয়ের সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো এবং কেন?', 'মোলের ধারণা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'খনিজ সম্পদ ও জীবাশ্ম থেকে একটি CQ দাও'] 
+      },
+      { 
+        id: 'ssc_physics', 
+        name: 'পদার্থবিজ্ঞান', 
+        tag: '১৪ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.physics,
+        iconColor: 'text-amber-400',
+        iconBg: 'bg-amber-500/10',
+        activeBorder: 'border-amber-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(245,158,11,0.16)]',
+        activeRing: 'ring-amber-500/30',
+        hoverBorder: 'hover:border-amber-500/35',
+        dotBg: 'bg-amber-400',
+        placeholder: 'পদার্থবিজ্ঞান গতি, বল, কাজ-ক্ষমতা বা তড়িৎ নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['পদার্থবিজ্ঞান সবগুলো অধ্যায়ের নাম ও তালিকা দাও', 'পদার্থবিজ্ঞান গতি অধ্যায়ের মাস্টার টাইপ ও সূত্র দাও', 'চল বিদ্যুৎ থেকে একটি বোর্ড স্ট্যান্ডার্ড CQ দাও', 'কাজ ক্ষমতা ও শক্তি থেকে একটি কঠিন MCQ দাও'] 
+      },
+      { 
+        id: 'ssc_biology', 
+        name: 'জীববিজ্ঞান', 
+        tag: '১৪ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.biology,
+        iconColor: 'text-rose-400',
+        iconBg: 'bg-rose-500/10',
+        activeBorder: 'border-rose-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(244,63,94,0.16)]',
+        activeRing: 'ring-rose-500/30',
+        hoverBorder: 'hover:border-rose-500/35',
+        dotBg: 'bg-rose-400',
+        placeholder: 'জীববিজ্ঞান কোষ, বংশগতি বা বাস্তুতন্ত্র নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['জীববিজ্ঞান সব অধ্যায়ের নাম ও সিলেবাস দাও', 'জীবকোষ ও টিস্যু অধ্যায়ের গুরুত্বপূর্ণ চিত্র ও CQ দাও', 'জীবের বংশগতি ও বিবর্তন থেকে একটি MCQ দাও', 'জীববিজ্ঞানে ৮০/২০ নিয়মে সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো?'] 
+      },
+      { 
+        id: 'ssc_general_math', 
+        name: 'সাধারণ গণিত', 
+        tag: '১৭ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.math,
+        iconColor: 'text-sky-400',
+        iconBg: 'bg-sky-500/10',
+        activeBorder: 'border-sky-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(56,189,248,0.16)]',
+        activeRing: 'ring-sky-500/30',
+        hoverBorder: 'hover:border-sky-500/35',
+        dotBg: 'bg-sky-400',
+        placeholder: 'সাধারণ গণিত বীজগণিত, জ্যামিতি বা ত্রিকোণমিতি নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['সাধারণ গণিত সম্পূর্ণ অধ্যায় তালিকা ও মানবণ্টন দাও', 'কম পড়ে সাধারণ গণিতে নিশ্চিত ৭০ এ ৭০ পাওয়ার রোডম্যাপ দাও', 'ত্রিকোণমিতিক অনুপাত থেকে একটি বোর্ড CQ দাও', 'সসীম ধারা অধ্যায় থেকে একটি ট্রিকি MCQ দাও'] 
+      },
+      { 
+        id: 'ssc_higher_math', 
+        name: 'উচ্চতর গণিত', 
+        tag: '১৪ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.higher_math,
+        iconColor: 'text-purple-400',
+        iconBg: 'bg-purple-500/10',
+        activeBorder: 'border-purple-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(168,85,247,0.16)]',
+        activeRing: 'ring-purple-500/30',
+        hoverBorder: 'hover:border-purple-500/35',
+        dotBg: 'bg-purple-400',
+        placeholder: 'উচ্চতর গণিত স্থানাঙ্ক জ্যামিতি, ভেক্টর বা সম্ভাবনা নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['উচ্চতর গণিত সব অধ্যায়ের পূর্ণাঙ্গ তালিকা দাও', 'দ্বিপদী বিস্তৃতি ও স্থানাঙ্ক জ্যামিতি থেকে CQ দাও', 'সম্ভাবনা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'উচ্চতর গণিতে এ-প্লাস পাওয়ার চ্যাপ্টার প্রায়োরিটি রুটম্যাপ দাও'] 
+      },
+      { 
+        id: 'ssc_bangla_1st', 
+        name: 'বাংলা ১ম পত্র', 
+        tag: 'সাহিত্য ও সহপাঠ', 
+        svgIcon: SUBJECT_SVGS.bangla_1st,
+        iconColor: 'text-teal-400',
+        iconBg: 'bg-teal-500/10',
+        activeBorder: 'border-teal-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(20,184,166,0.16)]',
+        activeRing: 'ring-teal-500/30',
+        hoverBorder: 'hover:border-teal-500/35',
+        dotBg: 'bg-teal-400',
+        placeholder: 'বাংলা ১ম পত্রের গদ্য, কবিতা বা সহপাঠ নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['বাংলা ১ম পত্রের নির্ধারিত সকল গদ্য ও কবিতার তালিকা দাও', 'সুভা ও বই পড়া গল্প থেকে একটি বোর্ড CQ দাও', 'কপোতাক্ষ নদ কবিতা থেকে একটি MCQ দাও', 'কাকতাড়ুয়া উপন্যাস ও বহিপীর নাটকের সারসংক্ষেপ দাও'] 
+      },
+      { 
+        id: 'ssc_bangla_2nd', 
+        name: 'বাংলা ২য় পত্র', 
+        tag: 'ব্যাকরণ ও নির্মিতি', 
+        svgIcon: SUBJECT_SVGS.bangla_2nd,
+        iconColor: 'text-orange-400',
+        iconBg: 'bg-orange-500/10',
+        activeBorder: 'border-orange-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(249,115,22,0.16)]',
+        activeRing: 'ring-orange-500/30',
+        hoverBorder: 'hover:border-orange-500/35',
+        dotBg: 'bg-orange-400',
+        placeholder: 'বাংলা ২য় পত্র ব্যাকরণ ও নির্মিতি নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['বাংলা ২য় পত্রের ব্যাকরণ সিলেবাস ও নম্বর বণ্টন দাও', 'সমাস ও সন্ধি থেকে গুরুত্বপূর্ণ বোর্ড MCQ দাও', 'ণ-ত্ব ও ষ-ত্ব বিধানের নিয়মগুলো বুঝিয়ে দাও', 'প্রতিবেদন ও ভাব-সম্প্রসারণ লেখার নিয়ম দাও'] 
+      },
+      { 
+        id: 'ssc_ict', 
+        name: 'আইসিটি (ICT)', 
+        tag: '৬ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.ict,
+        iconColor: 'text-cyan-400',
+        iconBg: 'bg-cyan-500/10',
+        activeBorder: 'border-cyan-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(6,182,212,0.16)]',
+        activeRing: 'ring-cyan-500/30',
+        hoverBorder: 'hover:border-cyan-500/35',
+        dotBg: 'bg-cyan-400',
+        placeholder: 'আইসিটি ডেটাবেস, মাল্টিমিডিয়া বা নিরাপত্তা নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['আইসিটি বিষয়ের ৬টি অধ্যায়ের নাম ও তালিকা দাও', 'কম্পিউটার ও তথ্য নিরাপত্তা থেকে বোর্ড MCQ দাও', 'স্প্রেডশিট ও ডেটাবেস ব্যবহারের মূল ধারণা বুঝিয়ে দাও', 'আইসিটিতে পূর্ণ নম্বর পাওয়ার সাজেশন দাও'] 
+      },
+      { 
+        id: 'ssc_bgs', 
+        name: 'বাংলাদেশ ও বিশ্বপরিচয়', 
+        tag: '১৫ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.bgs,
+        iconColor: 'text-emerald-400',
+        iconBg: 'bg-emerald-500/10',
+        activeBorder: 'border-emerald-500/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(16,185,129,0.16)]',
+        activeRing: 'ring-emerald-500/30',
+        hoverBorder: 'hover:border-emerald-500/35',
+        dotBg: 'bg-emerald-400',
+        placeholder: 'বাংলাদেশ ও বিশ্বপরিচয় ইতিহাস, ভূগোল বা অর্থনীতি নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['বাংলাদেশ ও বিশ্বপরিচয় সব অধ্যায়ের তালিকা দাও', 'স্বাধীন বাংলাদেশ ও মুক্তিযুদ্ধের অধ্যায় থেকে CQ দাও', 'বাংলাদেশের সম্পদ ও শিল্প থেকে একটি MCQ দাও', 'বিজিএস-এ সর্বোচ্চ নম্বর তোলার কৌশল বলো'] 
+      },
+      { 
+        id: 'ssc_islam', 
+        name: 'ইসলাম শিক্ষা', 
+        tag: '৫ অধ্যায়', 
+        svgIcon: SUBJECT_SVGS.islam,
+        iconColor: 'text-amber-300',
+        iconBg: 'bg-amber-400/10',
+        activeBorder: 'border-amber-400/50',
+        activeShadow: 'shadow-[0_0_20px_rgba(251,191,36,0.16)]',
+        activeRing: 'ring-amber-400/30',
+        hoverBorder: 'hover:border-amber-400/35',
+        dotBg: 'bg-amber-300',
+        placeholder: 'ইসলাম ও নৈতিক শিক্ষার আকাইদ, ইবাদত বা চরিত্র নিয়ে প্রশ্ন করো...', 
+        quickPrompts: ['ইসলাম ও নৈতিক শিক্ষা সব অধ্যায়ের তালিকা দাও', 'আকাইদ ও নৈতিক জীবন থেকে একটি CQ দাও', 'হাদিস ও শরিয়ত অংশ থেকে গুরুত্বপূর্ণ MCQ দাও', 'ইসলাম শিক্ষায় ৪ স্তরের সৃজনশীল লেখার নিয়ম দাও'] 
+      }
     ];
 
     let currentSelectedSubject = SUBJECTS_LIST[0]; // Default: Chemistry
@@ -488,16 +702,29 @@
         const isSelected = s.id === currentSelectedSubject.id;
         return `
           <button type="button" onclick="selectSubject('${s.id}')"
-            class="subj-card p-2 sm:p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all duration-150 cursor-pointer ${
+            class="subj-card group relative p-2.5 sm:p-3 rounded-2xl border text-left flex flex-col justify-between transition-all duration-200 cursor-pointer overflow-hidden ${
               isSelected 
-                ? 'bg-emerald-500/15 border-emerald-500/60 ring-1 ring-emerald-500/30 text-white shadow-[0_0_12px_rgba(16,185,129,0.15)] scale-[1.02]' 
-                : 'bg-app-surface/90 border-white/[0.07] hover:border-white/20 text-zinc-300 hover:text-white'
+                ? 'bg-zinc-900/90 ' + s.activeBorder + ' ' + s.activeShadow + ' ring-1 ' + s.activeRing + ' scale-[1.02]' 
+                : 'bg-white/[0.02] border-white/[0.07] hover:border-white/20 hover:bg-white/[0.04] text-zinc-300 hover:text-white ' + s.hoverBorder
             }">
             <div class="flex items-center justify-between w-full">
-              <span class="text-base sm:text-lg">${s.icon}</span>
-              <span class="text-[9.5px] sm:text-[10px] font-mono text-zinc-400 ${isSelected ? 'text-emerald-400 font-semibold' : ''}">${s.tag}</span>
+              <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                isSelected 
+                  ? s.iconBg + ' ' + s.iconColor + ' shadow-[0_0_12px_rgba(255,255,255,0.06)]' 
+                  : 'bg-white/[0.04] text-zinc-400 group-hover:text-zinc-200 group-hover:bg-white/[0.07]'
+              }">
+                ${s.svgIcon}
+              </div>
+              <span class="text-[9.5px] sm:text-[10px] font-mono tracking-tight px-1.5 py-0.5 rounded-md ${
+                isSelected 
+                  ? s.iconBg + ' ' + s.iconColor + ' font-semibold' 
+                  : 'text-zinc-500 bg-white/[0.02]'
+              }">${s.tag}</span>
             </div>
-            <div class="mt-1 font-medium text-xs sm:text-[12.5px] truncate leading-tight">${s.name}</div>
+            <div class="mt-2.5 flex items-center justify-between">
+              <span class="font-medium text-xs sm:text-[12.5px] truncate tracking-tight ${isSelected ? 'text-white font-semibold' : 'text-zinc-300 group-hover:text-white'}">${s.name}</span>
+              ${isSelected ? `<span class="w-1.5 h-1.5 rounded-full ${s.dotBg} animate-pulse shrink-0"></span>` : ''}
+            </div>
           </button>
         `;
       }).join('');
@@ -506,7 +733,11 @@
 
       const statusEl = document.getElementById('selectedSubjectStatus');
       if (statusEl) {
-        statusEl.innerHTML = `<span>${currentSelectedSubject.icon}</span> <span>${currentSelectedSubject.name} সক্রিয়</span>`;
+        statusEl.innerHTML = `
+          <span class="w-3.5 h-3.5 flex items-center justify-center ${currentSelectedSubject.iconColor}">${currentSelectedSubject.svgIcon}</span>
+          <span class="text-zinc-200 font-medium">${currentSelectedSubject.name}</span>
+          <span class="text-[9px] font-mono px-1.5 py-0.2 rounded ${currentSelectedSubject.iconBg} ${currentSelectedSubject.iconColor} border ${currentSelectedSubject.activeBorder}">সক্রিয়</span>
+        `;
       }
       const heroInp = document.getElementById('heroInput');
       if (heroInp) {
@@ -792,7 +1023,10 @@
       const icon = document.getElementById('activeSubjectHeaderIcon');
       const txt = document.getElementById('activeSubjectHeaderText');
       if (badge && currentSelectedSubject) {
-        if (icon) icon.innerText = currentSelectedSubject.icon;
+        if (icon) {
+          icon.className = `w-3.5 h-3.5 flex items-center justify-center ${currentSelectedSubject.iconColor}`;
+          icon.innerHTML = currentSelectedSubject.svgIcon;
+        }
         if (txt) txt.innerText = currentSelectedSubject.name;
         badge.classList.remove('hidden');
         badge.classList.add('flex');
@@ -1087,75 +1321,6 @@
       scrollToBottom();
     }
 
-    function deleteSession(id, event) {
-      if (event) event.stopPropagation();
-      chatSessions = chatSessions.filter(s => s.id !== id);
-      saveSessions();
-
-      if (currentSessionId === id) {
-        resetToHome();
-      } else {
-        renderRecentChats();
-      }
-    }
-
-    function clearAllSessions() {
-      if (!chatSessions || chatSessions.length === 0) return;
-      if (!confirm('আপনি কি নিশ্চিত যে সকল পূর্ববর্তী আলোচনা মুছে ফেলতে চান?')) return;
-      chatSessions = [];
-      saveSessions();
-      resetToHome();
-    }
-
-    function toggleSidebar() {
-      const sb = document.getElementById('sidebar');
-      const bd = document.getElementById('sidebarBackdrop');
-      sb.classList.toggle('-translate-x-full');
-      bd.classList.toggle('hidden');
-    }
-
-    function resetToHome() {
-      if (isProcessing) return;
-      currentSessionId = null;
-      isChatActive = false;
-      conversationHistory = [];
-      const hero = document.getElementById('heroView');
-      const chat = document.getElementById('chatView');
-      const docked = document.getElementById('dockedBar');
-      const msgs = document.getElementById('messagesArea');
-      
-      if (msgs) msgs.innerHTML = '';
-      if (chat) chat.classList.add('hidden');
-      if (docked) docked.classList.add('hidden');
-      
-      if (hero) {
-        hero.classList.remove('hidden');
-        hero.classList.add('flex');
-      }
-      const heroInp = document.getElementById('heroInput');
-      if (heroInp) {
-        heroInp.value = '';
-        setTimeout(() => heroInp.focus(), 50);
-      }
-      renderRecentChats();
-    }
-
-    function activateChatView() {
-      if (isChatActive) return;
-      isChatActive = true;
-      const hero = document.getElementById('heroView');
-      const chat = document.getElementById('chatView');
-      const docked = document.getElementById('dockedBar');
-
-      hero.classList.add('hidden');
-      hero.classList.remove('flex');
-      chat.classList.remove('hidden');
-      docked.classList.remove('hidden');
-      setTimeout(() => {
-        const dockedInp = document.getElementById('dockedInput');
-        if (dockedInp) dockedInp.focus();
-      }, 50);
-    }
 
     function handleHeroSubmit(e) {
       e.preventDefault();
@@ -1322,6 +1487,9 @@
         return '%%%MATH_I_' + (inlineMath.length - 1) + '%%%';
       });
 
+      // 4b. Eliminate redundant double numbering in chapter lists (e.g. "8. **অধ্যায় ৮: আলোর প্রতিফলন**" -> "- **অধ্যায় ৮: আলোর প্রতিফলন**")
+      clean = clean.replace(/^(\s*)[০-৯0-9]+[\.\)]\s+(\*{0,2}(?:অধ্যায়|অধ্যায়)\s*[০-৯0-9]+(?::|\*{1,2}|\s))/gim, (m, g1, g2) => g1 + '- ' + g2);
+
       // 5. Robust Raw-Text MCQ Option Extraction (Handles blank lines, bullets, bolding, multi-MCQs)
       const singleOptionLineRegex = /^[ \t]*(?:[-*+]\s+)?(?:\*{1,2})?(?:\(([ক-ঘa-dA-D])\)|([ক-ঘa-dA-D])[\.\)])(?:\*{1,2})?[ \t]+([^\r\n]+)/;
 
@@ -1445,6 +1613,23 @@
             <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2">
               ${optionsHtml}
             </div>
+            <div class="pt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
+              <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন দাও')" 
+                class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 hover:text-emerald-300 border border-emerald-500/25 hover:border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
+                <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>এই টাইপের আরেকটি প্রশ্ন অনুশীলন করো</span>
+              </button>
+              <button type="button" onclick="submitPrompt('এই অধ্যায়ের মাস্টার টাইপ ও পরীক্ষকের ফাঁদগুলো দেখাও')" 
+                class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/[0.08] hover:bg-indigo-500/[0.15] text-indigo-300 hover:text-indigo-200 border border-indigo-500/20 hover:border-indigo-500/35 shadow-[0_0_12px_rgba(99,102,241,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
+                <svg class="w-3.5 h-3.5 text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3m-9-4a4 4 0 100 8 4 4 0 000-8z"/>
+                </svg>
+                <span>মাস্টার টাইপ ব্লুপ্রিন্ট</span>
+              </button>
+            </div>
           </div>
         `;
 
@@ -1468,6 +1653,76 @@
         html = html.replace(reg, card.cardHtml);
       }
 
+      // 7b. Format Examiner Traps & Master Tricks inside blockquotes into glowing glassmorphic cards
+      html = html.replace(/<blockquote>([\s\S]*?)<\/blockquote>/gi, (m, inner) => {
+        if (/বোর্ড এক্সামিনারের ফাঁদ|পরীক্ষকের ফাঁদ|ফাঁদ অ্যালার্ট/i.test(inner)) {
+          const cleanInner = inner
+            .replace(/<p>(?:⚠️\s*)?<strong>(?:⚠️\s*)?(?:বোর্ড এক্সামিনারের ফাঁদ|পরীক্ষকের ফাঁদ|ফাঁদ অ্যালার্ট):?<\/strong>\s*/gi, '<p>')
+            .replace(/⚠️/g, '')
+            .trim();
+          return `
+            <div class="my-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] p-4 text-xs text-amber-200 shadow-[0_0_24px_rgba(245,158,11,0.08)] backdrop-blur-md">
+              <div class="flex items-center gap-2 font-bold text-amber-400 text-[13px] mb-2">
+                <svg class="w-4 h-4 shrink-0 text-amber-400 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span>বোর্ড এক্সামিনারের ফাঁদ ও সাধারণ ভুল</span>
+              </div>
+              <div class="leading-relaxed text-zinc-300 pl-6 space-y-1.5">${cleanInner}</div>
+            </div>
+          `;
+        }
+        if (/মাস্টার ট্রিক|শর্টকাট ট্রিক|মাস্টার টাইপ/i.test(inner)) {
+          const cleanInner = inner
+            .replace(/<p>(?:🎯\s*)?<strong>(?:🎯\s*)?(?:মাস্টার ট্রিক|শর্টকাট ট্রিক|মাস্টার টাইপ):?<\/strong>\s*/gi, '<p>')
+            .replace(/🎯/g, '')
+            .trim();
+          return `
+            <div class="my-3.5 rounded-2xl border border-indigo-500/30 bg-indigo-500/[0.08] p-4 text-xs text-indigo-200 shadow-[0_0_24px_rgba(99,102,241,0.08)] backdrop-blur-md">
+              <div class="flex items-center gap-2 font-bold text-indigo-400 text-[13px] mb-2">
+                <svg class="w-4 h-4 shrink-0 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="12" r="9"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3m-9-4a4 4 0 100 8 4 4 0 000-8z"/>
+                </svg>
+                <span>মাস্টার হ্যাক ও শর্টকাট কৌশল</span>
+              </div>
+              <div class="leading-relaxed text-zinc-300 pl-6 space-y-1.5">${cleanInner}</div>
+            </div>
+          `;
+        }
+        return m;
+      });
+
+      // 7c. Format standalone paragraph callouts (without blockquote) into styled cards
+      html = html.replace(/<p>(?:⚠️\s*)?<strong>(?:⚠️\s*)?(বোর্ড এক্সামিনারের ফাঁদ|পরীক্ষকের ফাঁদ|ফাঁদ অ্যালার্ট):?<\/strong>([\s\S]*?)<\/p>/gi, (m, title, content) => {
+        return `
+          <div class="my-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] p-4 text-xs text-amber-200 shadow-[0_0_24px_rgba(245,158,11,0.08)] backdrop-blur-md">
+            <div class="flex items-center gap-2 font-bold text-amber-400 text-[13px] mb-2">
+              <svg class="w-4 h-4 shrink-0 text-amber-400 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <span>${title}</span>
+            </div>
+            <div class="leading-relaxed text-zinc-300 pl-6">${content.trim()}</div>
+          </div>
+        `;
+      });
+
+      html = html.replace(/<p>(?:🎯\s*)?<strong>(?:🎯\s*)?(মাস্টার ট্রিক|শর্টকাট ট্রিক|মাস্টার টাইপ):?<\/strong>([\s\S]*?)<\/p>/gi, (m, title, content) => {
+        return `
+          <div class="my-3.5 rounded-2xl border border-indigo-500/30 bg-indigo-500/[0.08] p-4 text-xs text-indigo-200 shadow-[0_0_24px_rgba(99,102,241,0.08)] backdrop-blur-md">
+            <div class="flex items-center gap-2 font-bold text-indigo-400 text-[13px] mb-2">
+              <svg class="w-4 h-4 shrink-0 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="9"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3m-9-4a4 4 0 100 8 4 4 0 000-8z"/>
+              </svg>
+              <span>${title}</span>
+            </div>
+            <div class="leading-relaxed text-zinc-300 pl-6">${content.trim()}</div>
+          </div>
+        `;
+      });
+
       // 8. Restore KaTeX Display Math (Memoized for 60fps streaming)
       html = html.replace(/%%%MATH_D_(\d+)%%%/g, (m, idx) => {
         const code = displayMath[parseInt(idx, 10)];
@@ -1487,11 +1742,6 @@
       return html;
     }
 
-    function renderFormattedContentWithCursor(rawText, showCursor = true, extraBoardTag = null, extraAns = null) {
-      const rendered = renderFormattedContent(rawText, extraBoardTag, extraAns);
-      if (!showCursor) return rendered;
-      return rendered + '<span class="inline-block w-1.5 h-3.5 bg-zinc-400 animate-pulse ml-1 align-middle rounded-full"></span>';
-    }
 
     // High-performance KaTeX memoization cache to prevent CPU thrashing during streaming
     const katexCache = new Map();
@@ -1904,6 +2154,64 @@
         return { hasThought: false, inProgress: false, thought: '', answer: raw };
       }
 
+      function handleFinalDone(data) {
+        if (renderRafId) {
+          cancelAnimationFrame(renderRafId);
+          renderRafId = null;
+        }
+
+        const final = data?.content || streamContent;
+        const parsed = parseStreamThoughts(final);
+        let cleanFinal = parsed.hasThought ? parsed.answer : final;
+
+        cleanFinal = cleanFinal
+          .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
+          .replace(/^<\/?[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
+          .trim();
+
+        const statusEl = document.getElementById(statusId);
+        if (statusEl) statusEl.classList.add('hidden');
+
+        const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
+        if (cur1) cur1.remove();
+
+        const wp = document.getElementById(`writingPulse_${msgId}`);
+        if (wp) wp.remove();
+
+        const contentEl = document.getElementById(contentId);
+        if (contentEl) {
+          contentEl.classList.remove('hidden');
+          const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
+          const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
+          if (cleanFinal) {
+            contentEl.innerHTML = renderFormattedContentWithCursor(cleanFinal, false, extraBoardTag, extraAns);
+          }
+          // Thoroughly purge any residual cursors
+          contentEl.querySelectorAll('.streaming-cursor, .thought-cursor').forEach(el => el.remove());
+        }
+
+        conversationHistory.push({ role: "user", content: text });
+        conversationHistory.push({ role: "assistant", content: cleanFinal });
+
+        const currSession = chatSessions.find(s => s.id === currentSessionId);
+        if (currSession) {
+          currSession.updatedAt = Date.now();
+          if (data?.state) {
+            currSession.state = data.state;
+          }
+          currSession.conversationHistory = JSON.parse(JSON.stringify(conversationHistory));
+          const areaEl = document.getElementById('messagesArea');
+          if (areaEl) {
+            const clone = areaEl.cloneNode(true);
+            clone.querySelectorAll('.streaming-cursor, .thought-cursor, [id^="writingPulse_"]').forEach(el => el.remove());
+            currSession.html = clone.innerHTML;
+          }
+          saveSessions();
+          renderRecentChats();
+        }
+        scrollToBottom();
+      }
+
       try {
         const currSession = chatSessions.find(s => s.id === currentSessionId);
         const sessionSubj = currSession?.subject_id || currentSelectedSubject.id;
@@ -2094,6 +2402,19 @@
       }
     });
   
+    // Background Prewarm: Preheats API connection and eliminates 1st message cold-start latency
+    function triggerPrewarm() {
+      try {
+        fetch('/api/chat/prewarm', { method: 'POST' }).catch(() => {});
+      } catch(e) {}
+    }
+    setTimeout(triggerPrewarm, 100);
+
+    const hInp = document.getElementById('heroInput');
+    if (hInp) hInp.addEventListener('focus', triggerPrewarm, { once: true });
+    const dInp = document.getElementById('dockedInput');
+    if (dInp) dInp.addEventListener('focus', triggerPrewarm, { once: true });
+
     renderSubjectGrid();
     renderRecentChats();
   </script>

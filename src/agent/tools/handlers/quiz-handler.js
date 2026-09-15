@@ -8,6 +8,7 @@ import {
   parseYearFilter,
   buildYearSqlConditions,
   extractChapterKeywords,
+  isQuestionRelevantToChapter,
   RECENT_YEAR_ORDER_BY
 } from "../../../config/chapter-map.js";
 import { findChapterCached, getAllChaptersCached } from "../helpers.js";
@@ -52,6 +53,15 @@ export async function handleGetMcqQuiz(args) {
     const baseConditions = [`type = 'MCQ'`, `question_text != ''`, `answer != ''`, `option_a != ''`, `option_b != ''`];
     if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
     if (chapterConditionSql) baseConditions.push(chapterConditionSql);
+
+    // Chapter-level concept guards for collision-prone chapters (e.g. Physics Optics Reflection vs Refraction)
+    if (subjId === 'ssc_physics') {
+      if (matchedMcqChapterId === 'ch_0009' || rawT.includes('প্রতিসরণ')) {
+        baseConditions.push(`(question_text NOT LIKE '%অবতল দর্পণ%' AND question_text NOT LIKE '%উত্তল দর্পণ%' AND question_text NOT LIKE '%সমতল দর্পণ%' AND option_a NOT LIKE '%অবতল দর্পণ%' AND option_b NOT LIKE '%অবতল দর্পণ%')`);
+      } else if (matchedMcqChapterId === 'ch_0008' || rawT.includes('প্রতিফলন')) {
+        baseConditions.push(`(question_text NOT LIKE '%উত্তল লেন্স%' AND question_text NOT LIKE '%অবতল লেন্স%' AND question_text NOT LIKE '%লেন্সের ক্ষমতা%')`);
+      }
+    }
 
     let whereClauses = [...baseConditions];
 
@@ -161,8 +171,16 @@ export async function handleGetMcqQuiz(args) {
     }
   }
 
-  // Sample prioritizing the most recent available years in qRows
-  const topSlice = qRows ? qRows.slice(0, Math.max(count * 4, 8)) : [];
+  // Universal Semantic Chapter Relevance Filter:
+  // Discard any candidate rows that have zero target concepts and multiple alien concepts from another chapter
+  const targetOrder = matchedChapterInfo?.order_num;
+  const verifiedRows = (qRows && targetOrder)
+    ? qRows.filter(r => isQuestionRelevantToChapter(r, subjId, targetOrder))
+    : (qRows || []);
+  const activePool = verifiedRows.length > 0 ? verifiedRows : (qRows || []);
+
+  // Sample prioritizing the most recent available years in activePool
+  const topSlice = activePool.slice(0, Math.max(count * 4, 8));
   let sampled = topSlice.length > 0 ? [...topSlice].sort(() => Math.random() - 0.5).slice(0, count) : [];
   let res = { rows: sampled };
 
