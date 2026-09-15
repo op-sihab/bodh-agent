@@ -1773,11 +1773,21 @@
           if (bM) clusterBoard = bM[1];
         }
 
-        const fallbackToolQ = toolQuizList[c] || toolQuizList[0];
-        const finalAns = clusterAns || normLetter(fallbackToolQ?.answer || fallbackToolQ?.correct_answer_bn || extraAns || 'খ');
-        const finalQid = clusterQid || fallbackToolQ?.id || '';
-        const finalBoardTag = clusterBoard || fallbackToolQ?.tags || fallbackToolQ?.formatted_source || extraBoardTag || '';
-        const finalSolution = fallbackToolQ?.solution || fallbackToolQ?.explanation || 'বোর্ড পরীক্ষার স্ট্যান্ডার্ড পাঠ্যবই অনুযায়ী এই বিকল্পের সঠিক প্রয়োগ ও বিশ্লেষণ প্রযোজ্য।';
+        const optAText = cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '';
+        const optBText = cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '';
+        const optCText = cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '';
+        const optDText = cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '';
+
+        let correctText = optBText;
+        if (finalAns === 'ক') correctText = optAText;
+        else if (finalAns === 'খ') correctText = optBText;
+        else if (finalAns === 'গ') correctText = optCText;
+        else if (finalAns === 'ঘ') correctText = optDText;
+
+        const dbSol = (fallbackToolQ?.solution || fallbackToolQ?.explanation || '').trim();
+        const finalSolution = (dbSol && dbSol.length > 20 && !dbSol.includes('বিকল্পের সঠিক'))
+          ? dbSol
+          : `সঠিক উত্তর: (${finalAns}) **${correctText}**\n\n**অ্যাকাডেমিক ব্যাখ্যা:** এনসিটিবি পাঠ্যবইয়ের প্রামাণিক তথ্যানুযায়ী, '${stemLine.replace(/^#+\s*|\d+[\.\)]\s*/, '').trim()}'—এর জন্য (${finalAns}) বিকল্পটি নির্ভুল। অন্য বিকল্পগুলো বিভ্রান্তিকর ফাঁদ হিসেবে রাখা হয়েছে।`;
 
         cluster.targetAns = finalAns;
         cluster.qid = finalQid;
@@ -1789,11 +1799,11 @@
           id: finalQid,
           question_text: stemLine,
           stem: stemLine,
-          option_a: cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '',
-          option_b: cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '',
-          option_c: cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '',
-          option_d: cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '',
-          options: cluster.items.map(it => it.text),
+          option_a: optAText,
+          option_b: optBText,
+          option_c: optCText,
+          option_d: optDText,
+          options: [optAText, optBText, optCText, optDText],
           answer: finalAns,
           correct_answer_bn: finalAns,
           solution: finalSolution,
