@@ -81,7 +81,37 @@ export async function handleGetSubjectChapters(args) {
         "অংশ ২: কবিতা (১৫টি নির্ধারিত কবিতা)",
         "অংশ ৩: বাংলা সহপাঠ (উপন্যাস: কাকতাড়ুয়া ও নাটক: বহিপীর)"
       ],
-      instructions_for_mentor: `এনসিটিবি (NCTB) অফিশিয়াল পাঠ্যক্রম অনুযায়ী এসএসসি বাংলা ১ম পত্রে মোট ৩টি অংশ রয়েছে: গদ্য (১৫টি পাঠ), কবিতা (১৫টি পাঠ) এবং সহপাঠ (উপন্যাস: কাকতাড়ুয়া, নাটক: বহিপীর)। আমাদের ডেটাবেসে মোট ${toBn(totalQuestions)}টি বোর্ড প্রশ্ন সংরক্ষিত। শিক্ষার্থীদের গদ্য ও কবিতার পূর্ণাঙ্গ পাঠ্যতালিকা সুন্দরভাবে উপস্থাপন করো। ভুলেও কোনো এইচএসসি পাঠ (যেমন: অপরিচিতা, বিলাসী) এর সাথে মেশাবে না!`
+      instructions_for_mentor: `এনসিটিবি (NCTB) অফিশিয়াল পাঠ্যক্রম অনুযায়ী এসএসসি বাংলা ১ম পত্রে মোট ৩টি অংশ রয়েছে: গদ্য (১৫টি পাঠ), কবিতা (১৫টি পাঠ) এবং সহপাঠ (উপন্যাস: কাকতাড়ুয়া, নাটক: বহিপীর)। আমাদের ডেটাবেসে মোট ${toBn(totalQuestions)}টি বোর্ড প্রশ্ন সংরক্ষিত। শিক্ষার্থীদের গদ্য ও কবিতার পূর্ণাঙ্গ পাঠ্যতালিকা সুন্দরভাবে উপস্থাপন করো। কোনো এইচএসসি পাঠ এর সাথে মেশাবে না!`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
+  // Custom rich syllabus for SSC ICT (Information & Communication Technology)
+  if (subj === 'ssc_ict') {
+    const totalCountRes = await executeRawSql("SELECT COUNT(*) as cnt FROM questions WHERE subject_id = 'ssc_ict';");
+    const totalQuestions = parseInt(totalCountRes.rows[0]?.cnt || 2026);
+
+    const ictChapters = [
+      { id: "ict_ch1", order_num: "1", name: "তথ্য ও যোগাযোগ প্রযুক্তি এবং আমাদের বাংলাদেশ" },
+      { id: "ict_ch2", order_num: "2", name: "কম্পিউটার ও কম্পিউটার ব্যবহারকারীর নিরাপত্তা" },
+      { id: "ict_ch3", order_num: "3", name: "আমার শিক্ষায় ইন্টারনেট" },
+      { id: "ict_ch4", order_num: "4", name: "আমার লেখালেখি ও হিসাব" },
+      { id: "ict_ch5", order_num: "5", name: "মাল্টিমিডিয়া ও গ্রাফিক্স" },
+      { id: "ict_ch6", order_num: "6", name: "ডেটাবেজ-এর ব্যবহার" }
+    ];
+
+    const numberedChapters = ictChapters.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`);
+
+    const finalRes = {
+      subject: subjectName,
+      subject_id: subj,
+      total_chapters: 6,
+      total_questions_in_subject: totalQuestions,
+      chapters: ictChapters,
+      numbered_chapters: numberedChapters,
+      instructions_for_mentor: `এনসিটিবি (NCTB) অফিশিয়াল কারিকুলাম অনুযায়ী এসএসসি তথ্য ও যোগাযোগ প্রযুক্তি (ICT) বিষয়ের মোট ৬টি অধ্যায় ও মোট ${toBn(totalQuestions)}টি সংরক্ষিত বোর্ড প্রশ্নের তালিকা প্রস্তুত। শিক্ষার্থীদের অধ্যায়গুলো নম্বরসহ সুন্দর তালিকা আকারে উপস্থাপন করো।`
     };
 
     appCache.set(cacheKey, finalRes, 3600);
