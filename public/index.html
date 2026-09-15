@@ -608,6 +608,13 @@
                 <div id="resTimeText" class="text-base sm:text-lg font-bold text-amber-400 font-mono">০১:৪৫</div>
               </div>
             </div>
+
+            <div class="pt-3">
+              <button type="button" onclick="requestAiExamDiagnostic()" class="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 text-xs sm:text-sm font-bold shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 transition-all cursor-pointer inline-flex items-center justify-center gap-2">
+                <span>🤖 AI শিক্ষক থেকে বিস্তারিত সামারি ও গাইড নাও</span>
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </button>
+            </div>
           </div>
 
           <!-- Question-by-Question Review List -->
@@ -638,13 +645,19 @@
           </div>
         </div>
 
-        <div id="examResultFooterControls" class="hidden flex items-center justify-between w-full">
-          <button type="button" onclick="restartCurrentExam()" class="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white text-xs font-medium border border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer">
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            <span>পুনরায় পরীক্ষা দাও</span>
-          </button>
-          <button type="button" onclick="closeExamModal()" class="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 text-xs font-semibold shadow transition cursor-pointer">
-            <span>চ্যাটে ফিরে যাও</span>
+        <div id="examResultFooterControls" class="hidden flex flex-wrap items-center justify-between gap-2.5 w-full">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="restartCurrentExam()" class="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white text-xs font-medium border border-white/[0.08] flex items-center gap-1.5 transition cursor-pointer">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>পুনরায় পরীক্ষা দাও</span>
+            </button>
+            <button type="button" onclick="closeExamModal()" class="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 hover:text-white text-xs font-medium border border-white/[0.08] transition cursor-pointer">
+              <span>বন্ধ করো</span>
+            </button>
+          </div>
+          <button type="button" onclick="requestAiExamDiagnostic()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 text-xs font-bold shadow-[0_0_16px_rgba(16,185,129,0.3)] active:scale-95 transition-all cursor-pointer flex items-center gap-2">
+            <span>🤖 AI শিক্ষক থেকে বিস্তারিত সামারি ও গাইড নাও</span>
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </button>
         </div>
       </div>
@@ -1557,10 +1570,13 @@
       return c;
     }
 
-    // Interactive MCQ Selection (High-contrast Red/Green Feedback)
+    // Interactive MCQ Selection (High-contrast Red/Green Feedback with Strict One-Time Answer Locking)
     function handleOptionClick(btn, letter) {
       if (isProcessing) return;
       const cardWrapper = btn.closest('.mcq-wrapper');
+      if (cardWrapper && cardWrapper.getAttribute('data-answered') === 'true') return;
+      if (cardWrapper) cardWrapper.setAttribute('data-answered', 'true');
+
       let correct = cardWrapper ? cardWrapper.getAttribute('data-correct') : null;
       if (correct) correct = correct.trim();
 
@@ -1572,6 +1588,7 @@
       if (grid) {
         grid.querySelectorAll('.mcq-opt').forEach(opt => {
           opt.classList.add('pointer-events-none');
+          opt.disabled = true;
           const optL = (opt.getAttribute('data-letter') || '').trim();
           const optLNorm = normLetter(optL);
           const badge = opt.querySelector('.opt-badge');
@@ -1792,8 +1809,23 @@
       const cards = [];
       for (let c = clusters.length - 1; c >= 0; c--) {
         const cluster = clusters[c];
-        const firstLineIdx = cluster.startIndex;
+        let cardStartIdx = cluster.startIndex;
         let lastLineIdx = cluster.endIndex;
+
+        // Find question stem and header preceding options
+        let sIdx = cluster.startIndex - 1;
+        while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === "") sIdx--;
+        let detectedStem = "";
+        if (sIdx >= 0 && lines[sIdx]) {
+          detectedStem = lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d০-৯0-9]\s*/gi, '').trim();
+          cardStartIdx = sIdx;
+          let hIdx = sIdx - 1;
+          while (hIdx >= 0 && lines[hIdx] && lines[hIdx].trim() === "") hIdx--;
+          if (hIdx >= 0 && /^(?:#{1,4}\s+|[\d০-৯0-9]+[\.\)]\s*|প্রশ্ন\s*[:\d০-৯0-9])/i.test(lines[hIdx].trim())) {
+            cardStartIdx = hIdx;
+          }
+        }
+        const finalStem = detectedStem || cluster.stemLine || `প্রশ্ন ${c + 1}`;
 
         let explanationLines = [];
         let scanIdx = lastLineIdx + 1;
@@ -1822,7 +1854,9 @@
           }
         }
 
-        const clusterBoardHtml = cluster.boardTag ? `<div class="flex flex-wrap items-center gap-1.5 pb-2.5 border-b border-white/[0.06]"><span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(formatFullBoardTags(cluster.boardTag))}</span></div>` : '';
+        const isMultiMockTest = clusters.length >= 2;
+        const qBadge = `<span class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold tracking-wide ${isMultiMockTest ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-white/[0.08] text-zinc-300 border border-white/10'}">প্রশ্ন ${toBnDigits(c + 1)}</span>`;
+        const clusterBoardHtml = cluster.boardTag ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(formatFullBoardTags(cluster.boardTag))}</span>` : '';
 
         const optionsHtml = cluster.items.map(it => `
           <button type="button" 
@@ -1841,12 +1875,24 @@
 
         const placeholder = `%%%MCQ_PLACEHOLDER_${c}%%%`;
         const cardHtml = `
-          <div class="mcq-wrapper my-3.5 bg-gradient-to-b from-[#14141a] to-[#0f0f14] border border-white/[0.10] rounded-2xl p-4 space-y-3.5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]" data-correct="${cluster.targetAns}">
-            ${clusterBoardHtml}
-            <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div class="mcq-wrapper my-4 bg-gradient-to-b from-[#14151a] to-[#0f1014] border border-white/[0.10] rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-xl shadow-black/40" data-correct="${cluster.targetAns}">
+            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.06]">
+              <div class="flex items-center gap-2">
+                ${qBadge}
+                ${clusterBoardHtml}
+              </div>
+            </div>
+
+            <div class="text-[14px] sm:text-[15px] font-medium text-white leading-relaxed select-text pt-0.5">
+              ${escapeHtml(finalStem)}
+            </div>
+
+            <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               ${optionsHtml}
             </div>
-            <div class="pt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
+
+            ${!isMultiMockTest ? `
+            <div class="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
               <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন অনুশীলন করতে চাই' + (' [ID: ${cluster.qid || ''}]'))" 
                 class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 hover:text-emerald-300 border border-emerald-500/25 hover:border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
                 <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1863,10 +1909,11 @@
                 <span>মাস্টার টাইপ ব্লুপ্রিন্ট</span>
               </button>
             </div>
+            ` : ''}
           </div>
         `;
 
-        lines.splice(firstLineIdx, (lastLineIdx - firstLineIdx + 1), placeholder);
+        lines.splice(cardStartIdx, (lastLineIdx - cardStartIdx + 1), placeholder);
         cards.push({ placeholder, cardHtml });
       }
 
@@ -2961,6 +3008,7 @@
 
     function selectExamOption(optLetter) {
       const idx = currentExamState.currentIndex;
+      if (currentExamState.userAnswers[idx] !== undefined) return;
       currentExamState.userAnswers[idx] = optLetter;
       renderExamQuestion(idx);
     }
@@ -3057,6 +3105,35 @@
       document.getElementById('examResultView').classList.remove('hidden');
       document.getElementById('examActiveFooterControls').classList.add('hidden');
       document.getElementById('examResultFooterControls').classList.remove('hidden');
+    }
+
+    function requestAiExamDiagnostic() {
+      closeExamModal();
+      const total = currentExamState.questions.length;
+      let correct = 0;
+      const wrongItems = [];
+      currentExamState.questions.forEach((q, idx) => {
+        const userAns = currentExamState.userAnswers[idx];
+        const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+        if (userAns === correctAns) {
+          correct++;
+        } else {
+          wrongItems.push({
+            num: idx + 1,
+            stem: (q.question_text || q.stem || '').replace(/\s+/g, ' ').slice(0, 90),
+            userAns: userAns || 'উত্তর দেওয়া হয়নি',
+            correctAns: correctAns
+          });
+        }
+      });
+      const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+      let prompt = `আমি ${currentExamState.subjectName} বিষয়ের ${currentExamState.topicName} মক টেস্ট সম্পন্ন করেছি।\nফলাফল: ${toBnDigits(correct)}/${toBnDigits(total)} (সঠিকতার হার: ${toBnDigits(accuracy)}%)।\n`;
+      if (wrongItems.length > 0) {
+        prompt += `\nভুল হওয়া প্রশ্নসমূহ:\n` + wrongItems.map(w => `- প্রশ্ন ${toBnDigits(w.num)}: ${w.stem} (আমার উত্তর: ${w.userAns}, সঠিক উত্তর: ${w.correctAns})`).join('\n') + `\n`;
+      }
+      prompt += `\nআমার এই পারফরম্যান্সের ওপর ভিত্তি করে ভুল হওয়া প্রশ্নগুলোর গভীর কনসেপ্ট বিশ্লেষণ, পরীক্ষকের ফাঁদ এবং পরবর্তী রিভিশনের জন্য একটি সম্পূর্ণ এআই ডায়াগনস্টিক রিপোর্ট দাও।`;
+      activateChatView();
+      sendMessage(prompt);
     }
 
     function restartCurrentExam() {
