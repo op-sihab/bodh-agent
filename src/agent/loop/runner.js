@@ -360,12 +360,17 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
             }
           };
         } else if (isMcqRequest) {
+          const numMatch = userMessage.match(/([০-৯0-9]+)\s*(?:টি|টা|ta|ti)?\s*(?:mcq|প্রশ্ন|কুইজ|বহুনির্বাচন)/i);
+          const isMockTest = /মক\s*টেস্ট|mock\s*test|পরীক্ষা|exam/i.test(userMessage) || (numMatch && parseInt(numMatch[1].replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d))) >= 2);
+          const reqCount = numMatch ? Math.min(Math.max(parseInt(numMatch[1].replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d))) || (isMockTest ? 5 : 1), 1), 10) : (isMockTest ? 5 : 1);
           toolCall = {
             id: `call_${Date.now()}`,
             name: "get_mcq_quiz",
             input: {
               subject: activeSubject || undefined,
               chapter: activeChapter || undefined,
+              count: reqCount,
+              mode: isMockTest ? "mock_test" : "adaptive",
               query: userMessage,
               academic_intent: stepContent ? stepContent.replace(/<\/?thought>/gi, '').trim() : "শিক্ষার্থীর অনুরোধ অনুযায়ী বোর্ড বহুনির্বাচনী প্রশ্ন অনুসন্ধান করছি..."
             }
@@ -427,6 +432,14 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
     const toolName = toolCall.name;
     const toolArgs = toolCall.input || {};
     const callId = toolCall.id || `call_${Date.now()}`;
+
+    // Ensure batch count and mock test mode if student requested multiple MCQs or mock exam
+    const numMatch = userMessage.match(/([০-৯0-9]+)\s*(?:টি|টা|ta|ti)?\s*(?:mcq|প্রশ্ন|কুইজ|বহুনির্বাচন)/i);
+    const isMockExam = /মক\s*টেস্ট|mock\s*test|পরীক্ষা|exam/i.test(userMessage) || (numMatch && parseInt(numMatch[1].replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d))) >= 2);
+    if (toolName === 'get_mcq_quiz' && isMockExam && (!toolArgs.count || toolArgs.count === 1)) {
+      toolArgs.count = numMatch ? Math.min(parseInt(numMatch[1].replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d))) || 5, 10) : 5;
+      toolArgs.mode = 'mock_test';
+    }
 
     if (!stepContent) {
       const intentText = toolArgs.academic_intent || getToolHumanLabel(toolName, toolArgs) || "প্রাসঙ্গিক তথ্য ও প্রশ্ন অনুসন্ধান করছি...";
@@ -506,11 +519,55 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
     });
 
     // Explicit directive for answer synthesis step to prevent secondary unclosed thought tags
+    let synthDirective = "টুল থেকে অফিশিয়াল তথ্য সংগৃহীত হয়েছে। কোনো <thought> ট্যাগ ব্যবহার করবে না। সরাসরি প্রথম শব্দ থেকেই শিক্ষার্থীর প্রশ্নের পূর্ণাঙ্গ উত্তর বাংলায় আকর্ষণীয় ও গোছানোভাবে লেখা শুরু করো।";
+    if (toolName === "get_mcq_quiz" && Array.isArray(rawResult?.quiz) && rawResult.quiz.length >= 2) {
+      synthDirective = `টুলে মোট ${rawResult.quiz.length}টি প্রশ্ন প্রস্তুত আছে। শিক্ষার্থী মক টেস্ট/একাধিক প্রশ্ন চেয়েছে। তাই ১টি নয়—প্রাপ্ত সবকটি (${rawResult.quiz.length}টি) প্রশ্ন ক্রমানুসারে (### প্রশ্ন ১, ### প্রশ্ন ২, ইত্যাদি) পূর্ণ ৪টি অপশন (ক, খ, গ, ঘ), [বোর্ড: ...] এবং [ans: ...] কোডসহ একই মেসেজে সম্পূর্ণ লেখো। কোনো <thought> ট্যাগ ছাড়া সরাসরি উত্তর শুরু করো।`;
+    }
+
     inputHistory.push({
       type: "message",
       role: "system",
-      content: "টুল থেকে অফিশিয়াল তথ্য সংগৃহীত হয়েছে। কোনো <thought> ট্যাগ ব্যবহার করবে না। সরাসরি প্রথম শব্দ থেকেই শিক্ষার্থীর প্রশ্নের পূর্ণাঙ্গ উত্তর বাংলায় আকর্ষণীয় ও গোছানোভাবে লেখা শুরু করো।"
+      content: synthDirective
     });
+  }
+
+  // Fallback / Completeness Guard: If model returned empty, purely thought, or only 1 question when batch was requested
+  const cleanFinalCheck = finalResponseContent ? finalResponseContent.replace(/<[\s]*thought[\s]*>[\s\S]*?(?:<[\s]*\/[\s]*thought[\s]*>|$)/gi, "").trim() : "";
+  const lastTool = executedToolsLog[executedToolsLog.length - 1];
+  if (lastTool && lastTool.tool === 'get_mcq_quiz' && Array.isArray(lastTool.result?.quiz) && lastTool.result.quiz.length >= 2) {
+    const singleOptionMatches = cleanFinalCheck.match(/^[ \t]*(?:[-*+]\s+)?(?:\*{1,2})?(?:\(([ক-ঘa-dA-D])\)|([ক-ঘa-dA-D])[\.\)])/gm) || [];
+    const questionHeaders = cleanFinalCheck.match(/###\s*প্রশ্ন|\bপ্রশ্ন\s*[১-৯1-9]/g) || [];
+    if (!cleanFinalCheck || questionHeaders.length < 2 || singleOptionMatches.length < 8) {
+      const quiz = lastTool.result.quiz;
+      const count = quiz.length;
+      let synth = `${SUBJECT_DISPLAY_NAMES[state.subject_id] || 'বাংলা ১ম পত্র'} থেকে ${toBnDigits(count)}টি বহুনির্বাচনী প্রশ্ন (MCQ) মক টেস্ট নিচে দেওয়া হলো:\n\n`;
+      for (let i = 0; i < quiz.length; i++) {
+        const q = quiz[i];
+        const bTag = q.formatted_source || q.tags || '';
+        synth += `### প্রশ্ন ${toBnDigits(i + 1)}\n${q.question_text || q.stem}\n`;
+        if (bTag) synth += `[বোর্ড: ${bTag}]\n`;
+        synth += `(ক) ${q.option_a}\n(খ) ${q.option_b}\n(গ) ${q.option_c}\n(ঘ) ${q.option_d}\n`;
+        synth += `[ans: ${q.correct_answer_bn || q.answer}] [qid: ${q.id}]\n\n`;
+      }
+      finalResponseContent = synth;
+      await streamWords(synth, onEvent);
+    }
+  } else if (!cleanFinalCheck && executedToolsLog.length > 0) {
+    if (lastTool && lastTool.tool === 'get_mcq_quiz' && Array.isArray(lastTool.result?.quiz) && lastTool.result.quiz.length > 0) {
+      const quiz = lastTool.result.quiz;
+      const count = quiz.length;
+      let synth = `${SUBJECT_DISPLAY_NAMES[state.subject_id] || 'বোর্ড'} পরীক্ষার ${toBnDigits(count)}টি গুরুত্বপূর্ণ বহুনির্বাচনী প্রশ্ন (MCQ) নিচে দেওয়া হলো:\n\n`;
+      for (let i = 0; i < quiz.length; i++) {
+        const q = quiz[i];
+        const bTag = q.formatted_source || q.tags || '';
+        synth += `### প্রশ্ন ${toBnDigits(i + 1)}\n${q.question_text || q.stem}\n`;
+        if (bTag) synth += `[বোর্ড: ${bTag}]\n`;
+        synth += `(ক) ${q.option_a}\n(খ) ${q.option_b}\n(গ) ${q.option_c}\n(ঘ) ${q.option_d}\n`;
+        synth += `[ans: ${q.correct_answer_bn || q.answer}] [qid: ${q.id}]\n\n`;
+      }
+      finalResponseContent = synth;
+      await streamWords(synth, onEvent);
+    }
   }
 
   const totalLatency = Math.round(performance.now() - startTime);

@@ -2158,6 +2158,77 @@
       let pendingDeltas = [];
       let pendingDone = null;
 
+      function renderLoadingSkeleton(toolName, count = 5) {
+        if (toolName === 'get_mcq_quiz') {
+          const isMulti = count >= 2;
+          return `
+            <div class="skeleton-wrap space-y-3 py-2 animate-pulse" id="skeletonCard_${msgId}">
+              ${isMulti ? `
+              <div class="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/[0.04] border border-emerald-500/20 flex items-center justify-between gap-3 shadow-lg shadow-emerald-950/20">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  </div>
+                  <div class="space-y-1.5 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-semibold text-emerald-400 tracking-wide">মক টেস্ট মোড প্রস্তুত হচ্ছে</span>
+                      <span class="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded font-mono">${toBnDigits(count)}টি প্রশ্ন</span>
+                    </div>
+                    <div class="h-2.5 w-32 bg-emerald-500/10 rounded-full"></div>
+                  </div>
+                </div>
+                <div class="h-8 px-4 bg-emerald-500/20 rounded-xl border border-emerald-500/30 flex items-center text-xs font-medium text-emerald-400 shrink-0">
+                  <span>লোড হচ্ছে...</span>
+                </div>
+              </div>
+              ` : ''}
+
+              <div class="p-4 sm:p-5 rounded-2xl bg-[#121316] border border-white/[0.08] space-y-4 shadow-xl">
+                <div class="flex items-center gap-2">
+                  <div class="h-4 w-28 bg-white/10 rounded-md"></div>
+                  <div class="h-4 w-16 bg-white/5 rounded-md"></div>
+                </div>
+                
+                <div class="space-y-2 pt-1">
+                  <div class="h-4 w-5/6 bg-white/15 rounded-md"></div>
+                  <div class="h-3.5 w-3/5 bg-white/10 rounded-md"></div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                  <div class="h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3.5 gap-3">
+                    <div class="w-5 h-5 rounded-lg bg-white/10 flex items-center justify-center text-[11px] text-zinc-500 font-semibold">ক</div>
+                    <div class="h-3 w-3/4 bg-white/10 rounded-md"></div>
+                  </div>
+                  <div class="h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3.5 gap-3">
+                    <div class="w-5 h-5 rounded-lg bg-white/10 flex items-center justify-center text-[11px] text-zinc-500 font-semibold">খ</div>
+                    <div class="h-3 w-2/3 bg-white/10 rounded-md"></div>
+                  </div>
+                  <div class="h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3.5 gap-3">
+                    <div class="w-5 h-5 rounded-lg bg-white/10 flex items-center justify-center text-[11px] text-zinc-500 font-semibold">গ</div>
+                    <div class="h-3 w-4/5 bg-white/10 rounded-md"></div>
+                  </div>
+                  <div class="h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center px-3.5 gap-3">
+                    <div class="w-5 h-5 rounded-lg bg-white/10 flex items-center justify-center text-[11px] text-zinc-500 font-semibold">ঘ</div>
+                    <div class="h-3 w-1/2 bg-white/10 rounded-md"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="skeleton-wrap space-y-3 py-2 animate-pulse" id="skeletonCard_${msgId}">
+              <div class="p-4 rounded-2xl bg-[#121316] border border-white/[0.08] space-y-3">
+                <div class="h-3.5 w-1/3 bg-white/15 rounded-md"></div>
+                <div class="h-3 w-5/6 bg-white/10 rounded-md"></div>
+                <div class="h-3 w-4/6 bg-white/10 rounded-md"></div>
+                <div class="h-3 w-3/6 bg-white/5 rounded-md"></div>
+              </div>
+            </div>
+          `;
+        }
+      }
+
       function startSequentialExecution(startEvt, doneEvt, stepIdx) {
         step1Locked = true;
         streamContent = "";
@@ -2166,6 +2237,14 @@
         if (statusEl) statusEl.classList.add('hidden');
         const toolContainer = document.getElementById(toolContainerId);
         if (toolContainer) toolContainer.classList.remove('hidden');
+
+        // Show immediate skeleton in content container
+        const contentEl = document.getElementById(contentId);
+        if (contentEl) {
+          contentEl.classList.remove('hidden');
+          const countNum = parseInt(startEvt.args?.count) || (text.includes('৫') || text.includes('5') ? 5 : 1);
+          contentEl.innerHTML = renderLoadingSkeleton(startEvt.tool, countNum);
+        }
 
         const treeEl = document.getElementById(treeId);
         if (!treeEl) return;
@@ -2247,20 +2326,6 @@
 
           isToolExecutionDone = true;
 
-          // Step 4: Show writing pulse and start streaming markdown deltas
-          const contentEl = document.getElementById(contentId);
-          if (contentEl) {
-            contentEl.classList.remove('hidden');
-            if (pendingDeltas.length === 0 && !pendingDone) {
-              contentEl.innerHTML = `
-                <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
-                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                  <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
-                </div>
-              `;
-            }
-          }
-
           // Flush queued deltas
           if (pendingDeltas.length > 0) {
             streamContent += pendingDeltas.join('');
@@ -2324,8 +2389,6 @@
               const contentEl = document.getElementById(contentId);
               if (contentEl) {
                 contentEl.classList.remove('hidden');
-                const wp = document.getElementById(`writingPulse_${msgId}`);
-                if (wp) wp.remove();
                 const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
                 const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
                 contentEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extraBoardTag, extraAns);
@@ -2342,8 +2405,6 @@
             const contentEl = document.getElementById(contentId);
             if (contentEl) {
               contentEl.classList.remove('hidden');
-              const wp = document.getElementById(`writingPulse_${msgId}`);
-              if (wp) wp.remove();
               const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
               const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
               contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extraBoardTag, extraAns);
@@ -2361,8 +2422,6 @@
             const contentEl = document.getElementById(contentId);
             if (contentEl) {
               contentEl.classList.remove('hidden');
-              const wp = document.getElementById(`writingPulse_${msgId}`);
-              if (wp) wp.remove();
               const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
               const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
               contentEl.innerHTML = renderFormattedContentWithCursor(cleanAnswer, true, extraBoardTag, extraAns);
@@ -2421,14 +2480,26 @@
           .replace(/^<\/?[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
           .trim();
 
+        // Fallback: If cleanFinal is empty or missing questions, auto-synthesize from tool result!
+        if (!cleanFinal && toolDoneEvt?.tool === 'get_mcq_quiz' && Array.isArray(toolDoneEvt.result?.quiz) && toolDoneEvt.result.quiz.length > 0) {
+          const quiz = toolDoneEvt.result.quiz;
+          let synth = `এখানে ${toBnDigits(quiz.length)}টি বহুনির্বাচনী প্রশ্ন (MCQ) দেওয়া হলো:\n\n`;
+          for (let i = 0; i < quiz.length; i++) {
+            const q = quiz[i];
+            const bTag = q.formatted_source || q.tags || '';
+            synth += `### প্রশ্ন ${toBnDigits(i + 1)}\n${q.question_text || q.stem}\n`;
+            if (bTag) synth += `[বোর্ড: ${bTag}]\n`;
+            synth += `(ক) ${q.option_a}\n(খ) ${q.option_b}\n(গ) ${q.option_c}\n(ঘ) ${q.option_d}\n`;
+            synth += `[ans: ${q.correct_answer_bn || q.answer}] [qid: ${q.id}]\n\n`;
+          }
+          cleanFinal = synth;
+        }
+
         const statusEl = document.getElementById(statusId);
         if (statusEl) statusEl.classList.add('hidden');
 
         const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
         if (cur1) cur1.remove();
-
-        const wp = document.getElementById(`writingPulse_${msgId}`);
-        if (wp) wp.remove();
 
         const contentEl = document.getElementById(contentId);
         if (contentEl) {
