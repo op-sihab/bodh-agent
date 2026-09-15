@@ -263,6 +263,25 @@ export function getChapterConceptKeywords(subjId, chNum) {
   return concepts;
 }
 
+export function extractDirectTopicTokens(rawT, matchedChapterInfo) {
+  if (!rawT) return [];
+  const stopWords = new Set([
+    'অধ্যায়', 'অধ্যায়', 'chapter', 'ch', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'ekta', 'akta', 'কুইজ', 'quiz',
+    'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে',
+    'প্রশ্ন', 'prosno', 'বোর্ড', 'সাল', 'দেও', 'mcq', 'cq', '১টি', 'একটি', 'দুটো', '১', '২', '৩', '৪', '৫',
+    'dio', 'deba', 'debe', 'chai', 'চাই', 'দিতে', 'করো', 'koro', 'practice', 'অনুশীলন'
+  ]);
+  const normT = normalizeTopic(rawT);
+  const words = normT.split(/[\s,–—\-:;।?!/&()+]+/).map(w => w.trim()).filter(w => 
+    w.length >= 2 && 
+    !/^\d+$/.test(w) && 
+    !/^[০-৯]+$/.test(w) && 
+    !stopWords.has(w.toLowerCase())
+  );
+  const chName = matchedChapterInfo?.name;
+  return words.filter(w => !chName || !chName.includes(w));
+}
+
 export function extractChapterKeywords(rawT, matchedChapterInfo, subjId) {
   let chapterKeywords = [];
   if (!rawT) return chapterKeywords;
@@ -271,13 +290,14 @@ export function extractChapterKeywords(rawT, matchedChapterInfo, subjId) {
   const candidateNames = [normT, matchedChapterInfo?.name].filter(Boolean);
   const stopWords = new Set([
     'অধ্যায়', 'অধ্যায়', 'chapter', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'ekta', 'akta', 'কুইজ', 'quiz',
-    'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে'
+    'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে',
+    'dio', 'deba', 'debe', 'chai', 'চাই', 'দিতে', 'করো', 'koro', 'practice', 'অনুশীলন'
   ]);
 
   for (const name of candidateNames) {
     const cleanName = name.replace(/\s+ও\s+/g, ' ');
     const words = cleanName.split(/[\s,–—\-:;।?!/&()+]+/).map(w => w.trim()).filter(w => 
-      w.length >= 3 && 
+      w.length >= 2 && 
       !/^\d+$/.test(w) && 
       !/^[০-৯]+$/.test(w) && 
       !stopWords.has(w.toLowerCase())

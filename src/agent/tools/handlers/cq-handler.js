@@ -8,6 +8,7 @@ import {
   parseYearFilter,
   buildYearSqlConditions,
   extractChapterKeywords,
+  extractDirectTopicTokens,
   isQuestionRelevantToChapter,
   RECENT_YEAR_ORDER_BY
 } from "../../../config/chapter-map.js";
@@ -22,6 +23,9 @@ export async function handleGetCreativeQuestion(args) {
     subjId = matchedChapterInfo.subject_id;
   }
   const matchedCqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
+
+  // Granular Topic / Story tokens (e.g. 'নিমগাছ', 'কপোতাক্ষ নদ', 'জারণ-বিজারণ')
+  const directTopicTokens = extractDirectTopicTokens(rawT, matchedChapterInfo);
 
   // Board filter
   const boardTag = normalizeBoard(args.board);
@@ -42,9 +46,17 @@ export async function handleGetCreativeQuestion(args) {
     chapterConditionSql = `(${kwSql})`;
   }
 
+  // If specific story/topic tokens exist, enforce topic-level filtering
+  let topicConditionSql = "";
+  if (directTopicTokens.length > 0) {
+    const tKw = directTopicTokens.map(t => `(question_text LIKE '%${t.replace(/'/g, "''")}%' OR question_html LIKE '%${t.replace(/'/g, "''")}%' OR option_a LIKE '%${t.replace(/'/g, "''")}%' OR option_b LIKE '%${t.replace(/'/g, "''")}%' OR option_c LIKE '%${t.replace(/'/g, "''")}%' OR option_d LIKE '%${t.replace(/'/g, "''")}%')`).join(' OR ');
+    topicConditionSql = `(${tKw})`;
+  }
+
   // In-Memory Question Pool Cache for ultra-fast instant 0ms responses!
   const yrKey = years.length > 0 ? years.join('_') : 'all';
-  const poolKey = `cq_pool:${subjId || 'any'}:${matchedCqChapterId || 'none'}:${boardTag || 'none'}:${yrKey}:${diff}`;
+  const topicKey = directTopicTokens.length > 0 ? directTopicTokens.join('_') : 'all';
+  const poolKey = `cq_pool:${subjId || 'any'}:${matchedCqChapterId || 'none'}:${topicKey}:${boardTag || 'none'}:${yrKey}:${diff}`;
   let qRows = appCache.get(poolKey);
   console.log(`[CQ Tool] poolKey="${poolKey}", cacheHit=${Boolean(qRows && qRows.length)}`);
 
@@ -52,6 +64,7 @@ export async function handleGetCreativeQuestion(args) {
     const baseConditions = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`];
     if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
     if (chapterConditionSql) baseConditions.push(chapterConditionSql);
+    if (topicConditionSql) baseConditions.push(topicConditionSql);
 
     // Chapter-level concept guards for collision-prone chapters (e.g. Physics Optics Reflection vs Refraction)
     if (subjId === 'ssc_physics') {
@@ -176,9 +189,21 @@ export async function handleGetCreativeQuestion(args) {
   // Universal Semantic Chapter Relevance Filter:
   // Discard candidate CQs that have zero target concepts and multiple alien concepts from another chapter
   const targetOrder = matchedChapterInfo?.order_num;
-  const verifiedCqRows = (qRows && targetOrder)
+  let verifiedCqRows = (qRows && targetOrder)
     ? qRows.filter(r => isQuestionRelevantToChapter(r, subjId, targetOrder))
     : (qRows || []);
+
+  // If user requested a specific story/topic (e.g. 'নিমগাছ', 'কপোতাক্ষ নদ'), strictly retain topic-matched questions!
+  if (directTopicTokens.length > 0 && verifiedCqRows.length > 0) {
+    const topicFiltered = verifiedCqRows.filter(r => {
+      const allText = `${r.question_text || ''} ${r.question_html || ''} ${r.option_a || ''} ${r.option_b || ''} ${r.option_c || ''} ${r.option_d || ''} ${r.tags || ''}`;
+      return directTopicTokens.some(t => allText.includes(t));
+    });
+    if (topicFiltered.length > 0) {
+      verifiedCqRows = topicFiltered;
+    }
+  }
+
   const activeCqPool = verifiedCqRows.length > 0 ? verifiedCqRows : (qRows || []);
 
   // Sample prioritizing the most recent available years in activeCqPool

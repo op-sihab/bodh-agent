@@ -8,6 +8,7 @@ import {
   parseYearFilter,
   buildYearSqlConditions,
   extractChapterKeywords,
+  extractDirectTopicTokens,
   isQuestionRelevantToChapter,
   RECENT_YEAR_ORDER_BY
 } from "../../../config/chapter-map.js";
@@ -22,6 +23,9 @@ export async function handleGetMcqQuiz(args) {
     subjId = matchedChapterInfo.subject_id;
   }
   const matchedMcqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
+
+  // Granular Topic / Story tokens (e.g. 'নিমগাছ', 'কপোতাক্ষ নদ', 'জারণ-বিজারণ')
+  const directTopicTokens = extractDirectTopicTokens(rawT, matchedChapterInfo);
 
   // Board filter
   const boardTag = normalizeBoard(args.board);
@@ -43,9 +47,17 @@ export async function handleGetMcqQuiz(args) {
     chapterConditionSql = `(${kwSql})`;
   }
 
+  // If specific story/topic tokens exist, enforce topic-level filtering
+  let topicConditionSql = "";
+  if (directTopicTokens.length > 0) {
+    const tKw = directTopicTokens.map(t => `(question_text LIKE '%${t.replace(/'/g, "''")}%' OR question_html LIKE '%${t.replace(/'/g, "''")}%')`).join(' OR ');
+    topicConditionSql = `(${tKw})`;
+  }
+
   // In-Memory Question Pool Cache for ultra-fast instant 0ms responses!
   const yrKey = years.length > 0 ? years.join('_') : 'all';
-  const poolKey = `mcq_pool:${subjId || 'any'}:${matchedMcqChapterId || 'none'}:${boardTag || 'none'}:${yrKey}:${diff}`;
+  const topicKey = directTopicTokens.length > 0 ? directTopicTokens.join('_') : 'all';
+  const poolKey = `mcq_pool:${subjId || 'any'}:${matchedMcqChapterId || 'none'}:${topicKey}:${boardTag || 'none'}:${yrKey}:${diff}`;
   let qRows = appCache.get(poolKey);
   console.log(`[MCQ Tool] poolKey="${poolKey}", cacheHit=${Boolean(qRows && qRows.length)}`);
 
@@ -53,6 +65,7 @@ export async function handleGetMcqQuiz(args) {
     const baseConditions = [`type = 'MCQ'`, `question_text != ''`, `answer != ''`, `option_a != ''`, `option_b != ''`];
     if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
     if (chapterConditionSql) baseConditions.push(chapterConditionSql);
+    if (topicConditionSql) baseConditions.push(topicConditionSql);
 
     // Chapter-level concept guards for collision-prone chapters (e.g. Physics Optics Reflection vs Refraction)
     if (subjId === 'ssc_physics') {
@@ -174,9 +187,21 @@ export async function handleGetMcqQuiz(args) {
   // Universal Semantic Chapter Relevance Filter:
   // Discard any candidate rows that have zero target concepts and multiple alien concepts from another chapter
   const targetOrder = matchedChapterInfo?.order_num;
-  const verifiedRows = (qRows && targetOrder)
+  let verifiedRows = (qRows && targetOrder)
     ? qRows.filter(r => isQuestionRelevantToChapter(r, subjId, targetOrder))
     : (qRows || []);
+
+  // If user requested a specific story/topic (e.g. 'নিমগাছ', 'কপোতাক্ষ নদ'), strictly retain topic-matched questions!
+  if (directTopicTokens.length > 0 && verifiedRows.length > 0) {
+    const topicFiltered = verifiedRows.filter(r => {
+      const allText = `${r.question_text || ''} ${r.question_html || ''} ${r.tags || ''}`;
+      return directTopicTokens.some(t => allText.includes(t));
+    });
+    if (topicFiltered.length > 0) {
+      verifiedRows = topicFiltered;
+    }
+  }
+
   const activePool = verifiedRows.length > 0 ? verifiedRows : (qRows || []);
 
   // Sample prioritizing the most recent available years in activePool
