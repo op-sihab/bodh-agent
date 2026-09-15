@@ -1,7 +1,11 @@
 // Cognitive Archetype Detector for Questions (গণিত, বিজ্ঞান, সমাজ, সাহিত্য)
 
 export const COGNITIVE_ARCHETYPES = {
-  MATHEMATICAL_DERIVATION: "গাণিতিক ডেরিভেশন ও সূত্র প্রয়োগ (Mathematical Derivation)",
+  SEQUENTIAL_STOICHIOMETRY: "ধারাবাহিক বিক্রিয়া ও স্টয়কিওমিতি (Sequential Stoichiometry)",
+  LIMITING_REACTANT: "লিমিটিং বিক্রিয়ক ও অবশিষ্ট উৎপাদ (Limiting Reactant & Yield)",
+  MOLAR_CONCENTRATION_TITRATION: "মোলারিটি ও প্রশমন টাইট্রেশন (Molarity & Titration)",
+  SINGLE_STEP_FORMULA: "এক-ধাপের মৌলিক সূত্র প্রয়োগ (Single-Step Direct Formula)",
+  MATHEMATICAL_DERIVATION: "গাণিতিক ডেরিভেশন ও সমীকরণ সমাধান (Mathematical Derivation)",
   CAUSE_AND_MECHANISM: "কারণ ও বৈজ্ঞানিক মেকানিজম (Cause & Mechanism)",
   PERIODIC_TREND: "পর্যায়বৃত্ত ধর্ম ও পরিবর্তনশীল ট্রেন্ড (Periodic Trend & Property)",
   REAL_WORLD_APPLICATION: "বাস্তব জীবনের বৈজ্ঞানিক প্রয়োগ (Real-World Applied Principle)",
@@ -12,7 +16,48 @@ export const COGNITIVE_ARCHETYPES = {
 export function detectCognitiveArchetype(questionText, options = [], subjectId = null) {
   const fullText = `${questionText || ""} ${(options || []).join(" ")}`.toLowerCase();
 
-  // 1. Check for Mathematical Derivation
+  // 1. Limiting Reactants & Reaction Yields
+  if (/লিমিটিং\s*বিক্রিয়ক|কোনটি\s*আগে\s*শেষ\s*হবে|অবশিষ্ট\s*থাকবে|কতটুকু\s*বাকি|প্রত্যাশিত\s*উৎপাদ/i.test(fullText)) {
+    return {
+      type: "LIMITING_REACTANT",
+      title: COGNITIVE_ARCHETYPES.LIMITING_REACTANT,
+      description: "বিক্রিয়ার সমাপ্তি, লিমিটিং বিক্রিয়ক চিহ্নিতকরণ ও অপচয়/অবশিষ্ট পরিমাপ।"
+    };
+  }
+
+  // 2. Sequential Reactions & Stoichiometric Multi-Step Mass/Mole Calculation
+  const hasChemicalReaction = /বিক্রিয়া|বিক্রিয়ায়|কস্টিক\s*সোডা|চুনাপাথর|সোডিয়াম\s*কার্বনেট|গ্যাস\s*প্রস্তুত|প্রয়োজনীয়|উৎপন্ন\s*হবে|যুক্ত\s*করলে/i.test(fullText) &&
+                              /(?:caco3|co2|naoh|hcl|na2co3|h2o|h2so4|ch4|o2|n2|h2|কস্টিক|চুনাপাথর|কার্বনেট|এসিড|ক্ষার)/i.test(fullText);
+  if (hasChemicalReaction && /\d+(?:\.\d+)?\s*(?:g|gm|গ্রাম|mol|মোল|l|লিটার)\b/i.test(fullText)) {
+    return {
+      type: "SEQUENTIAL_STOICHIOMETRY",
+      title: COGNITIVE_ARCHETYPES.SEQUENTIAL_STOICHIOMETRY,
+      description: "একাধিক বিক্রিয়ার সমীকরণভিত্তিক মোল অনুপাত ও ভর হিসাব (mass → mole → reaction → ratio → mass)।"
+    };
+  }
+
+  // 3. Molarity, Solution Concentration & Titration
+  if (/মোলার\s*দ্রবণ|সেমিমোলার|ডেসিমোলার|মোলারিটি|ঘনমাত্রা|প্রমিত\s*দ্রবণ|প্রশমিত|টাইট্রেশন|v1s1/i.test(fullText) ||
+      (/\d+\s*(?:ml|মি\.লি|l|লিটার)\b/i.test(fullText) && /\d+(?:\.\d+)?\s*m\b/i.test(fullText))) {
+    return {
+      type: "MOLAR_CONCENTRATION_TITRATION",
+      title: COGNITIVE_ARCHETYPES.MOLAR_CONCENTRATION_TITRATION,
+      description: "দ্রবণের ঘনমাত্রা, মোলার দ্রবণ প্রস্তুতি ও এসিড-ক্ষার প্রশমন (S = 1000W / MV বা V1S1 = V2S2)।"
+    };
+  }
+
+  // 4. Single-step Direct Formula Plug (e.g. 5 mol CO2 volume, F=ma, s=vt)
+  const isSimpleFormula = /আয়তন\s*কত|মোল\s*সংখ্যা\s*কত|ভর\s*কত|অণুর\s*সংখ্যা\s*কত|পরমাণুর\s*সংখ্যা\s*কত|বেগ\s*কত|ত্বরণ\s*কত|বল\s*কত/i.test(fullText) &&
+                          !hasChemicalReaction;
+  if (isSimpleFormula && /\d+(?:\.\d+)?\s*(?:g|mol|l|m\/s|m\/s²|kg|n|v|j)\b/i.test(fullText)) {
+    return {
+      type: "SINGLE_STEP_FORMULA",
+      title: COGNITIVE_ARCHETYPES.SINGLE_STEP_FORMULA,
+      description: "সরাসরি এক-ধাপের মৌলিক সূত্রে মান বসিয়ে হিসাব (যেমন: V = n × 22.4, n = W/M, F = ma)।"
+    };
+  }
+
+  // 5. General Mathematical Derivation
   const hasNumbers = /\d+(?:\.\d+)?\s*(?:g|mol|l|ml|cm|m\/s|km\/h|kg|v|ohm|d|°c|j|w|n|pa|atm|m)\b/i.test(fullText) ||
                      /\b(?:stp|ঘনমাত্রা|মোলারিটি|মোলার ভর|আণবিক ভর|ত্বরণ|বেগ|দূরত্ব|ফোকাস দূরত্ব|বক্রতার ব্যাসার্ধ|তুল্য রোধ|বিভব পার্থক্য|কাজ|ক্ষমতা|গতিশক্তি|বিভবশক্তি|উচ্চতা)\b/i.test(fullText);
   const isMathSubject = ["ssc_physics", "ssc_chemistry", "ssc_general_math", "ssc_higher_math"].includes(subjectId);

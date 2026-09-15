@@ -45,20 +45,21 @@ export async function getSimilarQuestionsByVector({ questionId, queryText, subje
     targetId = seed.id;
   }
 
-  // Check cache for this targetId
-  const cacheKey = `vec_sim:${targetId}:${subjectId || 'all'}:${limit}`;
-  const cached = appCache.get(cacheKey);
-  if (cached) return { ...cached, fromCache: true, durationMs: 0 };
-
   const t0 = performance.now();
   // Get seed question
-  const seedRes = await executeRawSql(`SELECT id, subject_id, chapter_id, tags, question_text, option_a, option_b, option_c, option_d, answer, solution FROM questions WHERE id = '${targetId}';`);
+  const seedRes = await executeRawSql(`SELECT id, subject_id, chapter_id, exam_id, type, tags, question_text, option_a, option_b, option_c, option_d, answer, solution FROM questions WHERE id = '${targetId}';`);
   const seedQ = seedRes.rows[0];
   if (!seedQ) return { seed: null, similar: [] };
+
+  // Check cache for this targetId + type
+  const cacheKey = `vec_sim_v2:${targetId}:${subjectId || 'all'}:${limit}:${seedQ.type || 'all'}`;
+  const cached = appCache.get(cacheKey);
+  if (cached) return { ...cached, fromCache: true, durationMs: 0 };
 
   const subj = subjectId || seedQ.subject_id;
   const subjClause = subj ? `AND qs.subject_id = '${subj.replace(/'/g, "''")}'` : "";
   const chClause = seedQ.chapter_id ? `AND qs.chapter_id = '${seedQ.chapter_id.replace(/'/g, "''")}'` : "";
+  const typeClause = seedQ.type ? `AND qs.type = '${seedQ.type}'` : "";
 
   // Vector distance query using Turso's native vector_distance_cos
   const count = Math.min(Math.max(parseInt(limit) || 3, 1), 6);
@@ -67,7 +68,7 @@ export async function getSimilarQuestionsByVector({ questionId, queryText, subje
     SELECT q.qid, vector_distance_cos(q.emb, (SELECT emb FROM question_vectors WHERE qid = '${targetId}')) as dist
     FROM question_vectors q
     JOIN questions qs ON q.qid = qs.id
-    WHERE q.qid != '${targetId}' ${subjClause} ${chClause}
+    WHERE q.qid != '${targetId}' ${subjClause} ${chClause} ${typeClause}
     ORDER BY dist ASC
     LIMIT ${count};
   `;
@@ -79,7 +80,7 @@ export async function getSimilarQuestionsByVector({ questionId, queryText, subje
       SELECT q.qid, vector_distance_cos(q.emb, (SELECT emb FROM question_vectors WHERE qid = '${targetId}')) as dist
       FROM question_vectors q
       JOIN questions qs ON q.qid = qs.id
-      WHERE q.qid != '${targetId}' ${subjClause}
+      WHERE q.qid != '${targetId}' ${subjClause} ${typeClause}
       ORDER BY dist ASC
       LIMIT ${count};
     `;

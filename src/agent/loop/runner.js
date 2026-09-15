@@ -405,6 +405,24 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
       }
     }
 
+    // Intercept: If student explicitly asks for similar/identical type question, force find_similar_type_questions
+    const isSimilarRequest = /এই\s*টাইপের\s*আরেক|অনুরূপ\s*প্রশ্ন|similar\s*type|একই\s*সূত্রের/i.test(userMessage);
+    if (isSimilarRequest && toolCall && (toolCall.name === "get_mcq_quiz" || toolCall.name === "get_creative_question")) {
+      const targetQ = state.active_question || state.last_served_question;
+      const idMatch = userMessage.match(/\[ID:\s*(q_\d+)\]/i);
+      const qId = idMatch ? idMatch[1] : (targetQ?.id || undefined);
+      toolCall = {
+        id: toolCall.id || `call_${Date.now()}`,
+        name: "find_similar_type_questions",
+        input: {
+          subject: activeSubject || targetQ?.subject_id || undefined,
+          question_id: qId,
+          query_text: targetQ?.question || targetQ?.stem || userMessage,
+          academic_intent: "শিক্ষার্থীর অনুরোধ অনুযায়ী ভেক্টর সার্চ ও মাস্টার টাইপ ব্লুপ্রিন্ট ব্যবহার করে একই সূত্রের অনুরূপ প্রশ্ন অনুসন্ধান করছি..."
+        }
+      };
+    }
+
     // CASE B: Model autonomously invoked a tool! (Think -> Act -> Observe)
     const toolName = toolCall.name;
     const toolArgs = toolCall.input || {};
