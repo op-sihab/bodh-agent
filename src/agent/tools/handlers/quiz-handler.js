@@ -202,7 +202,17 @@ export async function handleGetMcqQuiz(args) {
     }
   }
 
-  const activePool = verifiedRows.length > 0 ? verifiedRows : (qRows || []);
+  let poolToUse = [...verifiedRows];
+  if (poolToUse.length < count && qRows && qRows.length > 0) {
+    for (const r of qRows) {
+      if (!poolToUse.some(p => p.id === r.id)) {
+        poolToUse.push(r);
+        if (poolToUse.length >= count) break;
+      }
+    }
+  }
+
+  const activePool = poolToUse.length > 0 ? poolToUse : (qRows || []);
 
   // Sample prioritizing the most recent available years in activePool
   const topSlice = activePool.slice(0, Math.max(count * 4, 8));
