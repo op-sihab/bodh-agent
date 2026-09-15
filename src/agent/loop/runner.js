@@ -5,7 +5,7 @@ import { SUBJECT_DISPLAY_NAMES, toBnDigits } from "../../config/subject-map.js";
 import { ENV } from "../../config/env.js";
 import { SYSTEM_PROMPT } from "../prompts/system-prompt.js";
 import { compactToolResult } from "./compaction.js";
-import { classifyIntent, getScopedTools, pruneHistoryForContext, INTENT_TYPES } from "./router.js";
+import { classifyIntent, getScopedTools, pruneHistoryForContext, getMaxTokensForIntent, calculateTokenTelemetry, INTENT_TYPES } from "./router.js";
 
 // Helpers for student-friendly, empathetic tool progress labels
 function getToolHumanLabel(tool, args) {
@@ -223,6 +223,7 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
       model: modelName,
       vendor: "openai",
       stream: true,
+      max_tokens: getMaxTokensForIntent(classifiedIntent),
       include_routing_metadata: true
     };
     if (activeTools && activeTools.length > 0) {
@@ -512,12 +513,14 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
   }
 
   const totalLatency = Math.round(performance.now() - startTime);
+  const tokenTelemetry = calculateTokenTelemetry(inputHistory, getScopedTools(classifiedIntent));
   await onEvent({
     type: "done",
     content: finalResponseContent,
     toolCalls: executedToolsLog,
     latencyMs: totalLatency,
     ttft: firstTokenTime,
+    tokenTelemetry,
     state
   });
   return;

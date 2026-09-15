@@ -167,3 +167,54 @@ export function pruneHistoryForContext(pastHistory = [], maxTurns = 4) {
 
   return result;
 }
+/**
+ * Dynamic Response Token Budget per Intent:
+ * Restricts output tokens to the necessary budget so the model doesn't generate bloated or runaway responses
+ */
+export function getMaxTokensForIntent(intent) {
+  switch (intent) {
+    case INTENT_TYPES.QUIZ_ANSWER:
+      return 450; // Ultra-crisp grading, feedback & scientific principle
+    case INTENT_TYPES.MCQ_QUIZ:
+      return 600; // Stem, board tag, 4 options, and [ans: ...]
+    case INTENT_TYPES.SYLLABUS_ROADMAP:
+      return 850; // Clean list of chapters without rambling
+    case INTENT_TYPES.CQ_CREATIVE:
+      return 1100; // Stem and parts (Ka, Kha, Ga, Gha)
+    case INTENT_TYPES.IMPORTANCE_RANKING:
+      return 800; // Priority chapters & 80/20 breakdown
+    case INTENT_TYPES.SIMILAR_PATTERN:
+      return 850;
+    default:
+      return 1100;
+  }
+}
+
+/**
+ * Calculate token savings compared to legacy unoptimized baseline
+ */
+export function calculateTokenTelemetry(inputHistory = [], activeTools = null) {
+  const BASELINE_OVERHEAD_BYTES = 58941 + 17130; // Legacy prompt (59KB) + all tools schema (17KB)
+  
+  let currentBytes = 0;
+  for (const m of inputHistory) {
+    if (typeof m.content === 'string') currentBytes += m.content.length;
+    else if (Array.isArray(m.content)) currentBytes += JSON.stringify(m.content).length;
+  }
+  if (activeTools && Array.isArray(activeTools)) {
+    currentBytes += JSON.stringify(activeTools).length;
+  }
+
+  const baselineEstTokens = Math.round(BASELINE_OVERHEAD_BYTES / 4);
+  const currentEstTokens = Math.round(currentBytes / 4);
+  const tokensSaved = Math.max(0, baselineEstTokens - currentEstTokens);
+  const savingsPercent = Math.min(95, Math.round((tokensSaved / baselineEstTokens) * 100));
+
+  return {
+    current_tokens_est: currentEstTokens,
+    baseline_tokens_est: baselineEstTokens,
+    tokens_saved_est: tokensSaved,
+    savings_percent: savingsPercent
+  };
+}
+
