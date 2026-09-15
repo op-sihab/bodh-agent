@@ -147,7 +147,8 @@
     .markdown-body h3 { font-size: 1.05rem; }
     .markdown-body strong { font-weight: 600; color: #ffffff; }
     .markdown-body code { 
-      padding: 0.15rem 0.4rem; border-radius: 0.375rem; font-family: 'JetBrains Mono', monospace; font-size: 0.84em; 
+      padding: 0.15rem 0.4rem; border-radius: 0.375rem; font-family: 'JetBrains Mono', monospace; font-size: 0.84em; background: rgba(255, 255, 255, 0.08);
+    }
     /* Table Styling */
     .markdown-body table {
       width: 100%;
@@ -340,6 +341,12 @@
         </div>
       </div>
       
+      <!-- Active Subject Pill in Header (When in active chat) -->
+      <div id="activeSubjectHeaderBadge" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium select-none animate-fadeIn">
+        <span id="activeSubjectHeaderIcon" class="text-sm">⚛️</span>
+        <span id="activeSubjectHeaderText">রসায়ন</span>
+      </div>
+
       <button onclick="resetToHome()" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition cursor-pointer">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         <span class="hidden sm:inline font-mono text-[11px]">New</span>
@@ -350,25 +357,42 @@
     <div id="contentScrollArea" class="flex-1 overflow-y-auto px-4 pt-6 pb-36 flex flex-col scroll-smooth">
       
       <!-- HERO VIEW (Centered Home) -->
-      <div id="heroView" class="w-full max-w-2xl mx-auto my-auto flex flex-col items-center text-center space-y-5">
+      <div id="heroView" class="w-full max-w-3xl mx-auto my-auto flex flex-col items-center text-center space-y-5">
         
         <!-- Clean, Compact Emblem with subtle ambient glow -->
         <div class="flex items-center justify-center">
           <img src="/assets/bodh-custom-logo.png" alt="বোধ" 
-            class="h-16 sm:h-20 w-auto object-contain select-none pointer-events-none opacity-95 drop-shadow-[0_0_24px_rgba(255,255,255,0.08)] transition-transform duration-200" />
+            class="h-14 sm:h-18 w-auto object-contain select-none pointer-events-none opacity-95 drop-shadow-[0_0_24px_rgba(255,255,255,0.08)] transition-transform duration-200" />
         </div>
 
-        <div class="space-y-1 text-center -mt-1">
+        <div class="space-y-1 text-center -mt-2">
           <p class="text-xs sm:text-sm text-zinc-400 font-normal">
             না বুঝে মুখস্থ নয়, পড়াশোনায় এবার গভীর বোধ
           </p>
         </div>
 
-        <!-- Central Input Box -->
+        <!-- 1. MANDATORY SUBJECT SELECTION SECTION -->
+        <div class="w-full space-y-2.5 text-left">
+          <div class="flex items-center justify-between px-1">
+            <span class="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>১. প্রথমে বিষয় নির্বাচন করো</span>
+              <span class="text-[11px] text-rose-400/90 font-mono bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">বাধ্যতামূলক</span>
+            </span>
+            <span id="selectedSubjectStatus" class="text-[11.5px] font-mono text-emerald-400 flex items-center gap-1">
+              <span>⚛️</span> <span>রসায়ন সক্রিয়</span>
+            </span>
+          </div>
+
+          <!-- Subject Cards Grid (10 NCTB Subjects) -->
+          <div id="subjectGrid" class="grid grid-cols-2 sm:grid-cols-5 gap-2"></div>
+        </div>
+
+        <!-- 2. Central Input Box -->
         <div class="w-full rounded-[24px] p-1 bg-white/[0.02] border border-white/[0.08] focus-within:border-white/20 focus-within:bg-white/[0.04] shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition duration-200">
           <div class="bg-app-surface rounded-[20px] p-3 border border-white/[0.04]">
             <form onsubmit="handleHeroSubmit(event)" class="flex flex-col gap-2">
-              <textarea id="heroInput" rows="2" placeholder="যেমন: রসায়ন অধ্যায়গুলোর তালিকা দাও, কিংবা গতির সমীকরণ বোঝাও..."
+              <textarea id="heroInput" rows="2" placeholder="রসায়ন বিষয়ের যেকোনো প্রশ্ন, অধ্যায় তালিকা বা কনসেপ্ট লিখো..."
                 class="w-full bg-transparent border-none px-2 py-1 text-sm text-white focus:outline-none placeholder:text-zinc-500 resize-none leading-relaxed"
                 onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); handleHeroSubmit(event); }"></textarea>
               
@@ -382,25 +406,8 @@
           </div>
         </div>
 
-        <!-- Minimalist Prompt Chips -->
-        <div class="flex flex-wrap justify-center gap-2 max-w-lg pt-1">
-          <button onclick="submitPrompt('রসায়ন বিষয়ের সবগুলো অধ্যায়ের নাম দাও')" 
-            class="text-xs px-3.5 py-1.5 rounded-xl border border-white/[0.08] hover:border-white/20 bg-app-surface/80 hover:bg-app-surface text-zinc-300 transition shadow-sm hover:-translate-y-0.5">
-            রসায়ন অধ্যায় তালিকা
-          </button>
-          <button onclick="submitPrompt('রসায়ন বিষয়ের সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো এবং কেন?')" 
-            class="text-xs px-3.5 py-1.5 rounded-xl border border-white/[0.08] hover:border-white/20 bg-app-surface/80 hover:bg-app-surface text-zinc-300 transition shadow-sm hover:-translate-y-0.5">
-            রসায়ন টপ অধ্যায়
-          </button>
-          <button onclick="submitPrompt('পদার্থবিজ্ঞান গতি অধ্যায়ের সবগুলো মাস্টার টাইপ ও সূত্র দাও')" 
-            class="text-xs px-3.5 py-1.5 rounded-xl border border-white/[0.08] hover:border-white/20 bg-app-surface/80 hover:bg-app-surface text-zinc-300 transition shadow-sm hover:-translate-y-0.5">
-            গতির মাস্টার টাইপ
-          </button>
-          <button onclick="submitPrompt('কম পড়ে সাধারণ গণিতে নিশ্চিত ৭০ এ ৭০ পাওয়ার রোডম্যাপ দাও')" 
-            class="text-xs px-3.5 py-1.5 rounded-xl border border-white/[0.08] hover:border-white/20 bg-app-surface/80 hover:bg-app-surface text-zinc-300 transition shadow-sm hover:-translate-y-0.5">
-            গণিত ৭০ এ ৭০ রোডম্যাপ
-          </button>
-        </div>
+        <!-- 3. Dynamic Subject Prompt Chips -->
+        <div id="quickPromptChips" class="flex flex-wrap justify-center gap-2 max-w-xl pt-0.5"></div>
 
       </div>
 
@@ -456,6 +463,75 @@
       if (!Array.isArray(chatSessions)) chatSessions = [];
     } catch(e) {
       chatSessions = [];
+    }
+
+    // Comprehensive NCTB Subjects Catalog
+    const SUBJECTS_LIST = [
+      { id: 'ssc_chemistry', name: 'রসায়ন', icon: '⚛️', tag: '১২ অধ্যায়', placeholder: 'রসায়ন বিষয়ের যেকোনো প্রশ্ন, অধ্যায় তালিকা বা কনসেপ্ট লিখো...', quickPrompts: ['রসায়ন বিষয়ের সবগুলো অধ্যায়ের নাম দাও', 'রসায়ন বিষয়ের সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো এবং কেন?', 'মোলের ধারণা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'খনিজ সম্পদ ও জীবাশ্ম থেকে একটি CQ দাও'] },
+      { id: 'ssc_physics', name: 'পদার্থবিজ্ঞান', icon: '⚡', tag: '১৪ অধ্যায়', placeholder: 'পদার্থবিজ্ঞান গতি, বল, কাজ-ক্ষমতা বা তড়িৎ নিয়ে প্রশ্ন করো...', quickPrompts: ['পদার্থবিজ্ঞান সবগুলো অধ্যায়ের নাম ও তালিকা দাও', 'পদার্থবিজ্ঞান গতি অধ্যায়ের মাস্টার টাইপ ও সূত্র দাও', 'চল বিদ্যুৎ থেকে একটি বোর্ড স্ট্যান্ডার্ড CQ দাও', 'কাজ ক্ষমতা ও শক্তি থেকে একটি কঠিন MCQ দাও'] },
+      { id: 'ssc_biology', name: 'জীববিজ্ঞান', icon: '🧬', tag: '১৪ অধ্যায়', placeholder: 'জীববিজ্ঞান কোষ, বংশগতি বা বাস্তুতন্ত্র নিয়ে প্রশ্ন করো...', quickPrompts: ['জীববিজ্ঞান সব অধ্যায়ের নাম ও সিলেবাস দাও', 'জীবকোষ ও টিস্যু অধ্যায়ের গুরুত্বপূর্ণ চিত্র ও CQ দাও', 'জীবের বংশগতি ও বিবর্তন থেকে একটি MCQ দাও', 'জীববিজ্ঞানে ৮০/২০ নিয়মে সবচেয়ে গুরুত্বপূর্ণ অধ্যায় কোনগুলো?'] },
+      { id: 'ssc_general_math', name: 'সাধারণ গণিত', icon: '📐', tag: '১৭ অধ্যায়', placeholder: 'সাধারণ গণিত বীজগণিত, জ্যামিতি বা ত্রিকোণমিতি নিয়ে প্রশ্ন করো...', quickPrompts: ['সাধারণ গণিত সম্পূর্ণ অধ্যায় তালিকা ও মানবণ্টন দাও', 'কম পড়ে সাধারণ গণিতে নিশ্চিত ৭০ এ ৭০ পাওয়ার রোডম্যাপ দাও', 'ত্রিকোণমিতিক অনুপাত থেকে একটি বোর্ড CQ দাও', 'সসীম ধারা অধ্যায় থেকে একটি ট্রিকি MCQ দাও'] },
+      { id: 'ssc_higher_math', name: 'উচ্চতর গণিত', icon: '∫', tag: '১৪ অধ্যায়', placeholder: 'উচ্চতর গণিত স্থানাঙ্ক জ্যামিতি, ভেক্টর বা সম্ভাবনা নিয়ে প্রশ্ন করো...', quickPrompts: ['উচ্চতর গণিত সব অধ্যায়ের পূর্ণাঙ্গ তালিকা দাও', 'দ্বিপদী বিস্তৃতি ও স্থানাঙ্ক জ্যামিতি থেকে CQ দাও', 'সম্ভাবনা অধ্যায় থেকে একটি বোর্ড MCQ দাও', 'উচ্চতর গণিতে এ-প্লাস পাওয়ার চ্যাপ্টার প্রায়োরিটি রুটম্যাপ দাও'] },
+      { id: 'ssc_bangla_1st', name: 'বাংলা ১ম পত্র', icon: '📖', tag: 'সাহিত্য ও সহপাঠ', placeholder: 'বাংলা ১ম পত্রের গদ্য, কবিতা বা সহপাঠ নিয়ে প্রশ্ন করো...', quickPrompts: ['বাংলা ১ম পত্রের নির্ধারিত সকল গদ্য ও কবিতার তালিকা দাও', 'সুভা ও বই পড়া গল্প থেকে একটি বোর্ড CQ দাও', 'কপোতাক্ষ নদ কবিতা থেকে একটি MCQ দাও', 'কাকতাড়ুয়া উপন্যাস ও বহিপীর নাটকের সারসংক্ষেপ দাও'] },
+      { id: 'ssc_bangla_2nd', name: 'বাংলা ২য় পত্র', icon: '✍️', tag: 'ব্যাকরণ ও নির্মিতি', placeholder: 'বাংলা ২য় পত্র ব্যাকরণ ও নির্মিতি নিয়ে প্রশ্ন করো...', quickPrompts: ['বাংলা ২য় পত্রের ব্যাকরণ সিলেবাস ও নম্বর বণ্টন দাও', 'সমাস ও সন্ধি থেকে গুরুত্বপূর্ণ বোর্ড MCQ দাও', 'ণ-ত্ব ও ষ-ত্ব বিধানের নিয়মগুলো বুঝিয়ে দাও', 'প্রতিবেদন ও ভাব-সম্প্রসারণ লেখার নিয়ম দাও'] },
+      { id: 'ssc_ict', name: 'তথ্য ও যোগাযোগ প্রযুক্তি', icon: '💻', tag: '৬ অধ্যায়', placeholder: 'আইসিটি ডেটাবেস, মাল্টিমিডিয়া বা নিরাপত্তা নিয়ে প্রশ্ন করো...', quickPrompts: ['আইসিটি বিষয়ের ৬টি অধ্যায়ের নাম ও তালিকা দাও', 'কম্পিউটার ও তথ্য নিরাপত্তা থেকে বোর্ড MCQ দাও', 'স্প্রেডশিট ও ডেটাবেস ব্যবহারের মূল ধারণা বুঝিয়ে দাও', 'আইসিটিতে পূর্ণ নম্বর পাওয়ার সাজেশন দাও'] },
+      { id: 'ssc_bgs', name: 'বাংলাদেশ ও বিশ্বপরিচয়', icon: '🌍', tag: '১৫ অধ্যায়', placeholder: 'বাংলাদেশ ও বিশ্বপরিচয় ইতিহাস, ভূগোল বা অর্থনীতি নিয়ে প্রশ্ন করো...', quickPrompts: ['বাংলাদেশ ও বিশ্বপরিচয় সব অধ্যায়ের তালিকা দাও', 'স্বাধীন বাংলাদেশ ও মুক্তিযুদ্ধের অধ্যায় থেকে CQ দাও', 'বাংলাদেশের সম্পদ ও শিল্প থেকে একটি MCQ দাও', 'বিজিএস-এ সর্বোচ্চ নম্বর তোলার কৌশল বলো'] },
+      { id: 'ssc_islam', name: 'ইসলাম শিক্ষা', icon: '🌙', tag: '৫ অধ্যায়', placeholder: 'ইসলাম ও নৈতিক শিক্ষার আকাইদ, ইবাদত বা চরিত্র নিয়ে প্রশ্ন করো...', quickPrompts: ['ইসলাম ও নৈতিক শিক্ষা সব অধ্যায়ের তালিকা দাও', 'আকাইদ ও নৈতিক জীবন থেকে একটি CQ দাও', 'হাদিস ও শরিয়ত অংশ থেকে গুরুত্বপূর্ণ MCQ দাও', 'ইসলাম শিক্ষায় ৪ স্তরের সৃজনশীল লেখার নিয়ম দাও'] }
+    ];
+
+    let currentSelectedSubject = SUBJECTS_LIST[0]; // Default: Chemistry
+
+    function renderSubjectGrid() {
+      const container = document.getElementById('subjectGrid');
+      if (!container) return;
+      container.innerHTML = SUBJECTS_LIST.map(s => {
+        const isSelected = s.id === currentSelectedSubject.id;
+        return `
+          <button type="button" onclick="selectSubject('${s.id}')"
+            class="subj-card p-2 sm:p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all duration-150 cursor-pointer ${
+              isSelected 
+                ? 'bg-emerald-500/15 border-emerald-500/60 ring-1 ring-emerald-500/30 text-white shadow-[0_0_12px_rgba(16,185,129,0.15)] scale-[1.02]' 
+                : 'bg-app-surface/90 border-white/[0.07] hover:border-white/20 text-zinc-300 hover:text-white'
+            }">
+            <div class="flex items-center justify-between w-full">
+              <span class="text-base sm:text-lg">${s.icon}</span>
+              <span class="text-[9.5px] sm:text-[10px] font-mono text-zinc-400 ${isSelected ? 'text-emerald-400 font-semibold' : ''}">${s.tag}</span>
+            </div>
+            <div class="mt-1 font-medium text-xs sm:text-[12.5px] truncate leading-tight">${s.name}</div>
+          </button>
+        `;
+      }).join('');
+
+      renderQuickChips();
+
+      const statusEl = document.getElementById('selectedSubjectStatus');
+      if (statusEl) {
+        statusEl.innerHTML = `<span>${currentSelectedSubject.icon}</span> <span>${currentSelectedSubject.name} সক্রিয়</span>`;
+      }
+      const heroInp = document.getElementById('heroInput');
+      if (heroInp) {
+        heroInp.placeholder = currentSelectedSubject.placeholder;
+      }
+    }
+
+    function renderQuickChips() {
+      const chipsEl = document.getElementById('quickPromptChips');
+      if (!chipsEl || !currentSelectedSubject) return;
+      chipsEl.innerHTML = currentSelectedSubject.quickPrompts.map(p => `
+        <button onclick="submitPrompt('${escapeHtml(p)}')" 
+          class="text-xs px-3.5 py-1.5 rounded-xl border border-white/[0.08] hover:border-white/20 bg-app-surface/80 hover:bg-app-surface text-zinc-300 transition shadow-sm hover:-translate-y-0.5">
+          ${escapeHtml(p)}
+        </button>
+      `).join('');
+    }
+
+    function selectSubject(id) {
+      const found = SUBJECTS_LIST.find(s => s.id === id);
+      if (!found) return;
+      currentSelectedSubject = found;
+      renderSubjectGrid();
+      const heroInp = document.getElementById('heroInput');
+      if (heroInp) heroInp.focus();
     }
 
     function saveSessions() {
@@ -581,7 +657,154 @@
       return kw.some(k => s.includes(k));
     }
 
-    // Exact Reference Generator: Builds intelligent, student-friendly academic thoughts
+    function renderRecentChats() {
+      const container = document.getElementById('recentChatsList');
+      if (!container) return;
+      if (!chatSessions || chatSessions.length === 0) {
+        container.innerHTML = '<div class="px-3 py-4 text-zinc-500 text-xs italic text-center">কোনো পূর্ববর্তী আলোচনা নেই</div>';
+        return;
+      }
+
+      container.innerHTML = chatSessions.map((session) => {
+        const isActive = session.id === currentSessionId;
+        const activeClass = isActive 
+          ? 'bg-white/[0.08] text-white border-white/[0.12] font-medium shadow-sm' 
+          : 'text-zinc-300 hover:bg-white/[0.04] hover:text-white border-transparent';
+        
+        return `
+          <div class="group relative flex items-center w-full rounded-xl border transition-all duration-150 ${activeClass}">
+            <button onclick="loadSession('${session.id}'); if(window.innerWidth < 768) toggleSidebar();" 
+              class="flex-1 flex items-center gap-2 px-3 py-2 text-left min-w-0 cursor-pointer" 
+              title="${escapeHtml(session.title)}">
+              <span class="text-xs shrink-0">${session.subject_icon || '💬'}</span>
+              <span class="truncate text-[13.55px] leading-tight flex-1">${escapeHtml(session.title)}</span>
+            </button>
+            <button onclick="deleteSession('${session.id}', event)" 
+              class="opacity-0 group-hover:opacity-100 p-1.5 mr-1 text-zinc-500 hover:text-rose-400 hover:bg-white/[0.08] rounded-lg transition-opacity cursor-pointer shrink-0" 
+              title="আলোচনা মুছুন">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadSession(id) {
+      if (isProcessing) return;
+      const session = chatSessions.find(s => s.id === id);
+      if (!session) return;
+
+      currentSessionId = session.id;
+      if (session.subject_id) {
+        const found = SUBJECTS_LIST.find(s => s.id === session.subject_id);
+        if (found) currentSelectedSubject = found;
+      }
+
+      conversationHistory = Array.isArray(session.conversationHistory) 
+        ? JSON.parse(JSON.stringify(session.conversationHistory)) 
+        : [];
+
+      const msgs = document.getElementById('messagesArea');
+      if (msgs) {
+        msgs.innerHTML = session.html || '';
+      }
+
+      activateChatView();
+      renderRecentChats();
+      scrollToBottom();
+    }
+
+    function deleteSession(id, event) {
+      if (event) event.stopPropagation();
+      chatSessions = chatSessions.filter(s => s.id !== id);
+      saveSessions();
+
+      if (currentSessionId === id) {
+        resetToHome();
+      } else {
+        renderRecentChats();
+      }
+    }
+
+    function clearAllSessions() {
+      if (!chatSessions || chatSessions.length === 0) return;
+      if (!confirm('আপনি কি নিশ্চিত যে সকল পূর্ববর্তী আলোচনা মুছে ফেলতে চান?')) return;
+      chatSessions = [];
+      saveSessions();
+      resetToHome();
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      const bd = document.getElementById('sidebarBackdrop');
+      sb.classList.toggle('-translate-x-full');
+      bd.classList.toggle('hidden');
+    }
+
+    function resetToHome() {
+      if (isProcessing) return;
+      currentSessionId = null;
+      isChatActive = false;
+      conversationHistory = [];
+      const hero = document.getElementById('heroView');
+      const chat = document.getElementById('chatView');
+      const docked = document.getElementById('dockedBar');
+      const msgs = document.getElementById('messagesArea');
+      const badge = document.getElementById('activeSubjectHeaderBadge');
+      
+      if (badge) {
+        badge.classList.add('hidden');
+        badge.classList.remove('flex');
+      }
+
+      if (msgs) msgs.innerHTML = '';
+      if (chat) chat.classList.add('hidden');
+      if (docked) docked.classList.add('hidden');
+      
+      if (hero) {
+        hero.classList.remove('hidden');
+        hero.classList.add('flex');
+      }
+      renderSubjectGrid();
+      const heroInp = document.getElementById('heroInput');
+      if (heroInp) {
+        heroInp.value = '';
+        setTimeout(() => heroInp.focus(), 50);
+      }
+      renderRecentChats();
+    }
+
+    function activateChatView() {
+      if (isChatActive) return;
+      isChatActive = true;
+      const hero = document.getElementById('heroView');
+      const chat = document.getElementById('chatView');
+      const docked = document.getElementById('dockedBar');
+
+      hero.classList.add('hidden');
+      hero.classList.remove('flex');
+      chat.classList.remove('hidden');
+      docked.classList.remove('hidden');
+
+      const badge = document.getElementById('activeSubjectHeaderBadge');
+      const icon = document.getElementById('activeSubjectHeaderIcon');
+      const txt = document.getElementById('activeSubjectHeaderText');
+      if (badge && currentSelectedSubject) {
+        if (icon) icon.innerText = currentSelectedSubject.icon;
+        if (txt) txt.innerText = currentSelectedSubject.name;
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+      }
+
+      setTimeout(() => {
+        const dockedInp = document.getElementById('dockedInput');
+        if (dockedInp) dockedInp.focus();
+      }, 50);
+    }
+
+    // Exact Reference Generator: Builds intelligent academic thought tree
     function generateThoughtTreeData(tool, args, result, userPrompt = '') {
       const up = (userPrompt || '').toLowerCase();
       let subj = getBanglaSubjectName(args?.subject || result?.subject);
@@ -1039,9 +1262,22 @@
     function renderFormattedContent(rawText, extraBoardTag = null, extraAns = null) {
       if (!rawText) return "";
 
-      let clean = rawText
-        .replace(/<\/?(?:thought|thinking|কুইজ|quiz|কথা|kotha|স্ট্যাটাস|status|প্রশ্ন|question|উত্তর|answer|message|response|text|mcq|cq)>/gi, '')
-        .replace(/<[\u0980-\u09FF_-]+>|<\/[\u0980-\u09FF_-]+>/g, '');
+      let clean = String(rawText)
+        // 1. Strip all closed thought blocks along with their inner content
+        .replace(/<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
+        // 2. Strip any leading unclosed thought blocks up to double newline
+        .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>[\s\S]*?(?:\n\n|$)/gi, '')
+        // 3. Strip stray thought tags
+        .replace(/<\/?[\s]*(?:thought|thinking)[\s]*>/gi, '')
+        // 4. Unwrap any accidental wrapping angle brackets from introductory sentences
+        .replace(/^<([^<>]{4,})>/gm, (m, g1) => g1.trim())
+        // 5. Strip stray custom tags
+        .replace(/<\/?[\s]*(?:কুইজ|quiz|কথা|kotha|স্ট্যাটাস|status|প্রশ্ন|question|উত্তর|answer|message|response|text|mcq|cq)[\s]*>/gi, '')
+        .trim();
+
+      if (/^<\/?\s*(?:th?o?u?g?h?t?|th?i?n?k?i?n?g?)[^>]*$/i.test(clean)) {
+        return "";
+      }
 
       // 1. Extract Board Reference Tag (cleanly removes tag from text without leaking placeholder)
       let boardTagsHtml = "";
@@ -1309,46 +1545,22 @@
       return html + cursorHtml;
     }
 
-    // High-speed smooth typewriter stream for academic thinking monologue
-    function streamThinkingText(targetEl, fullText, speedMs = 18, onComplete = null) {
-      if (!targetEl || !fullText) {
-        if (onComplete) onComplete();
-        return null;
-      }
-      targetEl.innerHTML = '';
-      
-      const words = fullText.match(/\S+|\s+/g) || [fullText];
-      let currentIdx = 0;
-      
-      const cursor = document.createElement('span');
-      cursor.className = 'thought-cursor inline-block w-1.5 h-3 bg-zinc-400/80 animate-pulse ml-1 align-middle rounded-full';
-      targetEl.appendChild(cursor);
-      
-      const timer = setInterval(() => {
-        if (currentIdx >= words.length) {
-          clearInterval(timer);
-          cursor.remove();
-          if (onComplete) onComplete();
-          return;
-        }
-        cursor.insertAdjacentText('beforebegin', words[currentIdx]);
-        currentIdx++;
-        scrollToBottom();
-      }, speedMs);
-      
-      return timer;
-    }
-
     async function sendMessage(text) {
       if (!currentSessionId) {
         currentSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
         const newSession = {
           id: currentSessionId,
           title: generateSessionTitle(text),
+          subject_id: currentSelectedSubject.id,
+          subject_name: currentSelectedSubject.name,
+          subject_icon: currentSelectedSubject.icon,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           conversationHistory: [],
-          state: null,
+          state: {
+            subject_id: currentSelectedSubject.id,
+            subject_name: currentSelectedSubject.name
+          },
           html: ''
         };
         chatSessions.unshift(newSession);
@@ -1385,7 +1597,7 @@
       const treeTitleId = 'treeTitle_' + msgId;
       const treeId = 'tree_' + msgId;
 
-      // 2. Assistant Message Shell (Clean Full-Width, Collapsible Thought Tree Toggle)
+      // 2. Assistant Message Shell (Lightbulb Thinking Animation initially, Dotted Thought Tree starts HIDDEN)
       const assistantHtml = `
         <div id="${msgId}" class="w-full space-y-2 py-1 select-text">
           
@@ -1397,7 +1609,7 @@
             <span id="${labelId}" class="thinking-shimmer font-medium tracking-wide">Thinking...</span>
           </div>
 
-          <!-- Exact Reference 2: Dotted Thought Tree (Interactive Collapsible Toggle, starts HIDDEN and EMPTY) -->
+          <!-- Exact Reference 2: Dotted Thought Tree (Interactive Collapsible Toggle, starts HIDDEN) -->
           <div id="${toolContainerId}" class="hidden select-none py-0.5">
             <div class="thought-header flex items-center gap-2 text-xs sm:text-[13px] text-zinc-300 hover:text-white cursor-pointer py-1 transition group w-fit" onclick="toggleThoughtTree('${treeId}', this)">
               <svg class="w-4 h-4 text-zinc-400 group-hover:text-zinc-200 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -1409,7 +1621,7 @@
               </svg>
             </div>
 
-            <!-- Dotted Connector Thread (EMPTY initially!) -->
+            <!-- Dotted Connector Thread -->
             <div id="${treeId}" class="thought-tree pl-2.5 ml-2 border-l border-dashed border-zinc-700/80 my-2 space-y-2 text-xs text-zinc-400"></div>
           </div>
 
@@ -1430,109 +1642,136 @@
 
       let streamContent = "";
       let hasTool = false;
+      let step1Locked = false;
       let toolStartEvt = null;
       let toolDoneEvt = null;
-      let thinkTimer = null;
       let initialThoughtCaptured = "";
       let toolStepIndex = 0;
-      let isThinkingActive = false;
-      let isToolExecuting = false;
-      let toolStartTimes = {};
-      let pendingToolStart = null;
+      
+      // Strict Sequential Execution Engine
+      let isThinkingStreaming = false;
+      let isToolExecutionDone = false;
       let pendingToolDone = null;
+      let hasPendingGeneratingStart = false;
+      let pendingDeltas = [];
+      let pendingDone = null;
 
-      function onThinkingFinished(stepIdx) {
-        isThinkingActive = false;
-        const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
-        if (cur1) cur1.remove();
-        const curSub = document.querySelector(`#stepThinkText_${stepIdx}_${msgId} .thought-cursor`);
-        if (curSub) curSub.remove();
+      function startSequentialExecution(startEvt, doneEvt, stepIdx) {
+        step1Locked = true;
+        streamContent = "";
 
-        if (pendingToolStart && pendingToolStart.stepIdx === stepIdx) {
-          const startEvt = pendingToolStart.data;
-          pendingToolStart = null;
-          renderToolRow(startEvt, stepIdx);
-        } else {
-          performStreamRender();
-        }
-      }
+        const statusEl = document.getElementById(statusId);
+        if (statusEl) statusEl.classList.add('hidden');
+        const toolContainer = document.getElementById(toolContainerId);
+        if (toolContainer) toolContainer.classList.remove('hidden');
 
-      function renderToolRow(startEvt, stepIdx) {
         const treeEl = document.getElementById(treeId);
         if (!treeEl) return;
-        if (document.getElementById(`stepTool_${stepIdx}_${msgId}`)) return;
-
-        isToolExecuting = true;
-        toolStartTimes[stepIdx] = Date.now();
 
         const startData = generateThoughtTreeData(startEvt.tool, startEvt.args, null, text);
-        const toolStepHtml = `
-          <div class="thought-step flex items-center gap-2 text-zinc-300 font-medium transition-all pt-1" id="stepTool_${stepIdx}_${msgId}">
-            <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <span id="stepToolLabel_${stepIdx}_${msgId}">${escapeHtml(startData.toolLabel)}</span>
-            <span class="text-[11px] font-mono text-zinc-400 bg-white/[0.06] border-white/[0.08] animate-pulse px-1.5 py-0.5 rounded border" id="stepToolBadge_${stepIdx}_${msgId}">অনুসন্ধান চলছে...</span>
-          </div>
-        `;
-        treeEl.insertAdjacentHTML('beforeend', toolStepHtml);
+        const initialIntent = startEvt.intent || initialThoughtCaptured || startData.intentReasoning || "শিক্ষার্থীর অনুরোধ ও পাঠ্যক্রম অনুযায়ী তথ্য অনুসন্ধানের সিদ্ধান্ত নেওয়া হয়েছে।";
 
-        // Immediately show writing pulse so screen is NEVER blank after thinking!
-        const contentEl = document.getElementById(contentId);
-        if (contentEl && !contentEl.innerHTML.trim()) {
-          contentEl.classList.remove('hidden');
-          contentEl.innerHTML = `
-            <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
+        // Step 1: Ensure Think Node exists and starts typewriter streaming
+        if (!document.getElementById(`step1_${msgId}`)) {
+          treeEl.innerHTML = `
+            <div class="thought-step" id="step1_${msgId}">
+              <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
+                <span class="text-zinc-500 font-bold">•</span>
+                <span>Think</span>
+                <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+              <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step1Text_${msgId}"></div>
             </div>
           `;
-        }
-        scrollToBottom();
-
-        // If tool_done has already arrived from backend, resolve tool badge with short smooth 100ms
-        if (pendingToolDone && pendingToolDone.stepIdx === stepIdx) {
-          const doneData = pendingToolDone.data;
-          pendingToolDone = null;
-          setTimeout(() => {
-            resolveToolDone(doneData, stepIdx);
-          }, 100);
+          const step1TextEl = document.getElementById(`step1Text_${msgId}`);
+          if (step1TextEl) {
+            isThinkingStreaming = true;
+            streamThinkingText(step1TextEl, initialIntent, 10, () => {
+              isThinkingStreaming = false;
+              proceedToToolPhase(startEvt, doneEvt, stepIdx);
+            });
+          } else {
+            proceedToToolPhase(startEvt, doneEvt, stepIdx);
+          }
+        } else {
+          // If thought was already streamed live
+          proceedToToolPhase(startEvt, doneEvt, stepIdx);
         }
       }
 
-      function resolveToolDone(data, stepIdx) {
-        const doneData = generateThoughtTreeData(data.tool, data.args, data.result, text);
-        const stepToolBadge = document.getElementById(`stepToolBadge_${stepIdx}_${msgId}`);
-        if (stepToolBadge) {
-          stepToolBadge.className = "text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20";
-          stepToolBadge.innerText = doneData.countTag || "যাচাই সম্পন্ন";
-        }
-        const stepToolEl = document.getElementById(`stepTool_${stepIdx}_${msgId}`);
-        if (stepToolEl) {
-          const icon = stepToolEl.querySelector('svg');
-          if (icon) icon.classList.remove('animate-pulse');
-        }
-        const titleEl = document.getElementById(treeTitleId);
-        if (titleEl && doneData.mainTitle) {
-          titleEl.innerText = doneData.mainTitle;
-        }
+      function proceedToToolPhase(startEvt, doneEvt, stepIdx) {
+        const treeEl = document.getElementById(treeId);
+        if (!treeEl) return;
 
-        isToolExecuting = false;
-        const contentEl = document.getElementById(contentId);
-        if (contentEl && !contentEl.innerHTML.trim()) {
-          contentEl.classList.remove('hidden');
-          contentEl.innerHTML = `
-            <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-              <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
+        // Step 2: Show Tool Search Row with pulsating search badge
+        if (!document.getElementById(`stepTool_${stepIdx}_${msgId}`)) {
+          const startData = generateThoughtTreeData(startEvt.tool, startEvt.args, null, text);
+          const toolStepHtml = `
+            <div class="thought-step flex items-center gap-2 text-zinc-300 font-medium transition-all pt-1" id="stepTool_${stepIdx}_${msgId}">
+              <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <span id="stepToolLabel_${stepIdx}_${msgId}">${escapeHtml(startEvt.label || startData.toolLabel)}</span>
+              <span class="text-[11px] font-mono text-zinc-400 bg-white/[0.06] border-white/[0.08] animate-pulse px-1.5 py-0.5 rounded border" id="stepToolBadge_${stepIdx}_${msgId}">অনুসন্ধান চলছে...</span>
             </div>
           `;
+          treeEl.insertAdjacentHTML('beforeend', toolStepHtml);
           scrollToBottom();
         }
-        performStreamRender();
-      }
 
-      // 2. Real-time stream handling
-      const initialData = generateThoughtTreeData(null, null, null, text);
-      const isAcademic = isAcademicPrompt(text);
+        // Step 3: Hold search pulse for 350ms, then transition to verified badge
+        setTimeout(() => {
+          const targetDoneEvt = doneEvt || pendingToolDone || toolDoneEvt || startEvt;
+          const doneData = generateThoughtTreeData(targetDoneEvt.tool, targetDoneEvt.args, targetDoneEvt.result, text);
+          const stepToolBadge = document.getElementById(`stepToolBadge_${stepIdx}_${msgId}`);
+          if (stepToolBadge) {
+            stepToolBadge.className = "text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20";
+            let countBadge = "";
+            if (targetDoneEvt.tool === 'get_subject_chapters') {
+              const tot = targetDoneEvt.result?.total_chapters || targetDoneEvt.result?.chapters?.length || (targetDoneEvt.result?.numbered_chapters ? targetDoneEvt.result.numbered_chapters.length : 0);
+              countBadge = tot ? `✓ ${toBnDigits(tot)}টি অধ্যায়` : `✓ যাচাই সম্পন্ন`;
+            } else {
+              countBadge = doneData.countTag || "যাচাই সম্পন্ন";
+            }
+            stepToolBadge.innerText = countBadge;
+          }
+          const stepToolEl = document.getElementById(`stepTool_${stepIdx}_${msgId}`);
+          if (stepToolEl) {
+            const icon = stepToolEl.querySelector('svg');
+            if (icon) icon.classList.remove('animate-pulse');
+          }
+          const titleEl = document.getElementById(treeTitleId);
+          if (titleEl && (targetDoneEvt.title || doneData.mainTitle)) {
+            titleEl.innerText = targetDoneEvt.title || doneData.mainTitle;
+          }
+
+          isToolExecutionDone = true;
+
+          // Step 4: Show writing pulse and start streaming markdown deltas
+          const contentEl = document.getElementById(contentId);
+          if (contentEl) {
+            contentEl.classList.remove('hidden');
+            if (pendingDeltas.length === 0 && !pendingDone) {
+              contentEl.innerHTML = `
+                <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
+                </div>
+              `;
+            }
+          }
+
+          // Flush queued deltas
+          if (pendingDeltas.length > 0) {
+            streamContent += pendingDeltas.join('');
+            pendingDeltas = [];
+            scheduleStreamRender();
+          }
+
+          if (pendingDone) {
+            handleFinalDone(pendingDone);
+            pendingDone = null;
+          }
+        }, 350);
+      }
 
       let renderRafId = null;
 
@@ -1545,47 +1784,59 @@
       }
 
       function performStreamRender() {
-        const parsed = parseStreamThoughts(streamContent);
+        if (!step1Locked) {
+          const parsed = parseStreamThoughts(streamContent);
 
-        if (parsed.hasThought) {
-          const statusEl = document.getElementById(statusId);
-          if (statusEl) statusEl.classList.add('hidden');
+          if (parsed.hasThought) {
+            const statusEl = document.getElementById(statusId);
+            if (statusEl) statusEl.classList.add('hidden');
 
-          const toolContainer = document.getElementById(toolContainerId);
-          if (toolContainer) toolContainer.classList.remove('hidden');
+            const toolContainer = document.getElementById(toolContainerId);
+            if (toolContainer) toolContainer.classList.remove('hidden');
 
-          const treeEl = document.getElementById(treeId);
-          if (treeEl && !document.getElementById(`step1_${msgId}`)) {
-            treeEl.innerHTML = `
-              <div class="thought-step" id="step1_${msgId}">
-                <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
-                  <span class="text-zinc-500 font-bold">•</span>
-                  <span>Think</span>
-                  <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            const treeEl = document.getElementById(treeId);
+            if (treeEl && !document.getElementById(`step1_${msgId}`)) {
+              treeEl.innerHTML = `
+                <div class="thought-step" id="step1_${msgId}">
+                  <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
+                    <span class="text-zinc-500 font-bold">•</span>
+                    <span>Think</span>
+                    <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                  </div>
+                  <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step1Text_${msgId}"></div>
                 </div>
-                <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step1Text_${msgId}"></div>
-              </div>
-            `;
-          }
-
-          const step1TextEl = document.getElementById(`step1Text_${msgId}`);
-          if (step1TextEl) {
-            if (hasTool && initialThoughtCaptured && !isThinkingActive) {
-              // Preserves the streamed thought once tool execution begins
-            } else if (parsed.thought) {
-              if (!hasTool) initialThoughtCaptured = parsed.thought;
-              step1TextEl.innerHTML = escapeHtml(parsed.thought) + (parsed.inProgress ? '<span class="inline-block w-1.5 h-3 bg-zinc-400/80 animate-pulse ml-1 align-middle rounded-full thought-cursor"></span>' : '');
-              if (parsed.inProgress) {
-                isThinkingActive = true;
-              } else if (isThinkingActive) {
-                onThinkingFinished(toolStepIndex || 1);
-              }
+              `;
             }
-          }
 
-          const answerText = parsed.answer;
-          if (answerText) {
-            isThinkingActive = false;
+            const step1TextEl = document.getElementById(`step1Text_${msgId}`);
+            if (step1TextEl && parsed.thought) {
+              initialThoughtCaptured = parsed.thought;
+              step1TextEl.innerHTML = escapeHtml(parsed.thought) + (parsed.inProgress ? '<span class="inline-block w-1.5 h-3 bg-zinc-400/80 animate-pulse ml-1 align-middle rounded-full thought-cursor"></span>' : '');
+            }
+
+            const answerText = parsed.answer;
+            if (answerText) {
+              const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
+              if (cur1) cur1.remove();
+
+              const contentEl = document.getElementById(contentId);
+              if (contentEl) {
+                contentEl.classList.remove('hidden');
+                const wp = document.getElementById(`writingPulse_${msgId}`);
+                if (wp) wp.remove();
+                const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
+                const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
+                contentEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extraBoardTag, extraAns);
+              }
+              scrollToBottom();
+            }
+          } else if (!parsed.inProgress && streamContent.trim()) {
+            const statusEl = document.getElementById(statusId);
+            if (statusEl) statusEl.classList.add('hidden');
+
+            const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
+            if (cur1) cur1.remove();
+
             const contentEl = document.getElementById(contentId);
             if (contentEl) {
               contentEl.classList.remove('hidden');
@@ -1593,37 +1844,36 @@
               if (wp) wp.remove();
               const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
               const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
-              contentEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extraBoardTag, extraAns);
+              contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extraBoardTag, extraAns);
             }
             scrollToBottom();
           }
-        } else if (!parsed.inProgress && streamContent.trim()) {
-          isThinkingActive = false;
-          const statusEl = document.getElementById(statusId);
-          if (statusEl) statusEl.classList.add('hidden');
-
-          if (hasTool) {
-            const toolContainer = document.getElementById(toolContainerId);
-            if (toolContainer) toolContainer.classList.remove('hidden');
+        } else {
+          // STEP 2: Tool has already executed -> clean answer tokens stream directly and immediately!
+          let cleanAnswer = streamContent
+            .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
+            .replace(/^<\/?[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
+            .trimStart();
+          
+          if (cleanAnswer) {
+            const contentEl = document.getElementById(contentId);
+            if (contentEl) {
+              contentEl.classList.remove('hidden');
+              const wp = document.getElementById(`writingPulse_${msgId}`);
+              if (wp) wp.remove();
+              const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
+              const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
+              contentEl.innerHTML = renderFormattedContentWithCursor(cleanAnswer, true, extraBoardTag, extraAns);
+            }
+            scrollToBottom();
           }
-
-          const contentEl = document.getElementById(contentId);
-          if (contentEl) {
-            contentEl.classList.remove('hidden');
-            const wp = document.getElementById(`writingPulse_${msgId}`);
-            if (wp) wp.remove();
-            const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
-            const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
-            contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extraBoardTag, extraAns);
-          }
-          scrollToBottom();
         }
       }
 
       function parseStreamThoughts(raw) {
         if (!raw) return { hasThought: false, inProgress: false, thought: '', answer: '' };
 
-        // Find all closed thoughts
+        // Match closed thought tags <thought>...</thought>
         const thoughtRegex = /<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>([\s\S]*?)<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi;
         const allThoughts = [];
         let lastClosedEnd = 0;
@@ -1633,21 +1883,22 @@
           lastClosedEnd = m.index + m[0].length;
         }
 
-        const remaining = raw.slice(lastClosedEnd);
+        let remaining = raw.slice(lastClosedEnd);
         const inProgressOpen = remaining.match(/<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/i);
         if (inProgressOpen) {
           const inProgressText = remaining.slice(inProgressOpen.index + inProgressOpen[0].length).trimStart();
           const combinedThought = allThoughts.concat([inProgressText]).filter(Boolean).join(' ');
-          return { hasThought: true, inProgress: true, thought: combinedThought, answer: remaining.slice(0, inProgressOpen.index).trimStart() };
+          const preAnswer = remaining.slice(0, inProgressOpen.index).trimStart();
+          return { hasThought: true, inProgress: true, thought: combinedThought, answer: preAnswer };
+        }
+
+        if (/^<\/?\s*(?:th?o?u?g?h?t?|th?i?n?k?i?n?g?|চি?ন?্ত?া?|ভা?ব?ন?া?|স্?ট?য?া?ট?া?স?|st?a?t?u?s?)[^>]*$/i.test(remaining.trim())) {
+          return { hasThought: true, inProgress: true, thought: allThoughts.join(' '), answer: '' };
         }
 
         if (allThoughts.length > 0) {
-          return { hasThought: true, inProgress: false, thought: allThoughts.join(' '), answer: remaining.trimStart() };
-        }
-
-        // Check if raw starts with an incomplete opening tag like `<` or `< thought`
-        if (/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)?[^>]*$/i.test(raw.trim())) {
-          return { hasThought: false, inProgress: true, thought: '', answer: '' };
+          const cleanedRemaining = remaining.replace(/^<\/?(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/i, '').trimStart();
+          return { hasThought: true, inProgress: false, thought: allThoughts.join(' '), answer: cleanedRemaining };
         }
 
         return { hasThought: false, inProgress: false, thought: '', answer: raw };
@@ -1655,13 +1906,22 @@
 
       try {
         const currSession = chatSessions.find(s => s.id === currentSessionId);
+        const sessionSubj = currSession?.subject_id || currentSelectedSubject.id;
+        const sessionSubjName = currSession?.subject_name || currentSelectedSubject.name;
+        
+        const payloadState = {
+          ...(currSession ? currSession.state : {}),
+          subject_id: sessionSubj,
+          subject_name: sessionSubjName
+        };
+
         const res = await fetch('/api/chat/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: text,
             history: conversationHistory,
-            state: currSession ? currSession.state : null
+            state: payloadState
           })
         });
 
@@ -1696,9 +1956,8 @@
 
               if (data.type === "error") {
                 console.error("[SSE Error]", data.error);
-                isThinkingActive = false;
-                const statusEl = document.getElementById(statusId);
-                if (statusEl) statusEl.classList.add('hidden');
+                const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
+                if (cur1) cur1.remove();
                 const wp = document.getElementById(`writingPulse_${msgId}`);
                 if (wp) wp.remove();
                 const contentEl = document.getElementById(contentId);
@@ -1719,10 +1978,11 @@
               }
 
               if (data.type === "thought_done") {
-                onThinkingFinished(toolStepIndex || 1);
+                const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
+                if (cur1) cur1.remove();
               }
 
-              // 1. Tool Start -> Queue or Render Tool step after thinking finishes
+              // 1. Tool Start -> Initiate Strict Sequential Pipeline
               if (data.type === "tool_start") {
                 toolStepIndex++;
                 streamContent = "";
@@ -1734,90 +1994,24 @@
                 toolStartEvt = data;
                 hasTool = true;
 
-                const statusEl = document.getElementById(statusId);
-                if (statusEl) statusEl.classList.add('hidden');
-                const toolContainer = document.getElementById(toolContainerId);
-                if (toolContainer) toolContainer.classList.remove('hidden');
-
                 const titleEl = document.getElementById(treeTitleId);
                 const startData = generateThoughtTreeData(data.tool, data.args, null, text);
                 if (titleEl && startData.mainTitle) titleEl.innerText = startData.mainTitle;
 
-                const treeEl = document.getElementById(treeId);
-                const step1TextEl = document.getElementById(`step1Text_${msgId}`);
-
-                if (toolStepIndex === 1) {
-                  if (!step1TextEl && treeEl) {
-                    const authenticThought = startData.intentReasoning || "অধ্যায় ও বিষয়বস্তু বিশ্লেষণ করে উপযুক্ত প্রশ্ন বাছাই করার সিদ্ধান্ত নেওয়া হয়েছে।";
-                    initialThoughtCaptured = authenticThought;
-                    treeEl.innerHTML = `
-                      <div class="thought-step" id="step1_${msgId}">
-                        <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
-                          <span class="text-zinc-500 font-bold">•</span>
-                          <span>Think</span>
-                          <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                        </div>
-                        <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="step1Text_${msgId}"></div>
-                      </div>
-                    `;
-                    isThinkingActive = true;
-                    pendingToolStart = { data, stepIdx: 1 };
-                    streamThinkingText(document.getElementById(`step1Text_${msgId}`), authenticThought, 10, () => {
-                      onThinkingFinished(1);
-                    });
-                  } else if (isThinkingActive) {
-                    pendingToolStart = { data, stepIdx: 1 };
-                  } else {
-                    renderToolRow(data, 1);
-                  }
-                } else {
-                  // Subsequent tool step
-                  const thinkId = `stepThinkText_${toolStepIndex}_${msgId}`;
-                  const authenticThought = startData.intentReasoning || "পরবর্তী ধাপে প্রয়োজনীয় তথ্য অনুসন্ধান করছি...";
-                  const thinkHtml = `
-                    <div class="thought-step pt-1" id="stepThink_${toolStepIndex}_${msgId}">
-                      <div class="flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 cursor-pointer font-medium" onclick="toggleSubStep(this)">
-                        <span class="text-zinc-500 font-bold">•</span>
-                        <span>Think (ধাপ ${toBnDigits(toolStepIndex)})</span>
-                        <svg class="w-3 h-3 text-zinc-500 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                      </div>
-                      <div class="thought-sub-content pl-3 pt-1 text-[11.5px] text-zinc-400 leading-relaxed font-sans" id="${thinkId}"></div>
-                    </div>
-                  `;
-                  if (treeEl) treeEl.insertAdjacentHTML('beforeend', thinkHtml);
-                  isThinkingActive = true;
-                  pendingToolStart = { data, stepIdx: toolStepIndex };
-                  streamThinkingText(document.getElementById(thinkId), authenticThought, 10, () => {
-                    onThinkingFinished(toolStepIndex);
-                  });
-                }
+                startSequentialExecution(data, null, toolStepIndex);
               }
 
-              // 2. Tool Done -> Update badge or queue if thinking is still streaming
+              // 2. Tool Done -> Buffer or update
               if (data.type === "tool_done") {
                 toolDoneEvt = data;
                 hasTool = true;
-
-                if (thinkTimer) {
-                  clearInterval(thinkTimer);
-                  thinkTimer = null;
-                }
-
-                if (document.getElementById(`stepTool_${toolStepIndex}_${msgId}`)) {
-                  setTimeout(() => {
-                    resolveToolDone(data, toolStepIndex);
-                  }, 100);
-                } else {
-                  pendingToolDone = { data, stepIdx: toolStepIndex };
-                }
+                pendingToolDone = data;
               }
 
-              // 2b. Generating Start -> Show writing pulse immediately so screen is never blank
+              // 2b. Generating Start -> Flag or show writing pulse
               if (data.type === "generating_start") {
-                if (!isThinkingActive) {
-                  const statusEl = document.getElementById(statusId);
-                  if (statusEl) statusEl.classList.add('hidden');
-
+                hasPendingGeneratingStart = true;
+                if (!isThinkingStreaming && isToolExecutionDone) {
                   const contentEl = document.getElementById(contentId);
                   if (contentEl && !contentEl.innerHTML.trim()) {
                     contentEl.classList.remove('hidden');
@@ -1832,69 +2026,27 @@
                 }
               }
 
-              // 3. Content Delta -> Batched rAF Streaming (Zero browser lockup/lag)
+              // 3. Content Delta -> Buffer if in thinking/tool phase, or stream directly
               if (data.type === "content_delta" && data.delta) {
-                isToolExecuting = false;
-                streamContent += data.delta;
-                scheduleStreamRender();
+                if (hasTool && (!isToolExecutionDone || isThinkingStreaming)) {
+                  pendingDeltas.push(data.delta);
+                } else {
+                  streamContent += data.delta;
+                  scheduleStreamRender();
+                }
               }
 
-              // 4. Done Event -> Final crisp render
+              // 4. Done Event -> Buffer or handle final crisp render
               if (data.type === "done") {
-                onThinkingFinished(toolStepIndex || 1);
-                isToolExecuting = false;
-                if (renderRafId) {
-                  cancelAnimationFrame(renderRafId);
-                  renderRafId = null;
+                if (hasTool && (!isToolExecutionDone || isThinkingStreaming)) {
+                  pendingDone = data;
+                } else {
+                  handleFinalDone(data);
                 }
-
-                const final = data.content || streamContent;
-                const parsed = parseStreamThoughts(final);
-                const cleanFinal = parsed.hasThought ? parsed.answer : final;
-
-                const statusEl = document.getElementById(statusId);
-                if (statusEl) statusEl.classList.add('hidden');
-
-                const tEl = document.getElementById(`step1Text_${msgId}`);
-                if (tEl) {
-                  if (initialThoughtCaptured) {
-                    tEl.innerText = initialThoughtCaptured;
-                  } else if (parsed.thought) {
-                    tEl.innerText = parsed.thought;
-                  }
-                }
-
-                const contentEl = document.getElementById(contentId);
-                if (contentEl) {
-                  contentEl.classList.remove('hidden');
-                  const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
-                  const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
-                  if (cleanFinal) contentEl.innerHTML = renderFormattedContentWithCursor(cleanFinal, false, extraBoardTag, extraAns);
-                }
-                conversationHistory.push({ role: "user", content: text });
-                conversationHistory.push({ role: "assistant", content: cleanFinal });
-
-                // Persist conversation and rendered messages to current session
-                const currSession = chatSessions.find(s => s.id === currentSessionId);
-                if (currSession) {
-                  currSession.updatedAt = Date.now();
-                  if (data.state) {
-                    currSession.state = data.state;
-                  }
-                  currSession.conversationHistory = JSON.parse(JSON.stringify(conversationHistory));
-                  const areaEl = document.getElementById('messagesArea');
-                  if (areaEl) {
-                    const clone = areaEl.cloneNode(true);
-                    clone.querySelectorAll('.streaming-cursor, .thought-cursor, [id^="writingPulse_"]').forEach(el => el.remove());
-                    currSession.html = clone.innerHTML;
-                  }
-                  saveSessions();
-                  renderRecentChats();
-                }
-                scrollToBottom();
               }
-
-            } catch(e) {}
+            } catch (e) {
+              console.error("[SSE Parse Error]", e, raw);
+            }
           }
         }
 
@@ -1941,7 +2093,8 @@
         resetToHome();
       }
     });
-
+  
+    renderSubjectGrid();
     renderRecentChats();
   </script>
 </body>
