@@ -1640,36 +1640,19 @@
         return "";
       }
 
-      // 1. Extract Board Reference Tag (cleanly removes tag from text without leaking placeholder)
-      let boardTagsHtml = "";
+      // 1. Extract Global Board Reference Tag
+      let globalBoardTagsHtml = "";
       clean = clean.replace(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/gi, (match, tag) => {
         const formatted = formatFullBoardTags(tag);
         const tags = formatted.split(',').map(x => x.trim()).filter(Boolean);
-        boardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
-        return '';
+        globalBoardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
+        return match; // keep in text for per-cluster parsing then clean
       });
-      clean = clean.replace(/%%%BOARD_CONTAINER%%%/gi, '');
 
-      if (!boardTagsHtml && extraBoardTag) {
+      if (!globalBoardTagsHtml && extraBoardTag) {
         const formatted = formatFullBoardTags(extraBoardTag);
         const tags = formatted.split(',').map(x => x.trim()).filter(Boolean);
-        boardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
-      }
-
-      // 2. Extract detected answer tag and optional question ID
-      let detectedAns = null;
-      let detectedQid = null;
-      clean = clean.replace(/\[ans:\s*([ক-ঘa-dA-D])\]/gi, (m, g) => {
-        detectedAns = g;
-        return '';
-      });
-      clean = clean.replace(/\[(?:qid|id):\s*(q_\d+)\]/gi, (m, g) => {
-        detectedQid = g;
-        return '';
-      });
-      if (!detectedAns && extraAns) {
-        const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
-        detectedAns = toBnAns[extraAns] || extraAns;
+        globalBoardTagsHtml = tags.map(b => `<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(b)}</span>`).join(' ');
       }
 
       // 3. Protect KaTeX Display Math ($$...$$ and \[...\])
@@ -1688,7 +1671,7 @@
         return '%%%MATH_I_' + (inlineMath.length - 1) + '%%%';
       });
 
-      // 4b. Eliminate redundant double numbering in chapter lists (e.g. "8. **অধ্যায় ৮: আলোর প্রতিফলন**" -> "- **অধ্যায় ৮: আলোর প্রতিফলন**")
+      // 4b. Eliminate redundant double numbering in chapter lists
       clean = clean.replace(/^(\s*)[০-৯0-9]+[\.\)]\s+(\*{0,2}(?:অধ্যায়|অধ্যায়)\s*[০-৯0-9]+(?::|\*{1,2}|\s))/gim, (m, g1, g2) => g1 + '- ' + g2);
 
       // 5. Robust Raw-Text MCQ Option Extraction (Handles blank lines, bullets, bolding, multi-MCQs)
@@ -1700,7 +1683,6 @@
 
       function isCreativeQuestionCluster(cluster, fullText) {
         if (!cluster || !cluster.items || cluster.items.length === 0) return false;
-        // If explicitly tagged as MCQ or Quiz, it is NEVER a Creative Question
         if (/\bMCQ\b|নৈর্ব্যক্তিক|বহুনির্বাচনী|কুইজ/i.test(fullText)) {
           return false;
         }
@@ -1740,6 +1722,71 @@
         clusters.push(currentCluster);
       }
 
+      // Collect questions for Global Active Exam Popup
+      const extractedExamQuestions = [];
+      const toolQuizList = (toolDoneEvt?.tool === 'get_mcq_quiz' && Array.isArray(toolDoneEvt.result?.quiz)) ? toolDoneEvt.result.quiz : [];
+
+      for (let c = 0; c < clusters.length; c++) {
+        const cluster = clusters[c];
+        
+        // Find question stem preceding the cluster
+        let sIdx = cluster.startIndex - 1;
+        while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === '') sIdx--;
+        const stemLine = (sIdx >= 0 && lines[sIdx]) ? lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d]\s*/gi, '').trim() : `প্রশ্ন ${c + 1}`;
+
+        // Find per-cluster answer tag, qid, board tag and explanation
+        let clusterAns = null;
+        let clusterQid = null;
+        let clusterBoard = null;
+
+        // Check lines around this cluster (up to 4 lines before and 4 lines after)
+        const checkRangeStart = Math.max(0, cluster.startIndex - 3);
+        const checkRangeEnd = Math.min(lines.length - 1, cluster.endIndex + 4);
+        for (let li = checkRangeStart; li <= checkRangeEnd; li++) {
+          const lText = lines[li] || '';
+          const ansM = lText.match(/\[ans:\s*([ক-ঘa-dA-D])\]/i);
+          if (ansM) clusterAns = normLetter(ansM[1]);
+
+          const qidM = lText.match(/\[(?:qid|id):\s*(q_\d+)\]/i);
+          if (qidM) clusterQid = qidM[1];
+
+          const bM = lText.match(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/i);
+          if (bM) clusterBoard = bM[1];
+        }
+
+        const fallbackToolQ = toolQuizList[c] || toolQuizList[0];
+        const finalAns = clusterAns || normLetter(fallbackToolQ?.answer || fallbackToolQ?.correct_answer_bn || extraAns || 'খ');
+        const finalQid = clusterQid || fallbackToolQ?.id || '';
+        const finalBoardTag = clusterBoard || fallbackToolQ?.tags || fallbackToolQ?.formatted_source || extraBoardTag || '';
+        const finalSolution = fallbackToolQ?.solution || fallbackToolQ?.explanation || 'বোর্ড পরীক্ষার স্ট্যান্ডার্ড পাঠ্যবই অনুযায়ী এই বিকল্পের সঠিক প্রয়োগ ও বিশ্লেষণ প্রযোজ্য।';
+
+        cluster.targetAns = finalAns;
+        cluster.qid = finalQid;
+        cluster.boardTag = finalBoardTag;
+        cluster.solution = finalSolution;
+        cluster.stemLine = stemLine;
+
+        extractedExamQuestions.push({
+          id: finalQid,
+          question_text: stemLine,
+          stem: stemLine,
+          option_a: cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '',
+          option_b: cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '',
+          option_c: cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '',
+          option_d: cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '',
+          options: cluster.items.map(it => it.text),
+          answer: finalAns,
+          correct_answer_bn: finalAns,
+          solution: finalSolution,
+          tags: finalBoardTag,
+          formatted_source: formatFullBoardTags(finalBoardTag)
+        });
+      }
+
+      if (clusters.length >= 2) {
+        globalActiveExamQuestions = extractedExamQuestions;
+      }
+
       const cards = [];
       for (let c = clusters.length - 1; c >= 0; c--) {
         const cluster = clusters[c];
@@ -1747,14 +1794,9 @@
         let lastLineIdx = cluster.endIndex;
 
         let explanationLines = [];
-        let foundAnsInExp = null;
         let scanIdx = lastLineIdx + 1;
+        while (scanIdx < lines.length && lines[scanIdx].trim() === "") scanIdx++;
 
-        while (scanIdx < lines.length && lines[scanIdx].trim() === "") {
-          scanIdx++;
-        }
-
-        // Cleanly strip any trailing answer/explanation lines to prevent spoiler leaks
         while (scanIdx < lines.length && /^\s*(?:\*{0,2}(?:সঠিক উত্তর|Answer|Ans|ব্যাখ্যা|Explanation):)/i.test(lines[scanIdx])) {
           explanationLines.push(lines[scanIdx]);
           lastLineIdx = scanIdx;
@@ -1768,12 +1810,8 @@
               if (consecutiveBlanks >= 2) break;
               explanationLines.push(expLine);
             } else {
-              if (/^(?:#{1,4}\s+|MCQ:|\d+[\.\)]|প্রশ্ন\s*[:\d])/i.test(expLine.trim())) {
-                break;
-              }
-              if (/^\s*(?:\*{0,2}(?:সঠিক উত্তর|Answer|Ans|ব্যাখ্যা|Explanation):)/i.test(expLine)) {
-                break;
-              }
+              if (/^(?:#{1,4}\s+|MCQ:|\d+[\.\)]|প্রশ্ন\s*[:\d])/i.test(expLine.trim())) break;
+              if (/^\s*(?:\*{0,2}(?:সঠিক উত্তর|Answer|Ans|ব্যাখ্যা|Explanation):)/i.test(expLine)) break;
               consecutiveBlanks = 0;
               explanationLines.push(expLine);
             }
@@ -1782,15 +1820,7 @@
           }
         }
 
-        const explanationText = explanationLines.join('\n').trim();
-        if (explanationText) {
-          const expAnsM = explanationText.match(/(?:সঠিক উত্তর|Answer|Ans)[:\s]*\(([ক-ঘa-dA-D])\)|(?:সঠিক উত্তর|Answer|Ans)[:\s]*([ক-ঘa-dA-D])/i);
-          if (expAnsM) {
-            foundAnsInExp = expAnsM[1] || expAnsM[2];
-          }
-        }
-
-        const targetAns = detectedAns || foundAnsInExp || '';
+        const clusterBoardHtml = cluster.boardTag ? `<div class="flex flex-wrap items-center gap-1.5 pb-2.5 border-b border-white/[0.06]"><span class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]">${escapeHtml(formatFullBoardTags(cluster.boardTag))}</span></div>` : '';
 
         const optionsHtml = cluster.items.map(it => `
           <button type="button" 
@@ -1809,13 +1839,13 @@
 
         const placeholder = `%%%MCQ_PLACEHOLDER_${c}%%%`;
         const cardHtml = `
-          <div class="mcq-wrapper my-3.5 bg-gradient-to-b from-[#14141a] to-[#0f0f14] border border-white/[0.10] rounded-2xl p-4 space-y-3.5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]" data-correct="${targetAns}">
-            ${boardTagsHtml ? `<div class="flex flex-wrap items-center gap-1.5 pb-2.5 border-b border-white/[0.06]">${boardTagsHtml}</div>` : ''}
+          <div class="mcq-wrapper my-3.5 bg-gradient-to-b from-[#14141a] to-[#0f0f14] border border-white/[0.10] rounded-2xl p-4 space-y-3.5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]" data-correct="${cluster.targetAns}">
+            ${clusterBoardHtml}
             <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               ${optionsHtml}
             </div>
             <div class="pt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
-              <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন অনুশীলন করতে চাই' + (typeof detectedQid !== 'undefined' && detectedQid ? ' [ID: ' + detectedQid + ']' : ''))" 
+              <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন অনুশীলন করতে চাই' + (' [ID: ${cluster.qid || ''}]'))" 
                 class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 hover:text-emerald-300 border border-emerald-500/25 hover:border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
                 <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -1838,29 +1868,10 @@
         cards.push({ placeholder, cardHtml });
       }
 
-      if (clusters.length >= 2) {
-        const extractedExamQuestions = [];
-        for (let c = 0; c < clusters.length; c++) {
-          const cluster = clusters[c];
-          let sIdx = cluster.startIndex - 1;
-          while (sIdx >= 0 && lines[sIdx] && lines[sIdx].trim() === '') sIdx--;
-          const stemLine = (sIdx >= 0 && lines[sIdx]) ? lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d]\s*/gi, '').trim() : `প্রশ্ন ${c + 1}`;
-          
-          extractedExamQuestions.push({
-            question_text: stemLine,
-            option_a: cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '',
-            option_b: cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '',
-            option_c: cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '',
-            option_d: cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '',
-            answer: detectedAns || 'ক',
-            solution: 'বোর্ড স্ট্যান্ডার্ড সমাধান ও নির্ভুল বিশ্লেষণ',
-            tags: extraBoardTag || ''
-          });
-        }
-        globalActiveExamQuestions = extractedExamQuestions;
-      }
-
       clean = lines.join('\n');
+      clean = clean.replace(/\[ans:\s*[ক-ঘa-dA-D]\]/gi, '');
+      clean = clean.replace(/\[(?:qid|id):\s*q_\d+\]/gi, '');
+      clean = clean.replace(/\[(?:বোর্ড|Board):?\s*[^\]]+\]/gi, '');
 
       // 6. Parse Markdown
       let html = "";
