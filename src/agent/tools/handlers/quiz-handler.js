@@ -43,10 +43,16 @@ export async function handleGetMcqQuiz(args) {
 
   // Extract search keywords for this chapter/topic
   const chapterKeywords = isFullSyllabus ? [] : extractChapterKeywords(rawT, matchedChapterInfo, subjId);
+  const kwSql = (chapterKeywords.length > 0 && !isFullSyllabus)
+    ? chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ')
+    : '';
 
-  let chapterConditionSql = matchedMcqChapterId ? `chapter_id = '${matchedMcqChapterId}'` : "";
-  if (!chapterConditionSql && chapterKeywords.length > 0 && !isFullSyllabus) {
-    const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
+  let chapterConditionSql = "";
+  if (matchedMcqChapterId && kwSql) {
+    chapterConditionSql = `(chapter_id = '${matchedMcqChapterId}' OR (chapter_id NOT LIKE 'ch_%' AND (${kwSql})))`;
+  } else if (matchedMcqChapterId) {
+    chapterConditionSql = `chapter_id = '${matchedMcqChapterId}'`;
+  } else if (kwSql) {
     chapterConditionSql = `(${kwSql})`;
   }
 
@@ -106,9 +112,11 @@ export async function handleGetMcqQuiz(args) {
     let res = await executeRawSql(sql);
 
     // Fallback 1: If board + year was too restrictive, try requested years across ANY authentic board first!
-    if (res.rows.length === 0 && boardTag && boardTag !== "RANDOM" && years.length > 0) {
+    if (res.rows.length < count && boardTag && boardTag !== "RANDOM" && years.length > 0) {
       const yrAllBoards = buildYearSqlConditions(null, years);
+      const existingIds = res.rows.map(r => `'${r.id}'`);
       const fbWhere1 = [...baseConditions, yrAllBoards];
+      if (existingIds.length > 0) fbWhere1.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
         FROM questions
@@ -116,12 +124,17 @@ export async function handleGetMcqQuiz(args) {
         ${RECENT_YEAR_ORDER_BY}
         LIMIT 80;
       `;
-      res = await executeRawSql(sql);
+      const fbRes1 = await executeRawSql(sql);
+      if (fbRes1.rows && fbRes1.rows.length > 0) {
+        res.rows = [...res.rows, ...fbRes1.rows];
+      }
     }
 
     // Fallback 2: Try board without year restriction
-    if (res.rows.length === 0 && boardTag && boardTag !== "RANDOM") {
+    if (res.rows.length < count && boardTag && boardTag !== "RANDOM") {
+      const existingIds = res.rows.map(r => `'${r.id}'`);
       const fbWhere2 = [...baseConditions, `tags LIKE '%${boardTag}%'`];
+      if (existingIds.length > 0) fbWhere2.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
         FROM questions
@@ -129,12 +142,17 @@ export async function handleGetMcqQuiz(args) {
         ${RECENT_YEAR_ORDER_BY}
         LIMIT 80;
       `;
-      res = await executeRawSql(sql);
+      const fbRes2 = await executeRawSql(sql);
+      if (fbRes2.rows && fbRes2.rows.length > 0) {
+        res.rows = [...res.rows, ...fbRes2.rows];
+      }
     }
 
-    // Fallback 3: If this specific board has no questions in this chapter, try without board filter
-    if (res.rows.length === 0) {
+    // Fallback 3: If this specific board has fewer questions in this chapter, try without board filter
+    if (res.rows.length < count) {
+      const existingIds = res.rows.map(r => `'${r.id}'`);
       const fbWhere3 = [...baseConditions, `tags != '' AND tags IS NOT NULL`];
+      if (existingIds.length > 0) fbWhere3.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
         FROM questions
@@ -142,35 +160,37 @@ export async function handleGetMcqQuiz(args) {
         ${RECENT_YEAR_ORDER_BY}
         LIMIT 80;
       `;
-      res = await executeRawSql(sql);
+      const fbRes3 = await executeRawSql(sql);
+      if (fbRes3.rows && fbRes3.rows.length > 0) {
+        res.rows = [...res.rows, ...fbRes3.rows];
+      }
     }
 
-    // Fallback 3.5: If verified chapter had 0 questions, check unmapped questions using concepts
-    if (res.rows.length === 0 && chapterKeywords.length > 0) {
-      const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
+    // Fallback 3.5: If verified chapter still has fewer questions than count, check unmapped questions using concepts
+    if (res.rows.length < count && kwSql) {
+      const existingIds = res.rows.map(r => `'${r.id}'`);
       const fbUnmapped = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `(chapter_id NOT LIKE 'ch_%' AND (${kwSql}))`];
       if (subjId) fbUnmapped.push(`subject_id = '${subjId}'`);
-      let fbUnmappedWhere = [...fbUnmapped];
-      if (boardTag && boardTag !== "RANDOM") {
-        fbUnmappedWhere.push(`tags LIKE '%${boardTag}%'`);
-      } else {
-        fbUnmappedWhere.push(`tags != '' AND tags IS NOT NULL`);
-      }
+      fbUnmapped.push(`tags != '' AND tags IS NOT NULL`);
+      if (existingIds.length > 0) fbUnmapped.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
         FROM questions
-        WHERE ${fbUnmappedWhere.join(" AND ")}
+        WHERE ${fbUnmapped.join(" AND ")}
         ${RECENT_YEAR_ORDER_BY}
         LIMIT 80;
       `;
-      res = await executeRawSql(sql);
+      const fbRes35 = await executeRawSql(sql);
+      if (fbRes35.rows && fbRes35.rows.length > 0) {
+        res.rows = [...res.rows, ...fbRes35.rows];
+      }
     }
 
-    // Fallback 4: General subject fallback ONLY IF user did not specify chapter/topic
-    if (res.rows.length === 0 && !rawT) {
-      const fbWhere4 = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`];
-      if (subjId) fbWhere4.push(`subject_id = '${subjId}'`);
-      if (boardTag && boardTag !== "RANDOM") fbWhere4.push(`tags LIKE '%${boardTag}%'`);
+    // Fallback 4: General subject fallback if fewer than count and not full syllabus or broad request
+    if (res.rows.length < count && subjId) {
+      const existingIds = res.rows.map(r => `'${r.id}'`);
+      const fbWhere4 = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `subject_id = '${subjId}'`, `tags != '' AND tags IS NOT NULL`];
+      if (existingIds.length > 0) fbWhere4.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
         FROM questions
@@ -178,7 +198,10 @@ export async function handleGetMcqQuiz(args) {
         ${RECENT_YEAR_ORDER_BY}
         LIMIT 80;
       `;
-      res = await executeRawSql(sql);
+      const fbRes4 = await executeRawSql(sql);
+      if (fbRes4.rows && fbRes4.rows.length > 0) {
+        res.rows = [...res.rows, ...fbRes4.rows];
+      }
     }
 
     qRows = res.rows;
@@ -200,8 +223,12 @@ export async function handleGetMcqQuiz(args) {
       const allText = `${r.question_text || ''} ${r.question_html || ''} ${r.tags || ''}`;
       return directTopicTokens.some(t => allText.includes(t));
     });
-    if (topicFiltered.length > 0) {
+    if (topicFiltered.length >= count) {
       verifiedRows = topicFiltered;
+    } else if (topicFiltered.length > 0) {
+      const used = new Set(topicFiltered.map(q => q.id));
+      const rest = verifiedRows.filter(q => !used.has(q.id));
+      verifiedRows = [...topicFiltered, ...rest];
     }
   }
 
@@ -210,6 +237,46 @@ export async function handleGetMcqQuiz(args) {
   // Sample prioritizing the most recent available years in activePool
   const topSlice = activePool.slice(0, Math.max(count * 4, 8));
   let sampled = topSlice.length > 0 ? [...topSlice].sort(() => Math.random() - 0.5).slice(0, count) : [];
+
+  // ABSOLUTE GUARANTEE: Never return fewer questions than count if questions exist
+  if (sampled.length < count) {
+    const sampledIds = new Set(sampled.map(r => r.id));
+    for (const r of (verifiedRows || [])) {
+      if (sampled.length >= count) break;
+      if (!sampledIds.has(r.id)) {
+        sampled.push(r);
+        sampledIds.add(r.id);
+      }
+    }
+    if (sampled.length < count && qRows) {
+      for (const r of qRows) {
+        if (sampled.length >= count) break;
+        if (!sampledIds.has(r.id)) {
+          sampled.push(r);
+          sampledIds.add(r.id);
+        }
+      }
+    }
+  }
+
+  if (sampled.length < count && subjId) {
+    const sampledIds = new Set(sampled.map(r => r.id));
+    const needed = count - sampled.length;
+    const finalFbSql = `
+      SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
+      FROM questions
+      WHERE type = 'MCQ' AND question_text != '' AND answer != '' AND option_a != '' AND option_b != '' AND subject_id = '${subjId}'
+      ${sampledIds.size > 0 ? `AND id NOT IN (${[...sampledIds].map(id => `'${id}'`).join(',')})` : ''}
+      ${RECENT_YEAR_ORDER_BY}
+      LIMIT ${needed * 4};
+    `;
+    const finalFbRes = await executeRawSql(finalFbSql);
+    if (finalFbRes.rows && finalFbRes.rows.length > 0) {
+      const extra = finalFbRes.rows.slice(0, needed);
+      sampled.push(...extra);
+    }
+  }
+
   let res = { rows: sampled };
 
   if (!res.rows || res.rows.length === 0) {
