@@ -1,5 +1,6 @@
 // Tool Result Compaction & Context Minimization
 import { formatTag } from "../../config/tag-map.js";
+import { SUBJECT_DISPLAY_NAMES } from "../../config/subject-map.js";
 
 export function compactToolResult(toolName, rawResult, toolArgs = {}) {
   if (!rawResult) return { status: "empty" };
@@ -18,8 +19,8 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
       // MULTI-QUESTION / MOCK TEST MODE (> 1 MCQs)
       if (rawResult.quiz.length > 1) {
         const total = rawResult.quiz.length;
-        const chDisplay = rawResult.actual_chapter?.display || rawResult.actual_chapter?.name || toolArgs?.chapter || "অধ্যায়";
-        const subjName = rawResult.subject || "এসএসসি";
+        const chDisplay = rawResult.actual_chapter?.display || rawResult.actual_chapter?.name || toolArgs?.chapter || "সম্পূর্ণ বই";
+        const subjName = SUBJECT_DISPLAY_NAMES[rawResult.subject] || rawResult.subject || "এসএসসি প্রস্তুতি";
 
         return {
           mode: "exam_launcher",
