@@ -174,19 +174,19 @@ export function pruneHistoryForContext(pastHistory = [], maxTurns = 4) {
 export function getMaxTokensForIntent(intent) {
   switch (intent) {
     case INTENT_TYPES.QUIZ_ANSWER:
-      return 450; // Ultra-crisp grading, feedback & scientific principle
+      return 600; // Crisp grading, gentle encouragement & scientific principle
     case INTENT_TYPES.MCQ_QUIZ:
-      return 600; // Stem, board tag, 4 options, and [ans: ...]
+      return 750; // Stem, board tag, 4 options, and [ans: ...]
     case INTENT_TYPES.SYLLABUS_ROADMAP:
-      return 850; // Clean list of chapters without rambling
+      return 1000; // Complete official chapter roadmap with division breakdown
     case INTENT_TYPES.CQ_CREATIVE:
-      return 1100; // Stem and parts (Ka, Kha, Ga, Gha)
+      return 1500; // Full authentic stem + complete Ka, Kha, Ga, Gha levels
     case INTENT_TYPES.IMPORTANCE_RANKING:
-      return 800; // Priority chapters & 80/20 breakdown
+      return 1200; // Priority chapters, 80/20 breakdown & board tips
     case INTENT_TYPES.SIMILAR_PATTERN:
-      return 850;
+      return 1100; // Deep pattern analysis & formula matching
     default:
-      return 1100;
+      return 1600; // Full masterclass pedagogical depth for concepts & math problems
   }
 }
 
