@@ -221,6 +221,28 @@ for (const kw of expectedKeywords) {
 assert(doneEventData?.state?.subject_id === 'ssc_chemistry', 'Session state subject strictly preserved as ssc_chemistry');
 assert(doneEventData?.state?.chapter_num === null, 'Session state chapter unlocked (null) for broad syllabus');
 
+// TEST 9: Merge Gateway Cost & Telemetry Verification
+console.log('\n--- TEST 9: Merge Gateway Real-time Cost & Telemetry Verification ---');
+const gw = doneEventData?.gatewayTelemetry;
+assert(gw !== undefined && gw !== null, 'Received gatewayTelemetry in done event');
+assert(gw.model === 'openai/gpt-5.6-luna', `Gateway model identified correctly (${gw.model})`);
+assert(gw.input_tokens > 0, `Recorded input tokens (${gw.input_tokens})`);
+assert(gw.output_tokens > 0, `Recorded output tokens (${gw.output_tokens})`);
+assert(gw.total_tokens === gw.input_tokens + gw.output_tokens, `Total tokens matches input + output (${gw.total_tokens})`);
+assert(typeof gw.cost_usd === 'number' && gw.cost_usd > 0, `Recorded cost in USD (${gw.cost_formatted_usd})`);
+assert(typeof gw.cost_bdt === 'number' && gw.cost_bdt > 0, `Calculated cost in BDT (${gw.cost_formatted_bdt})`);
+assert(gw.savings_percent >= 0, `Recorded savings percentage (${gw.savings_percent}%)`);
+
+// TEST 10: Global Gateway Stats API (/api/gateway/stats)
+console.log('\n--- TEST 10: Global Gateway Stats API (/api/gateway/stats) ---');
+const gwStatsRes = await fetch('http://localhost:3000/api/gateway/stats');
+assert(gwStatsRes.ok, 'Gateway stats API returned HTTP 200');
+const gwStats = await gwStatsRes.json();
+assert(gwStats.gateway === 'Merge.dev AI Gateway', 'Gateway provider is Merge.dev AI Gateway');
+assert(gwStats.total_queries >= 1, `Global tracked queries count (${gwStats.total_queries})`);
+assert(gwStats.total_cost_usd > 0, `Global accumulated cost USD (${gwStats.total_cost_formatted_usd})`);
+assert(gwStats.total_cost_bdt > 0, `Global accumulated cost BDT (${gwStats.total_cost_formatted_bdt})`);
+
 console.log('\n====================================================');
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED WITH 100% SUCCESS!`);
 console.log('====================================================');

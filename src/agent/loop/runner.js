@@ -6,6 +6,7 @@ import { ENV } from "../../config/env.js";
 import { SYSTEM_PROMPT } from "../prompts/system-prompt.js";
 import { compactToolResult } from "./compaction.js";
 import { classifyIntent, getScopedTools, pruneHistoryForContext, getMaxTokensForIntent, calculateTokenTelemetry, INTENT_TYPES } from "./router.js";
+import { calculateStepCost, calculateBaselineCost, formatCostUsd, formatCostBdt, recordGatewayCall, USD_TO_BDT_RATE } from "./gateway-metrics.js";
 
 // Helpers for student-friendly, empathetic tool progress labels
 function getToolHumanLabel(tool, args) {
@@ -209,11 +210,23 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
   let firstTokenTime = null;
   let finalResponseContent = "";
 
+  // Cumulative Token & Cost Telemetry Tracker (Across all ReAct steps)
+  let cumulativeInputTokens = 0;
+  let cumulativeOutputTokens = 0;
+  let cumulativeTotalTokens = 0;
+  let cumulativeCostUsd = 0;
+  let cumulativeGatewayLatencyMs = 0;
+  let detectedModelUsed = modelName;
+  let detectedVendorUsed = "openai";
+
   const MAX_STEPS = 4;
   let currentStep = 0;
 
   reactLoop: while (currentStep < MAX_STEPS) {
     currentStep++;
+
+    let stepUsage = null;
+    let stepRouting = null;
 
     // Dynamic Focused Tool Scoping (Only send necessary tool schemas on step 1, 0 tool overhead on step 2+)
     const activeTools = (currentStep === 1) ? getScopedTools(classifiedIntent) : undefined;
@@ -271,6 +284,12 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
 
         try {
           const parsed = JSON.parse(raw);
+          if (parsed.usage) {
+            stepUsage = parsed.usage;
+          }
+          if (parsed.routing) {
+            stepRouting = parsed.routing;
+          }
           const content = parsed.output?.[0]?.content;
           if (Array.isArray(content)) {
             for (const item of content) {
@@ -316,6 +335,40 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
         } catch (e) {}
       }
     }
+
+    // Capture exact token usage and cost for this step from Merge Gateway
+    const stepIn = (typeof stepUsage?.input_tokens === "number")
+      ? stepUsage.input_tokens
+      : Math.round(JSON.stringify(requestPayload.input).length / 4);
+    const stepOut = (typeof stepUsage?.output_tokens === "number")
+      ? stepUsage.output_tokens
+      : Math.round(stepContent.length / 4);
+    const stepTotal = (typeof stepUsage?.total_tokens === "number")
+      ? stepUsage.total_tokens
+      : (stepIn + stepOut);
+
+    const gatewayReportedCost = (typeof stepUsage?.cost === "number" && stepUsage.cost > 0)
+      ? stepUsage.cost
+      : ((typeof stepRouting?.cost_usd === "number" && stepRouting.cost_usd > 0)
+        ? stepRouting.cost_usd
+        : null);
+
+    const stepCost = calculateStepCost({
+      inputTokens: stepIn,
+      outputTokens: stepOut,
+      gatewayCostUsd: gatewayReportedCost,
+      model: stepRouting?.model_used || modelName
+    });
+
+    const stepGatewayLat = stepRouting?.latency?.total_ms || 0;
+
+    cumulativeInputTokens += stepIn;
+    cumulativeOutputTokens += stepOut;
+    cumulativeTotalTokens += stepTotal;
+    cumulativeCostUsd += stepCost;
+    cumulativeGatewayLatencyMs += stepGatewayLat;
+    if (stepRouting?.model_used) detectedModelUsed = stepRouting.model_used;
+    if (stepRouting?.vendor_used) detectedVendorUsed = stepRouting.vendor_used;
 
     // CASE A: Model provided direct response text (No tool called in this step)
     if (!toolCall) {
@@ -514,6 +567,42 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
 
   const totalLatency = Math.round(performance.now() - startTime);
   const tokenTelemetry = calculateTokenTelemetry(inputHistory, getScopedTools(classifiedIntent));
+
+  // Compute Baseline Cost and Net Savings
+  const baselineCostUsd = calculateBaselineCost(cumulativeOutputTokens, detectedModelUsed);
+  const costSavedUsd = Math.max(0, +(baselineCostUsd - cumulativeCostUsd).toFixed(6));
+  const savingsPercent = baselineCostUsd > 0
+    ? Math.min(95, Math.round((costSavedUsd / baselineCostUsd) * 100))
+    : tokenTelemetry.savings_percent;
+
+  const costBdt = +(cumulativeCostUsd * USD_TO_BDT_RATE).toFixed(6);
+
+  recordGatewayCall({
+    inputTokens: cumulativeInputTokens,
+    outputTokens: cumulativeOutputTokens,
+    totalTokens: cumulativeTotalTokens,
+    costUsd: cumulativeCostUsd,
+    costSavedUsd
+  });
+
+  const gatewayTelemetry = {
+    provider: "Merge.dev AI Gateway",
+    model: detectedModelUsed,
+    vendor: detectedVendorUsed,
+    input_tokens: cumulativeInputTokens,
+    output_tokens: cumulativeOutputTokens,
+    total_tokens: cumulativeTotalTokens,
+    cost_usd: +cumulativeCostUsd.toFixed(6),
+    cost_bdt: costBdt,
+    cost_formatted_usd: formatCostUsd(cumulativeCostUsd),
+    cost_formatted_bdt: formatCostBdt(costBdt),
+    baseline_cost_usd: +baselineCostUsd.toFixed(6),
+    cost_saved_usd: costSavedUsd,
+    savings_percent: savingsPercent,
+    gateway_latency_ms: Math.round(cumulativeGatewayLatencyMs),
+    steps_count: currentStep
+  };
+
   await onEvent({
     type: "done",
     content: finalResponseContent,
@@ -521,6 +610,7 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
     latencyMs: totalLatency,
     ttft: firstTokenTime,
     tokenTelemetry,
+    gatewayTelemetry,
     state
   });
   return;
