@@ -231,8 +231,33 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
     // Dynamic Focused Tool Scoping (Only send necessary tool schemas on step 1, 0 tool overhead on step 2+)
     const activeTools = (currentStep === 1) ? getScopedTools(classifiedIntent) : undefined;
 
+    // High-Efficiency Input Payload:
+    // On Step 1: Send master prompt, state, and user prompt with scoped tools.
+    // On Step 2+: Swap in lightweight synthesis prompt and recent tool results (cuts 75% input tokens from re-transmission).
+    let stepInputMessages = inputHistory;
+    if (currentStep > 1) {
+      stepInputMessages = [
+        {
+          type: "message",
+          role: "system",
+          content: `You are "বোধ" (BODH), Bangladesh's premier SSC academic mentor ("বড় ভাইয়া").
+Write a complete, structured, and encouraging answer in elegant Bengali based on the tool results provided.
+Rules:
+- Never emit <thought> tags in this final response.
+- Do not mention internal tools, database, or RAG.
+- Maintain NCTB syllabus accuracy, KaTeX for math ($v = u + at$, $pH < 7$), and clean markdown formatting.`
+        },
+        {
+          type: "message",
+          role: "user",
+          content: userMessage
+        },
+        ...inputHistory.slice(-3)
+      ];
+    }
+
     const requestPayload = {
-      input: inputHistory,
+      input: stepInputMessages,
       model: modelName,
       vendor: "openai",
       stream: true,
