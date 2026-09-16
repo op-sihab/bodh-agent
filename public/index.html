@@ -2292,6 +2292,125 @@
       return html + cursorHtml;
     }
 
+    // Specialized luxury renderer for user message bubbles (handles exam review requests & standard chat)
+    function renderUserMessageBubble(text) {
+      if (!text) return '';
+
+      // 1. Single MCQ Review Request from Modal or Scorecard
+      if (text.includes("ভাইয়া, এই MCQ-তে আমার ভুল হয়েছিল") || text.includes("সঠিক উত্তর কেন")) {
+        let stem = "";
+        let options = [];
+        let userAns = "";
+        let correctAns = "";
+
+        const stemMatch = text.match(/প্রশ্ন:\s*([^\n\r]+)/);
+        if (stemMatch) stem = stemMatch[1].trim();
+
+        const optLine = text.split('\n').find(l => /^\s*\([ক-ঘa-dA-D]\)/.test(l.trim()));
+        if (optLine) {
+          const optMatches = [...optLine.matchAll(/\(([ক-ঘa-dA-D])\)\s*([^(\n\r]+)/g)];
+          options = optMatches.map(m => ({ letter: m[1], text: m[2].trim() }));
+        }
+
+        const userMatch = text.match(/আমার উত্তর ছিল:\s*(?:\()?([^\s,\)]+)(?:\))?/);
+        if (userMatch) userAns = userMatch[1].trim();
+
+        const correctMatch = text.match(/সঠিক উত্তর:\s*(?:\()?([^\s,\)]+)(?:\))?/);
+        if (correctMatch) correctAns = correctMatch[1].trim();
+
+        return `
+          <div class="flex justify-end my-2 w-full">
+            <div class="w-full sm:max-w-[78%] p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#181822] via-[#14141a] to-[#0f0f14] border border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.5)] space-y-3.5 select-text">
+              <!-- Card Header Strip -->
+              <div class="flex items-center justify-between gap-2 border-b border-white/[0.07] pb-2.5">
+                <div class="flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  </span>
+                  <span class="text-xs font-semibold text-zinc-200">MCQ ডাউট ও কনসেপ্ট ক্লিয়ারিং</span>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 font-semibold">পরীক্ষা রিভিউ</span>
+              </div>
+
+              <!-- Question Body -->
+              ${stem ? `
+                <div class="space-y-1">
+                  <div class="text-[11px] font-mono text-zinc-400">প্রশ্ন:</div>
+                  <div class="text-xs sm:text-[13.5px] font-medium text-white leading-relaxed font-sans">
+                    ${formatExamMath(stem)}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Options Grid (if parsed) -->
+              ${options.length > 0 ? `
+                <div class="grid grid-cols-2 gap-2 pt-0.5">
+                  ${options.map(o => `
+                    <div class="flex items-center gap-2 p-2 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs">
+                      <span class="w-5 h-5 rounded-md bg-white/[0.05] text-zinc-300 font-mono text-[10px] flex items-center justify-center font-bold shrink-0 border border-white/[0.08]">(${o.letter})</span>
+                      <span class="text-zinc-300 truncate">${formatExamMath(o.text)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              <!-- Answer Comparison Badges -->
+              <div class="grid grid-cols-2 gap-2.5 pt-1">
+                <div class="p-2.5 rounded-xl bg-rose-500/[0.08] border border-rose-500/20 flex flex-col">
+                  <span class="text-[10px] font-mono text-rose-300 font-medium">আমার উত্তর</span>
+                  <span class="text-xs sm:text-[13px] font-bold text-rose-400 mt-0.5">(${userAns || 'ভুল'})</span>
+                </div>
+                <div class="p-2.5 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 flex flex-col">
+                  <span class="text-[10px] font-mono text-emerald-300 font-medium">সঠিক উত্তর</span>
+                  <span class="text-xs sm:text-[13px] font-bold text-emerald-400 mt-0.5">(${correctAns || 'ক'})</span>
+                </div>
+              </div>
+
+              <!-- Student Request Prompt -->
+              <div class="pt-2 border-t border-white/[0.06] flex items-center gap-2 text-xs text-indigo-300 font-medium leading-snug">
+                <span class="text-base shrink-0">💡</span>
+                <span>ভাইয়া, সঠিক উত্তর কেন হলো এবং এর পেছনের মূল সূত্র ও কনসেপ্ট বুঝিয়ে দাও।</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 2. Multi-Question Mistake Review Request
+      if (text.includes("এই প্রশ্নগুলোতে আমার ভুল হয়েছিল, দয়া করে এগুলোর পেছনের মূল নিয়ম ও কনসেপ্ট বুঝিয়ে দাও")) {
+        const lines = text.split('\n').filter(l => l.trim().startsWith('-'));
+        return `
+          <div class="flex justify-end my-2 w-full">
+            <div class="w-full sm:max-w-[78%] p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#181822] via-[#14141a] to-[#0f0f14] border border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.5)] space-y-3.5 select-text">
+              <div class="flex items-center justify-between gap-2 border-b border-white/[0.07] pb-2.5">
+                <div class="flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 font-bold text-xs">🎓</span>
+                  <span class="text-xs font-semibold text-zinc-200">মক টেস্ট ভুল প্রশ্নাবলির যৌথ বিশ্লেষণ</span>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-300 font-semibold">${toBnDigits(lines.length)}টি ভুল</span>
+              </div>
+              <div class="space-y-1.5 text-xs text-zinc-300">
+                ${lines.map(l => `<div class="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05] leading-relaxed">${escapeHtml(l.replace(/^-\s*/, ''))}</div>`).join('')}
+              </div>
+              <div class="pt-2 border-t border-white/[0.06] flex items-center gap-2 text-xs text-indigo-300 font-medium">
+                <span class="text-base shrink-0">💡</span>
+                <span>ভাইয়া, এই ভুলগুলোর পেছনের মূল কনসেপ্ট ও পরীক্ষার হলে সতর্ক থাকার টিপস বুঝিয়ে দাও।</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. Default Standard User Message
+      return `
+        <div class="flex justify-end my-1">
+          <div class="bg-[#27272e] text-zinc-100 px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] sm:max-w-[72%] text-sm leading-relaxed border border-white/[0.06] shadow-sm font-normal tracking-wide select-text">
+            ${escapeHtml(text)}
+          </div>
+        </div>
+      `;
+    }
+
     async function sendMessage(text) {
       if (!currentSessionId) {
         currentSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -2325,14 +2444,8 @@
 
       const area = document.getElementById('messagesArea');
 
-      // 1. User Message (Clean, Natural, ChatGPT-style)
-      const userHtml = `
-        <div class="flex justify-end my-1">
-          <div class="bg-[#27272e] text-zinc-100 px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] sm:max-w-[72%] text-sm leading-relaxed border border-white/[0.06] shadow-sm font-normal tracking-wide">
-            ${escapeHtml(text)}
-          </div>
-        </div>
-      `;
+      // 1. User Message (Formatted with Premium Exam Card or Clean Chat Bubble)
+      const userHtml = renderUserMessageBubble(text);
       area.insertAdjacentHTML('beforeend', userHtml);
       scrollToBottom();
 
@@ -3246,15 +3359,29 @@
 
         if (hasValidSol) {
           contentHtml += `<div class="mt-2.5 pt-2 border-t border-indigo-500/20 text-zinc-300 leading-relaxed">${formatExamMath(rawSol)}</div>`;
+        } else if (q._aiExplanation) {
+          contentHtml += `
+            <div class="mt-2.5 pt-2 border-t border-indigo-500/20 text-zinc-300 leading-relaxed space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 text-xs font-semibold text-indigo-300">
+                  <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                  <span>বড় ভাইয়ার ইন-ডেপথ সমাধান:</span>
+                </div>
+                <span class="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06]">AI Mentor</span>
+              </div>
+              <div class="text-xs sm:text-[13px] text-zinc-300 leading-relaxed">${formatExamMath(marked.parse(q._aiExplanation))}</div>
+            </div>
+          `;
         } else {
           contentHtml += `
-            <div class="mt-2.5 pt-2 border-t border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="mt-2.5 pt-2 border-t border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5" id="examExplainActionBox_${idx}">
               <span class="text-[11.5px] text-zinc-400">এই প্রশ্নটির বিস্তারিত কনসেপ্ট বা সূত্র বুঝতে চাও?</span>
-              <button type="button" onclick="askAiToExplainQuestion(${idx})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold cursor-pointer transition shadow-[0_0_12px_rgba(99,102,241,0.15)] active:scale-95 shrink-0">
-                <span>💡 বড় ভাইয়ার কাছে ব্যাখ্যা নাও</span>
+              <button type="button" onclick="requestInlineAiExplanation(${idx})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold cursor-pointer transition shadow-[0_0_12px_rgba(99,102,241,0.15)] active:scale-95 shrink-0">
+                <span>💡 বড় ভাইয়ার ব্যাখ্যা দেখো</span>
                 <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
               </button>
             </div>
+            <div id="examInlineAiBox_${idx}" class="hidden mt-2.5 pt-2 border-t border-indigo-500/20"></div>
           `;
         }
 
@@ -3374,10 +3501,16 @@
                 </div>
                 ${solHtml}
               </div>
-              <div class="pt-1 flex items-center justify-end">
-                <button type="button" onclick="askAiToExplainQuestion(${idx})" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-white border border-indigo-500/25 hover:border-indigo-500/40 text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer shadow-[0_0_12px_rgba(99,102,241,0.08)]">
-                  <span>💡 বড় ভাইয়া, এই প্রশ্নটি বুঝিয়ে দাও</span>
-                  <svg class="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              <div id="reviewAiBox_${idx}" class="${q._aiExplanation ? '' : 'hidden'} p-3.5 rounded-xl bg-indigo-500/[0.07] border border-indigo-500/20 text-xs text-zinc-300 leading-relaxed">
+                ${q._aiExplanation ? formatExamMath(marked.parse(q._aiExplanation)) : ''}
+              </div>
+              <div class="pt-1 flex items-center justify-end gap-2 flex-wrap">
+                <button type="button" onclick="revealScorecardAiExplanation(${idx})" id="reviewExplainBtn_${idx}" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-white border border-indigo-500/25 hover:border-indigo-500/40 text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer shadow-[0_0_12px_rgba(99,102,241,0.08)]">
+                  <span>${q._aiExplanation ? '💡 ব্যাখ্যা দেখো' : '💡 এখানেই ব্যাখ্যা দেখো'}</span>
+                </button>
+                <button type="button" onclick="askAiToExplainQuestion(${idx})" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] hover:border-white/20 text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer">
+                  <span>💬 চ্যাটে ভাইয়াকে ডাউট বলো</span>
+                  <svg class="w-3.5 h-3.5 text-zinc-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </button>
               </div>
             </div>
@@ -3417,6 +3550,199 @@
         subjectName: currentExamState.subjectName,
         topicName: currentExamState.topicName
       });
+    }
+
+    async function requestInlineAiExplanation(idx) {
+      const q = currentExamState.questions[idx];
+      if (!q) return;
+
+      const actionBox = document.getElementById(`examExplainActionBox_${idx}`);
+      const aiBox = document.getElementById(`examInlineAiBox_${idx}`);
+      if (!aiBox) return;
+
+      if (actionBox) actionBox.classList.add('hidden');
+      aiBox.classList.remove('hidden');
+
+      aiBox.innerHTML = `
+        <div class="p-3.5 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/25 text-zinc-300 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-indigo-300 text-xs font-semibold">
+              <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+              <span id="examAiStreamLabel_${idx}">বড় ভাইয়া রিয়েল-টাইমে ব্যাখ্যা সাজাচ্ছেন...</span>
+            </div>
+            <span class="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06]">AI Mentor</span>
+          </div>
+          <div id="examAiStreamText_${idx}" class="text-xs sm:text-[13px] text-zinc-300 leading-relaxed font-sans min-h-[40px]">
+            <div class="space-y-2 animate-pulse pt-1">
+              <div class="h-3 bg-indigo-500/20 rounded w-5/6"></div>
+              <div class="h-3 bg-indigo-500/15 rounded w-4/6"></div>
+              <div class="h-3 bg-indigo-500/10 rounded w-3/6"></div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const userAns = currentExamState.userAnswers[idx] || '';
+      const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+      const textEl = document.getElementById(`examAiStreamText_${idx}`);
+      const labelEl = document.getElementById(`examAiStreamLabel_${idx}`);
+
+      try {
+        const res = await fetch('/api/quiz/explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question_text: q.question_text || q.stem || '',
+            options: [
+              q.option_a || q.options?.[0] || '',
+              q.option_b || q.options?.[1] || '',
+              q.option_c || q.options?.[2] || '',
+              q.option_d || q.options?.[3] || ''
+            ],
+            correct_answer: correctAns,
+            user_answer: userAns,
+            subject: currentExamState.subjectName || currentSelectedSubject?.name || '',
+            board: q.tags || q.board || '',
+            stream: true
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullExp = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (!raw) continue;
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed.delta) {
+                fullExp += parsed.delta;
+                if (textEl) textEl.innerHTML = formatExamMath(marked.parse(fullExp));
+              } else if (parsed.text && parsed.text.length > fullExp.length) {
+                fullExp = parsed.text;
+                if (textEl) textEl.innerHTML = formatExamMath(marked.parse(fullExp));
+              }
+            } catch (e) {}
+          }
+        }
+
+        q._aiExplanation = fullExp;
+        if (labelEl) labelEl.innerText = 'বড় ভাইয়ার ইন-ডেপথ সমাধান:';
+        if (textEl) textEl.innerHTML = formatExamMath(marked.parse(fullExp));
+      } catch (err) {
+        if (textEl) {
+          textEl.innerHTML = `<span class="text-rose-400 text-xs">ব্যাখ্যা লোড হতে সমস্যা হয়েছে: ${escapeHtml(err.message)}</span>`;
+        }
+      }
+    }
+
+    async function revealScorecardAiExplanation(idx) {
+      const q = currentExamState.questions[idx];
+      if (!q) return;
+
+      const aiBox = document.getElementById(`reviewAiBox_${idx}`);
+      const btn = document.getElementById(`reviewExplainBtn_${idx}`);
+      if (!aiBox) return;
+
+      if (!aiBox.classList.contains('hidden') && q._aiExplanation) {
+        aiBox.classList.add('hidden');
+        if (btn) btn.innerHTML = `<span>💡 ব্যাখ্যা দেখো</span>`;
+        return;
+      }
+
+      aiBox.classList.remove('hidden');
+      if (btn) btn.innerHTML = `<span>🔼 ব্যাখ্যা সংক্ষেপ করো</span>`;
+
+      if (q._aiExplanation) {
+        aiBox.innerHTML = formatExamMath(marked.parse(q._aiExplanation));
+        return;
+      }
+
+      aiBox.innerHTML = `
+        <div class="flex items-center gap-2 text-indigo-300 text-xs font-semibold py-1">
+          <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+          <span>বড় ভাইয়া রিয়েল-টাইমে ব্যাখ্যা তৈরি করছেন...</span>
+        </div>
+        <div id="reviewAiStreamText_${idx}" class="text-xs text-zinc-300 leading-relaxed min-h-[30px] pt-1">
+          <div class="space-y-1.5 animate-pulse">
+            <div class="h-2.5 bg-indigo-500/20 rounded w-4/5"></div>
+            <div class="h-2.5 bg-indigo-500/15 rounded w-3/5"></div>
+          </div>
+        </div>
+      `;
+
+      const userAns = currentExamState.userAnswers[idx] || '';
+      const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+      const textEl = document.getElementById(`reviewAiStreamText_${idx}`);
+
+      try {
+        const res = await fetch('/api/quiz/explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question_text: q.question_text || q.stem || '',
+            options: [
+              q.option_a || q.options?.[0] || '',
+              q.option_b || q.options?.[1] || '',
+              q.option_c || q.options?.[2] || '',
+              q.option_d || q.options?.[3] || ''
+            ],
+            correct_answer: correctAns,
+            user_answer: userAns,
+            subject: currentExamState.subjectName || currentSelectedSubject?.name || '',
+            board: q.tags || q.board || '',
+            stream: true
+          })
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullExp = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const raw = line.slice(6).trim();
+            if (!raw) continue;
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed.delta) {
+                fullExp += parsed.delta;
+                if (textEl) textEl.innerHTML = formatExamMath(marked.parse(fullExp));
+              } else if (parsed.text && parsed.text.length > fullExp.length) {
+                fullExp = parsed.text;
+                if (textEl) textEl.innerHTML = formatExamMath(marked.parse(fullExp));
+              }
+            } catch (e) {}
+          }
+        }
+
+        q._aiExplanation = fullExp;
+        aiBox.innerHTML = formatExamMath(marked.parse(fullExp));
+      } catch (err) {
+        aiBox.innerHTML = `<span class="text-rose-400 text-xs">ব্যাখ্যা লোড হতে সমস্যা হয়েছে: ${escapeHtml(err.message)}</span>`;
+      }
     }
 
     function askAiToExplainQuestion(idx) {
