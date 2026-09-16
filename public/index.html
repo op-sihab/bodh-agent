@@ -2430,25 +2430,25 @@
         `;
       }
 
-      // 2. Multi-Question Mistake Review Request
-      if (text.includes("এই প্রশ্নগুলোতে আমার ভুল হয়েছিল, দয়া করে এগুলোর পেছনের মূল নিয়ম ও কনসেপ্ট বুঝিয়ে দাও")) {
+      // 2. Multi-Question Mistake Clinic & Debrief Request
+      if (text.includes("মিস্টেক ক্লিনিক") || text.includes("এই প্রশ্নগুলোতে আমার ভুল হয়েছিল") || text.includes("ভুল প্রশ্নাবলি")) {
         const lines = text.split('\n').filter(l => l.trim().startsWith('-'));
         return `
           <div class="flex justify-end my-2 w-full">
-            <div class="w-full sm:max-w-[78%] p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#181822] via-[#14141a] to-[#0f0f14] border border-indigo-500/30 shadow-[0_8px_32px_rgba(0,0,0,0.5)] space-y-3.5 select-text">
-              <div class="flex items-center justify-between gap-2 border-b border-white/[0.07] pb-2.5">
+            <div class="w-full sm:max-w-[78%] p-4 sm:p-5 rounded-2xl bg-zinc-900/90 border border-white/[0.08] shadow-xl shadow-black/40 space-y-3.5 select-text">
+              <div class="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
                 <div class="flex items-center gap-2">
-                  <span class="w-6 h-6 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 font-bold text-xs">🎓</span>
-                  <span class="text-xs font-semibold text-zinc-200">মক টেস্ট ভুল প্রশ্নাবলির যৌথ বিশ্লেষণ</span>
+                  <span class="w-6 h-6 rounded-lg bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-xs text-rose-400 font-bold shrink-0">🏥</span>
+                  <span class="text-xs font-semibold text-zinc-200">বড় ভাইয়ার ১-অন-১ মিস্টেক ক্লিনিক</span>
                 </div>
-                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-300 font-semibold">${toBnDigits(lines.length)}টি ভুল</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-300 font-semibold">${toBnDigits(lines.length)}টি ভুল অডিট</span>
               </div>
               <div class="space-y-1.5 text-xs text-zinc-300">
-                ${lines.map(l => `<div class="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05] leading-relaxed">${escapeHtml(l.replace(/^-\s*/, ''))}</div>`).join('')}
+                ${lines.map(l => `<div class="p-2 rounded-xl bg-white/[0.02] border border-white/[0.05] leading-relaxed text-[12px] font-sans">${escapeHtml(l.replace(/^-\s*/, ''))}</div>`).join('')}
               </div>
               <div class="pt-2 border-t border-white/[0.06] flex items-center gap-2 text-xs text-indigo-300 font-medium">
                 <span class="text-base shrink-0">💡</span>
-                <span>ভাইয়া, এই ভুলগুলোর পেছনের মূল কনসেপ্ট ও পরীক্ষার হলে সতর্ক থাকার টিপস বুঝিয়ে দাও।</span>
+                <span>ভাইয়া, আমার মূল কনসেপ্ট গ্যাপগুলো বুঝিয়ে দাও এবং শেখা যাচাই করতে ১টি পাল্টা প্রশ্ন (counter-challenge) করো।</span>
               </div>
             </div>
           </div>
@@ -3580,18 +3580,24 @@
         if (wrong > 0 || unans > 0) {
           const problemCount = wrong + unans;
           const batchReviewCard = `
-            <div class="mt-4 p-4 sm:p-5 rounded-2xl bg-zinc-900/80 border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-black/30">
-              <div>
-                <h4 class="text-xs sm:text-sm font-semibold text-white flex items-center gap-2">
-                  <span>ভুল কনসেপ্টগুলো মাস্টার করতে চাও?</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/15 text-rose-300 border border-rose-500/30 font-medium">${toBnDigits(problemCount)}টি প্রশ্ন</span>
-                </h4>
-                <p class="text-[11.5px] text-zinc-400 mt-1">যে প্রশ্নগুলোতে ভুল বা বাদ পড়েছে, বড় ভাইয়ার কাছে এক ক্লিকে পরিষ্কার সমাধান ও পরীক্ষার কৌশল জেনে নাও।</p>
+            <div class="mt-4 p-4 sm:p-5 rounded-2xl bg-zinc-900/90 border border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl shadow-black/40">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-xs text-rose-400 font-bold">🏥</span>
+                  <h4 class="text-xs sm:text-sm font-semibold text-white">ভুল খাতা ও ১-অন-১ কনসেপ্ট ক্লিনিক</h4>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/15 text-rose-300 border border-rose-500/30 font-medium">${toBnDigits(problemCount)}টি ঝালাই বাকি</span>
+                </div>
+                <p class="text-[11.5px] text-zinc-400">বড় ভাইয়ার সাথে লাইভ চ্যাটে দুর্বল কনসেপ্টগুলো মাস্টার করো অথবা এখনই শুধু ভুলগুলোর রি-টেস্ট দাও।</p>
               </div>
-              <button type="button" onclick="askAiToExplainAllMistakes()" class="px-4 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-xs sm:text-[13px] active:scale-95 transition-all cursor-pointer shrink-0 flex items-center justify-center gap-2 shadow-sm">
-                <span>🎓 সব ভুলের ব্যাখ্যা নাও</span>
-                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-              </button>
+              <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                <button type="button" onclick="retakeMistakesOnly()" class="px-3.5 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-200 hover:text-white border border-white/[0.1] font-medium text-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5">
+                  <span>🎯 ভুলগুলোর রি-টেস্ট</span>
+                </button>
+                <button type="button" onclick="askAiToExplainAllMistakes()" class="px-4 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm">
+                  <span>💬 ১-অন-১ ভাইয়ার চ্যাট</span>
+                  <svg class="w-3.5 h-3.5 text-black" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+              </div>
             </div>
           `;
           reviewList.innerHTML += batchReviewCard;
@@ -3825,6 +3831,25 @@
       submitPrompt(prompt);
     }
 
+    function retakeMistakesOnly() {
+      const wrongQuestions = [];
+      currentExamState.questions.forEach((q, idx) => {
+        const userAns = currentExamState.userAnswers[idx];
+        const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+        if (userAns !== correctAns) {
+          wrongQuestions.push(q);
+        }
+      });
+
+      if (wrongQuestions.length === 0) return;
+
+      openExamModal({
+        questions: wrongQuestions,
+        subjectName: currentExamState.subjectName,
+        topicName: 'ভুল প্রশ্নাবলির রিকভারি রি-টেস্ট'
+      });
+    }
+
     function askAiToExplainAllMistakes() {
       closeExamModal();
       const wrongItems = [];
@@ -3832,12 +3857,21 @@
         const userAns = currentExamState.userAnswers[idx];
         const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
         if (userAns !== correctAns) {
-          const stem = (q.question_text || q.stem || '').replace(/\n+/g, ' ').slice(0, 100);
-          wrongItems.push(`- প্রশ্ন ${idx + 1}: "${stem}" (আমার উত্তর: ${userAns || 'বাদ'}, সঠিক: ${correctAns})`);
+          const stem = (q.question_text || q.stem || '').replace(/\n+/g, ' ').slice(0, 120);
+          wrongItems.push(`- প্রশ্ন ${idx + 1}: "${stem}" | আমার উত্তর: (${userAns || 'বাদ'}), সঠিক উত্তর: (${correctAns})`);
         }
       });
       if (wrongItems.length === 0) return;
-      const prompt = `ভাইয়া, আমি ${currentExamState.subjectName} (${currentExamState.topicName})-এর মক টেস্ট দিয়েছি। এই প্রশ্নগুলোতে আমার ভুল হয়েছিল, দয়া করে এগুলোর পেছনের মূল নিয়ম ও কনসেপ্ট বুঝিয়ে দাও:\n${wrongItems.join('\n')}`;
+
+      const prompt = `ভাইয়া, আমি ${currentExamState.subjectName} (${currentExamState.topicName})-এর মক টেস্ট দিয়েছি। মোট ${toBnDigits(currentExamState.questions.length)}টি প্রশ্নের মধ্যে আমার এই ${toBnDigits(wrongItems.length)}টি প্রশ্নে ভুল হয়েছিল।
+দয়া করে "মিস্টেক ক্লিনিক" মোডে আমার সাথে ১-অন-১ চ্যাট করো:
+১. প্রশ্নগুলোকে আলাদা আলাদা মুখস্থ না করিয়ে এদের পেছনের মূল ২-৩টি কনসেপ্ট গ্যাপ (দুর্বলতা) বুঝিয়ে দাও।
+২. পরীক্ষার হলের শর্ট ট্রিক ও নিয়মগুলো ধরিয়ে দাও।
+৩. সবশেষে আমি আসলেই বুঝেছি কিনা তা যাচাই করতে আমাকে ১টি লাইভ পাল্টা প্রশ্ন (counter-challenge) করো যাতে আমি চ্যাটে উত্তর দিতে পারি!
+
+আমার ভুল হওয়া প্রশ্নাবলি:
+${wrongItems.join('\n')}`;
+
       submitPrompt(prompt);
     }
 
