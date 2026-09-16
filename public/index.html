@@ -609,19 +609,17 @@
           </div>
 
           <!-- Hidden / Revealed Explanation Card -->
-          <div id="examExplanationCard" class="hidden rounded-2xl border border-indigo-500/30 bg-indigo-500/[0.08] p-4 text-xs text-zinc-200 shadow-[0_0_24px_rgba(99,102,241,0.08)] backdrop-blur-md space-y-2 transition-all duration-300">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2 font-bold text-indigo-300 text-[13px]">
-                <svg class="w-4 h-4 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span>ব্যাখ্যা ও বিশ্লেষণ</span>
+          <div id="examExplanationCard" class="hidden rounded-2xl border border-white/[0.08] bg-zinc-900/90 backdrop-blur-xl p-4 sm:p-5 text-xs text-zinc-300 space-y-3 shadow-xl shadow-black/40 transition-all duration-300">
+            <div class="flex items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
+              <div id="examStatusIndicator" class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-zinc-400"></span>
+                <span class="font-semibold text-xs sm:text-[13px] text-zinc-200">ব্যাখ্যা ও বিশ্লেষণ</span>
               </div>
-              <span id="examCorrectAnsBadge" class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-semibold text-[11px]">
+              <span id="examCorrectAnsBadge" class="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-300 font-mono font-medium text-[11px] shrink-0">
                 সঠিক উত্তর: ক
               </span>
             </div>
-            <div id="examExplanationContent" class="leading-relaxed text-zinc-300 pt-1"></div>
+            <div id="examExplanationContent" class="leading-relaxed text-zinc-300 pt-0.5"></div>
           </div>
         </div>
 
@@ -1811,6 +1809,12 @@
       // Normalize escaped backslashes before math delimiters (\\( -> \( or \\[ -> \[)
       clean = clean.replace(/\\\\([()[\]])/g, '\\$1');
 
+      // 3b. Normalize bare isotope notations: e.g. (^{32}P), ^{32}P, (^{60}Co), ^{14}C -> ${}^{32}\text{P}$
+      clean = clean.replace(/\(?\^\{?([০-৯0-9]+[a-zA-Z]*)\}?\s*([A-Za-z]+)\)?/g, (m, mass, elem) => {
+        const asciiMass = mass.replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+        return `$ {}^{${asciiMass}}\\text{${elem}} $`;
+      });
+
       // 4. Protect KaTeX Inline Math ($...$, \(...\), and parenthesized/standalone LaTeX formulas like (\mathrm{pH}=7))
       const inlineMath = [];
       clean = clean.replace(/(?:(?<!\\)\$([^\$\n]+?)(?<!\\)\$|\\\(([\s\S]*?)\\\)|\(([^()\n]*?\\[a-zA-Z]+[^()\n]*?)\)|(\\[a-zA-Z]+(?:\{[^\}\n]*\})*(?:[\s_^\-\+*\/=<>]+[a-zA-Z0-9\(\)\{\}\\]+)*))/g, (m, c1, c2, c3, c4) => {
@@ -2272,6 +2276,13 @@
       str = str.replace(/(?:(?<!\\)\$([^\$\n]+?)(?<!\\)\$|\\\(([\s\S]*?)\\\))/g, (m, c1, c2) => {
         const code = (c1 !== undefined ? c1 : c2).trim();
         mathItems.push({ code: toAsciiMathDigits(code), display: false });
+        return placeholder(mathItems.length - 1);
+      });
+
+      // 2b. Bare isotope notation with superscripts: e.g. (^{32}P), ^{32}P, (^{60}Co), ^{60}Co, (^{131}I), (^{99m}Tc), ^{14}C
+      str = str.replace(/\(?\^\{?([০-৯0-9]+[a-zA-Z]*)\}?\s*([A-Za-z]+)\)?/g, (m, mass, elem) => {
+        const asciiMass = toAsciiMathDigits(mass);
+        mathItems.push({ code: `{}^{${asciiMass}}\\text{${elem}}`, display: false });
         return placeholder(mathItems.length - 1);
       });
 
@@ -3382,51 +3393,55 @@
         document.getElementById('examCorrectAnsBadge').innerText = `সঠিক উত্তর: (${correctLetter})`;
 
         const isUserCorrect = selectedLetter === correctLetter;
+        const statusEl = document.getElementById('examStatusIndicator');
+        if (statusEl) {
+          if (isUserCorrect) {
+            statusEl.innerHTML = `
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span class="font-semibold text-xs sm:text-[13px] text-emerald-400">উত্তরটি সঠিক হয়েছে</span>
+            `;
+          } else {
+            statusEl.innerHTML = `
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+              <span class="font-semibold text-xs sm:text-[13px] text-rose-400">তোমার উত্তর (${selectedLetter}) সঠিক নয়</span>
+            `;
+          }
+        }
+
         const rawSol = (q.solution || q.explanation || '').trim();
         const hasValidSol = rawSol && !/^(?:upgrade|premium|none|null|n\/a)$/i.test(rawSol);
 
         let contentHtml = '';
-        if (isUserCorrect) {
-          contentHtml += `
-            <div class="flex items-center gap-2 text-emerald-400 font-semibold text-xs sm:text-[13px]">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-              <span>দারুণ! তোমার উত্তরটি সঠিক হয়েছে।</span>
-            </div>
-          `;
-        } else {
-          contentHtml += `
-            <div class="flex items-center gap-2 text-rose-400 font-semibold text-xs sm:text-[13px]">
-              <span class="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>
-              <span>তোমার উত্তর (${selectedLetter}) সঠিক নয়, সঠিক উত্তর হলো (${correctLetter})।</span>
-            </div>
-          `;
-        }
-
         if (hasValidSol) {
-          contentHtml += `<div class="mt-2.5 pt-2 border-t border-indigo-500/20 text-zinc-300 leading-relaxed">${formatExamMath(rawSol)}</div>`;
+          contentHtml += `
+            <div class="space-y-1.5 pt-0.5">
+              <div class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">পাঠ্যবইয়ের সমাধান:</div>
+              <div class="text-zinc-200 text-xs sm:text-[13px] leading-relaxed">${formatExamMath(rawSol)}</div>
+            </div>
+          `;
         } else if (q._aiExplanation) {
           contentHtml += `
-            <div class="mt-2.5 pt-2 border-t border-indigo-500/20 text-zinc-300 leading-relaxed space-y-2">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-1.5 text-xs font-semibold text-indigo-300">
-                  <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
-                  <span>বড় ভাইয়ার ইন-ডেপথ সমাধান:</span>
+            <div class="space-y-2 pt-0.5">
+              <div class="flex items-center justify-between text-[11px] text-zinc-400 pb-1.5 border-b border-white/[0.04]">
+                <div class="flex items-center gap-1.5 text-zinc-300 font-medium">
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                  <span>সংক্ষিপ্ত সমাধান ও টিপস</span>
                 </div>
-                <span class="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06]">AI Mentor</span>
+                <span class="text-[10px] font-mono text-zinc-400">BODH AI</span>
               </div>
-              <div class="text-xs sm:text-[13px] text-zinc-300 leading-relaxed">${formatExamMath(marked.parse(q._aiExplanation))}</div>
+              <div class="text-xs sm:text-[13px] text-zinc-200 leading-relaxed font-sans">${formatExamMath(marked.parse(q._aiExplanation))}</div>
             </div>
           `;
         } else {
           contentHtml += `
-            <div class="mt-2.5 pt-2 border-t border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5" id="examExplainActionBox_${idx}">
-              <span class="text-[11.5px] text-zinc-400">এই প্রশ্নটির বিস্তারিত কনসেপ্ট বা সূত্র বুঝতে চাও?</span>
-              <button type="button" onclick="requestInlineAiExplanation(${idx})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold cursor-pointer transition shadow-[0_0_12px_rgba(99,102,241,0.15)] active:scale-95 shrink-0">
-                <span>💡 বড় ভাইয়ার ব্যাখ্যা দেখো</span>
-                <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5" id="examExplainActionBox_${idx}">
+              <span class="text-xs text-zinc-400">এই প্রশ্নটির সংক্ষিপ্ত কনসেপ্ট বা শর্টকাট সূত্র বুঝতে চাও?</span>
+              <button type="button" onclick="requestInlineAiExplanation(${idx})" class="inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] active:scale-[0.98] text-zinc-200 hover:text-white border border-white/[0.1] text-xs font-medium cursor-pointer transition shrink-0">
+                <svg class="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span>AI ব্যাখ্যা দেখো</span>
               </button>
             </div>
-            <div id="examInlineAiBox_${idx}" class="hidden mt-2.5 pt-2 border-t border-indigo-500/20"></div>
+            <div id="examInlineAiBox_${idx}" class="hidden pt-0.5"></div>
           `;
         }
 
@@ -3537,23 +3552,23 @@
                 ${statusBadge}
               </div>
               <h5 class="text-sm font-medium text-white leading-relaxed">${formatExamMath(q.question_text || q.stem || '')}</h5>
-              <div class="p-3 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20 text-xs text-zinc-300 space-y-1.5">
+              <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs text-zinc-300 space-y-1.5">
                 <div class="flex items-center justify-between gap-2 flex-wrap">
-                  <div class="flex items-center gap-2 font-semibold text-indigo-300">
+                  <div class="flex items-center gap-2 font-medium text-zinc-200">
                     <span>সঠিক উত্তর: (${correctAns})</span>
                   </div>
                   ${boardTagDisplay ? `<span class="text-[10px] font-mono text-zinc-400 px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.06]">${escapeHtml(boardTagDisplay)}</span>` : ''}
                 </div>
                 ${solHtml}
               </div>
-              <div id="reviewAiBox_${idx}" class="${q._aiExplanation ? '' : 'hidden'} p-3.5 rounded-xl bg-indigo-500/[0.07] border border-indigo-500/20 text-xs text-zinc-300 leading-relaxed">
+              <div id="reviewAiBox_${idx}" class="${q._aiExplanation ? '' : 'hidden'} p-3.5 rounded-xl bg-zinc-900/60 border border-white/[0.06] text-xs text-zinc-200 leading-relaxed font-sans">
                 ${q._aiExplanation ? formatExamMath(marked.parse(q._aiExplanation)) : ''}
               </div>
               <div class="pt-1 flex items-center justify-end gap-2 flex-wrap">
-                <button type="button" onclick="revealScorecardAiExplanation(${idx})" id="reviewExplainBtn_${idx}" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-white border border-indigo-500/25 hover:border-indigo-500/40 text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer shadow-[0_0_12px_rgba(99,102,241,0.08)]">
+                <button type="button" onclick="revealScorecardAiExplanation(${idx})" id="reviewExplainBtn_${idx}" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-200 hover:text-white border border-white/[0.08] text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer">
                   <span>${q._aiExplanation ? '💡 ব্যাখ্যা দেখো' : '💡 এখানেই ব্যাখ্যা দেখো'}</span>
                 </button>
-                <button type="button" onclick="askAiToExplainQuestion(${idx})" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] hover:border-white/20 text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer">
+                <button type="button" onclick="askAiToExplainQuestion(${idx})" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300 hover:text-white border border-white/[0.06] hover:border-white/10 text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer">
                   <span>💬 চ্যাটে ভাইয়াকে ডাউট বলো</span>
                   <svg class="w-3.5 h-3.5 text-zinc-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </button>
@@ -3565,17 +3580,17 @@
         if (wrong > 0 || unans > 0) {
           const problemCount = wrong + unans;
           const batchReviewCard = `
-            <div class="mt-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-indigo-500/10 border border-indigo-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_4px_24px_rgba(99,102,241,0.12)]">
+            <div class="mt-4 p-4 sm:p-5 rounded-2xl bg-zinc-900/80 border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-black/30">
               <div>
-                <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                <h4 class="text-xs sm:text-sm font-semibold text-white flex items-center gap-2">
                   <span>ভুল কনসেপ্টগুলো মাস্টার করতে চাও?</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">${toBnDigits(problemCount)}টি প্রশ্ন</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/15 text-rose-300 border border-rose-500/30 font-medium">${toBnDigits(problemCount)}টি প্রশ্ন</span>
                 </h4>
-                <p class="text-[11.5px] text-zinc-300 mt-1">যে প্রশ্নগুলোতে ভুল বা বাদ পড়েছে, বড় ভাইয়ার কাছে এক ক্লিকে পরিষ্কার সমাধান ও পরীক্ষার কৌশল জেনে নাও।</p>
+                <p class="text-[11.5px] text-zinc-400 mt-1">যে প্রশ্নগুলোতে ভুল বা বাদ পড়েছে, বড় ভাইয়ার কাছে এক ক্লিকে পরিষ্কার সমাধান ও পরীক্ষার কৌশল জেনে নাও।</p>
               </div>
-              <button type="button" onclick="askAiToExplainAllMistakes()" class="px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs sm:text-sm shadow-[0_0_16px_rgba(99,102,241,0.3)] active:scale-95 transition-all cursor-pointer shrink-0 flex items-center justify-center gap-2">
+              <button type="button" onclick="askAiToExplainAllMistakes()" class="px-4 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-xs sm:text-[13px] active:scale-95 transition-all cursor-pointer shrink-0 flex items-center justify-center gap-2 shadow-sm">
                 <span>🎓 সব ভুলের ব্যাখ্যা নাও</span>
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
               </button>
             </div>
           `;
@@ -3609,19 +3624,18 @@
       aiBox.classList.remove('hidden');
 
       aiBox.innerHTML = `
-        <div class="p-3.5 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/25 text-zinc-300 space-y-2">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 text-indigo-300 text-xs font-semibold">
-              <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
-              <span id="examAiStreamLabel_${idx}">বড় ভাইয়া রিয়েল-টাইমে ব্যাখ্যা সাজাচ্ছেন...</span>
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between text-[11px] text-zinc-400 pb-1.5 border-b border-white/[0.04]">
+            <div class="flex items-center gap-1.5 text-zinc-300 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+              <span id="examAiStreamLabel_${idx}">বড় ভাইয়া দ্রুত সমাধান সাজাচ্ছেন...</span>
             </div>
-            <span class="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06]">AI Mentor</span>
+            <span class="text-[10px] font-mono text-zinc-400">BODH AI</span>
           </div>
-          <div id="examAiStreamText_${idx}" class="text-xs sm:text-[13px] text-zinc-300 leading-relaxed font-sans min-h-[40px]">
+          <div id="examAiStreamText_${idx}" class="text-xs sm:text-[13px] text-zinc-200 leading-relaxed font-sans min-h-[36px]">
             <div class="space-y-2 animate-pulse pt-1">
-              <div class="h-3 bg-indigo-500/20 rounded w-5/6"></div>
-              <div class="h-3 bg-indigo-500/15 rounded w-4/6"></div>
-              <div class="h-3 bg-indigo-500/10 rounded w-3/6"></div>
+              <div class="h-2.5 bg-white/[0.06] rounded w-5/6"></div>
+              <div class="h-2.5 bg-white/[0.04] rounded w-4/6"></div>
             </div>
           </div>
         </div>
@@ -3684,7 +3698,7 @@
         }
 
         q._aiExplanation = fullExp;
-        if (labelEl) labelEl.innerText = 'বড় ভাইয়ার ইন-ডেপথ সমাধান:';
+        if (labelEl) labelEl.innerText = 'সংক্ষিপ্ত সমাধান ও টিপস';
         if (textEl) textEl.innerHTML = formatExamMath(marked.parse(fullExp));
       } catch (err) {
         if (textEl) {
@@ -3716,14 +3730,19 @@
       }
 
       aiBox.innerHTML = `
-        <div class="flex items-center gap-2 text-indigo-300 text-xs font-semibold py-1">
-          <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
-          <span>বড় ভাইয়া রিয়েল-টাইমে ব্যাখ্যা তৈরি করছেন...</span>
-        </div>
-        <div id="reviewAiStreamText_${idx}" class="text-xs text-zinc-300 leading-relaxed min-h-[30px] pt-1">
-          <div class="space-y-1.5 animate-pulse">
-            <div class="h-2.5 bg-indigo-500/20 rounded w-4/5"></div>
-            <div class="h-2.5 bg-indigo-500/15 rounded w-3/5"></div>
+        <div class="space-y-1.5 pt-1">
+          <div class="flex items-center justify-between text-[11px] text-zinc-400">
+            <div class="flex items-center gap-1.5 text-zinc-300 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+              <span>বড় ভাইয়া দ্রুত সমাধান সাজাচ্ছেন...</span>
+            </div>
+            <span class="text-[10px] font-mono text-zinc-400">BODH AI</span>
+          </div>
+          <div id="reviewAiStreamText_${idx}" class="text-xs text-zinc-200 leading-relaxed min-h-[30px] pt-0.5 font-sans">
+            <div class="space-y-1.5 animate-pulse">
+              <div class="h-2 bg-white/[0.06] rounded w-4/5"></div>
+              <div class="h-2 bg-white/[0.04] rounded w-3/5"></div>
+            </div>
           </div>
         </div>
       `;
