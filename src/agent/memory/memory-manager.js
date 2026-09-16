@@ -206,15 +206,21 @@ export class MemoryManager {
     } else if (toolName === "find_similar_type_questions") {
       const sim = toolResult.similar_type_questions?.[0];
       if (sim) {
-        state.last_served_question = {
+        const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
+        const normAns = toBnAns[sim.answer] || sim.answer || 'ক';
+        state.active_question = {
           id: sim.id,
           type: "mcq",
           stem: sim.question,
           question: sim.question,
+          options: sim.options,
+          answer_code: normAns,
           board_tag: sim.board || "বোর্ড অনুরূপ প্রশ্ন",
           status: "PENDING",
           timestamp: Date.now()
         };
+        state.last_served_question = { ...state.active_question };
+        state.active_mode = "QUIZ";
       }
     }
 

@@ -31,6 +31,13 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
     return INTENT_TYPES.QUIZ_ANSWER;
   }
 
+  // Similar type or pattern analysis (Highest Priority when student asks for another question of the same pattern)
+  if (
+    /(?:এই\s*টাইপের|অনুরূপ|similar|একই\s*সূত্রের|আরেকটি\s*প্রশ্ন|আরেকটা\s*প্রশ্ন|আরেকটা\s*mcq|আরেকটি\s*mcq|আরেকটা\s*cq|আরেকটি\s*cq|মাস্টার\s*টাইপ|ব্লুপ্রিন্ট|blueprint|pattern)/i.test(lower)
+  ) {
+    return INTENT_TYPES.SIMILAR_PATTERN;
+  }
+
   // MCQ / Quiz / Mock test (Highest Priority for question generation)
   if (
     /(?:mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|মক\s*টেস্ট|mock\s*test|পরীক্ষা\s*নাও|টেস্ট\s*দাও)/i.test(lower)

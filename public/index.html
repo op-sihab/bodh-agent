@@ -1729,7 +1729,7 @@
     }
 
     // Content Formatter (Markdown + KaTeX Math + Robust Multi-MCQ Extraction)
-    function renderFormattedContent(rawText, extraBoardTag = null, extraAns = null, extraQuizData = null) {
+    function renderFormattedContent(rawText, extraBoardTag = null, extraAns = null, extraQuizData = null, extraQid = null) {
       if (!rawText) return "";
 
       let clean = String(rawText)
@@ -1795,6 +1795,9 @@
       if (!detectedAns && extraAns) {
         const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
         detectedAns = toBnAns[extraAns] || extraAns;
+      }
+      if (!detectedQid && extraQid) {
+        detectedQid = extraQid;
       }
 
       // 3. Protect KaTeX Display Math ($$...$$ and \[...\])
@@ -2271,12 +2274,12 @@
       return str;
     }
 
-    function renderFormattedContentWithCursor(rawText, isStreaming = false, extraBoardTag = null, extraAns = null, extraQuizData = null) {
+    function renderFormattedContentWithCursor(rawText, isStreaming = false, extraBoardTag = null, extraAns = null, extraQuizData = null, extraQid = null) {
       if (!rawText) return "";
       
       // Clean up empty trailing table pipes
       let cleanText = rawText.replace(/\|\s*\|\s*$/gm, '|');
-      let html = renderFormattedContent(cleanText, extraBoardTag, extraAns, extraQuizData);
+      let html = renderFormattedContent(cleanText, extraBoardTag, extraAns, extraQuizData, extraQid);
       if (!isStreaming) return html;
 
       const cursorHtml = '<span class="streaming-cursor"></span>';
@@ -2552,6 +2555,39 @@
         }, 350);
       }
 
+      function extractToolExtras(toolEvt) {
+        if (!toolEvt) return { boardTag: null, ans: null, quizData: null, qid: null };
+        const tool = toolEvt.tool;
+        const res = toolEvt.result || {};
+        const args = toolEvt.args || {};
+
+        if (tool === 'get_mcq_quiz') {
+          const q = res.quiz?.[0];
+          return {
+            boardTag: q?.all_board_tags || q?.formatted_source || (args?.board ? args.board + ' বোর্ড' : '') || null,
+            ans: q?.answer || null,
+            quizData: res.quiz || null,
+            qid: q?.id || null
+          };
+        } else if (tool === 'find_similar_type_questions') {
+          const q = res.similar_type_questions?.[0] || res.seed_question;
+          return {
+            boardTag: q?.board || q?.raw_tag || null,
+            ans: q?.answer || null,
+            quizData: res.similar_type_questions || null,
+            qid: q?.id || null
+          };
+        } else if (tool === 'get_creative_question') {
+          return {
+            boardTag: res.board_tag || res.formatted_source || res.raw_tag || null,
+            ans: null,
+            quizData: null,
+            qid: res.id || null
+          };
+        }
+        return { boardTag: null, ans: null, quizData: null, qid: null };
+      }
+
       let renderRafId = null;
 
       function scheduleStreamRender() {
@@ -2603,9 +2639,8 @@
                 contentEl.classList.remove('hidden');
                 const wp = document.getElementById(`writingPulse_${msgId}`);
                 if (wp) wp.remove();
-                const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
-                const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
-                contentEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extraBoardTag, extraAns);
+                const extras = extractToolExtras(toolDoneEvt);
+                contentEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extras.boardTag, extras.ans, extras.quizData, extras.qid);
               }
               scrollToBottom();
             }
@@ -2621,9 +2656,8 @@
               contentEl.classList.remove('hidden');
               const wp = document.getElementById(`writingPulse_${msgId}`);
               if (wp) wp.remove();
-              const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
-              const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
-              contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extraBoardTag, extraAns);
+              const extras = extractToolExtras(toolDoneEvt);
+              contentEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extras.boardTag, extras.ans, extras.quizData, extras.qid);
             }
             scrollToBottom();
           }
@@ -2640,9 +2674,8 @@
               contentEl.classList.remove('hidden');
               const wp = document.getElementById(`writingPulse_${msgId}`);
               if (wp) wp.remove();
-              const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
-              const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
-              contentEl.innerHTML = renderFormattedContentWithCursor(cleanAnswer, true, extraBoardTag, extraAns);
+              const extras = extractToolExtras(toolDoneEvt);
+              contentEl.innerHTML = renderFormattedContentWithCursor(cleanAnswer, true, extras.boardTag, extras.ans, extras.quizData, extras.qid);
             }
             scrollToBottom();
           }
@@ -2710,11 +2743,9 @@
         const contentEl = document.getElementById(contentId);
         if (contentEl) {
           contentEl.classList.remove('hidden');
-          const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
-          const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
-          const extraQuizData = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz || null) : null;
+          const extras = extractToolExtras(toolDoneEvt);
           if (cleanFinal) {
-            contentEl.innerHTML = renderFormattedContentWithCursor(cleanFinal, false, extraBoardTag, extraAns, extraQuizData);
+            contentEl.innerHTML = renderFormattedContentWithCursor(cleanFinal, false, extras.boardTag, extras.ans, extras.quizData, extras.qid);
           }
           // Thoroughly purge any residual cursors
           contentEl.querySelectorAll('.streaming-cursor, .thought-cursor').forEach(el => el.remove());

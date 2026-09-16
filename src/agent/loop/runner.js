@@ -222,6 +222,12 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
   const MAX_STEPS = 4;
   let currentStep = 0;
 
+  const isSimilarReq = /এই\s*টাইপের|অনুরূপ|similar|একই\s*সূত্রের|আরেকটি\s*প্রশ্ন|আরেকটা\s*প্রশ্ন|আরেকটা\s*mcq|আরেকটি\s*mcq|আরেকটা\s*cq|আরেকটি\s*cq|এইরকম\s*আরেক/i.test(userMessage);
+  const isMcqReq = /mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|1\s*mcq|one\s*mcq|ekta\s*mcq|একটা\s*mcq|একটি\s*mcq|show\s*1\s*mcq/i.test(userMessage);
+  const isCqReq = /cq|সৃজনশীল|উদ্দীপক|1\s*cq|one\s*cq|ekta\s*cq|একটা\s*cq|একটি\s*cq/i.test(userMessage);
+  const isPatReq = /মাস্টার\s*টাইপ|পরীক্ষকের\s*ফাঁদ|অধ্যায়ের\s*টাইপ|ব্লুপ্রিন্ট|chapter\s*pattern/i.test(userMessage);
+  const requiresQuestionTool = isSimilarReq || isMcqReq || isCqReq || isPatReq;
+
   reactLoop: while (currentStep < MAX_STEPS) {
     currentStep++;
 
@@ -245,6 +251,11 @@ Write a complete, high-pedagogy, and encouraging answer in natural Bengali based
 Quality Standards:
 - Teach with deep intuition, step-by-step clarity, and real-life analogies like a caring elder brother ("বড় ভাইয়া").
 - Present data cleanly (tables, bullet points, bold highlights) for effortless readability.
+- When presenting an authentic MCQ, quiz, or similar question from tool results:
+  1. ALWAYS include the authentic board tag at the top: [বোর্ড: <বোর্ডের নাম>]
+  2. Present the authentic question stem and 4 options (ক, খ, গ, ঘ).
+  3. STRICTLY NEVER reveal or explain the correct answer in this turn! Encourage the student to think and select their answer first.
+  4. ALWAYS append [ans: <ক/খ/গ/ঘ>] and [qid: <question_id>] at the very end.
 - Never emit <thought> tags in this final response.
 - Do not mention internal tools, database, or RAG.
 - Maintain 100% NCTB syllabus accuracy, KaTeX for math ($v = u + at$, $pH < 7$), and clean markdown formatting.`
@@ -268,6 +279,9 @@ Quality Standards:
     };
     if (activeTools && activeTools.length > 0) {
       requestPayload.tools = activeTools;
+      if (currentStep === 1 && requiresQuestionTool) {
+        requestPayload.tool_choice = "required";
+      }
     }
 
     const res = await fetch(mergeUrl, {
@@ -333,7 +347,7 @@ Quality Standards:
                       inLeadingThought = false;
                       const answerPortion = closeMatch[1].replace(/^\n+/, '');
                       streamEmittedLength = stepContent.length;
-                      if (answerPortion) {
+                      if (answerPortion && !(currentStep === 1 && requiresQuestionTool)) {
                         if (!firstTokenTime) firstTokenTime = Math.round(performance.now() - startTime);
                         await onEvent({ type: "content_delta", delta: answerPortion });
                       }
@@ -346,7 +360,7 @@ Quality Standards:
                 if (!inLeadingThought && item.text.length > streamEmittedLength) {
                   const delta = item.text.slice(streamEmittedLength);
                   streamEmittedLength = item.text.length;
-                  if (delta) {
+                  if (delta && !(currentStep === 1 && requiresQuestionTool)) {
                     if (!firstTokenTime) {
                       firstTokenTime = Math.round(performance.now() - startTime);
                     }
@@ -400,8 +414,9 @@ Quality Standards:
     // CASE A: Model provided direct response text (No tool called in this step)
     if (!toolCall) {
       const cleanAnswer = stepContent ? stepContent.replace(/<[\s]*thought[\s]*>[\s\S]*?(?:<[\s]*\/[\s]*thought[\s]*>|$)/gi, "").trim() : "";
-      
-      if (!cleanAnswer && currentStep < MAX_STEPS) {
+      const shouldForceTool = (requiresQuestionTool && currentStep === 1) || (!cleanAnswer && currentStep < MAX_STEPS);
+
+      if (shouldForceTool) {
         // Ensure any unclosed thought is properly closed in the stream
         if (stepContent && /<[\s]*thought[\s]*>/i.test(stepContent) && !/<[\s]*\/[\s]*thought[\s]*>/i.test(stepContent)) {
           await onEvent({ type: "content_delta", delta: "</thought>\n\n" });
@@ -409,12 +424,7 @@ Quality Standards:
         }
         await onEvent({ type: "thought_done", thought: stepContent });
 
-        const isMcqRequest = /mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|1\s*mcq|one\s*mcq|ekta\s*mcq|একটা\s*mcq|একটি\s*mcq|show\s*1\s*mcq/i.test(userMessage);
-        const isCqRequest = /cq|সৃজনশীল|উদ্দীপক|1\s*cq|one\s*cq|ekta\s*cq|একটা\s*cq|একটি\s*cq/i.test(userMessage);
-        const isSimilarRequest = /এই\s*টাইপের\s*আরেক|অনুরূপ\s*প্রশ্ন|similar\s*type|একই\s*সূত্রের/i.test(userMessage);
-        const isPatternRequest = /মাস্টার\s*টাইপ|পরীক্ষকের\s*ফাঁদ|অধ্যায়ের\s*টাইপ|ব্লুপ্রিন্ট|chapter\s*pattern/i.test(userMessage);
-
-        if (isSimilarRequest) {
+        if (isSimilarReq) {
           const targetQ = state.active_question || state.last_served_question;
           const idMatch = userMessage.match(/\[ID:\s*(q_\d+)\]/i);
           const qId = idMatch ? idMatch[1] : (targetQ?.id || undefined);
@@ -422,13 +432,13 @@ Quality Standards:
             id: `call_${Date.now()}`,
             name: "find_similar_type_questions",
             input: {
-              subject: activeSubject || undefined,
+              subject: activeSubject || targetQ?.subject_id || undefined,
               question_id: qId,
               query_text: targetQ?.question || targetQ?.stem || userMessage,
               academic_intent: "শিক্ষার্থীর অনুরোধ অনুযায়ী ভেক্টর সার্চ ব্যবহার করে একই সূত্রের অনুরূপ প্রশ্ন অনুসন্ধান করছি..."
             }
           };
-        } else if (isPatternRequest) {
+        } else if (isPatReq) {
           toolCall = {
             id: `call_${Date.now()}`,
             name: "analyze_chapter_patterns",
@@ -438,7 +448,7 @@ Quality Standards:
               academic_intent: "শিক্ষার্থীর অনুরোধ অনুযায়ী অধ্যায়ের বিগত বোর্ড প্রশ্নের মাস্টার টাইপ ও পরীক্ষকের ফাঁদ বিশ্লেষণ করছি..."
             }
           };
-        } else if (isMcqRequest) {
+        } else if (isMcqReq) {
           let countVal = 1;
           const countMatch = userMessage.match(/(\d+|[১-৯][০-৯]*)\s*(?:টি|টা)?\s*(?:mcq|কুইজ|বহুনির্বাচন|নৈর্ব্যক্তিক|প্রশ্ন|মক\s*টেস্ট)/i) ||
                              userMessage.match(/(?:mcq|কুইজ|বহুনির্বাচন|নৈর্ব্যক্তিক|মক\s*টেস্ট)\s*(\d+|[১-৯][০-৯]*)\s*(?:টি|টা)?/i);
@@ -458,7 +468,7 @@ Quality Standards:
               academic_intent: stepContent ? stepContent.replace(/<\/?thought>/gi, '').trim() : "শিক্ষার্থীর অনুরোধ অনুযায়ী বোর্ড বহুনির্বাচনী প্রশ্ন অনুসন্ধান করছি..."
             }
           };
-        } else if (isCqRequest) {
+        } else if (isCqReq) {
           toolCall = {
             id: `call_${Date.now()}`,
             name: "get_creative_question",
@@ -494,13 +504,12 @@ Quality Standards:
     }
 
     // Intercept: If student explicitly asks for similar/identical type question, force find_similar_type_questions
-    const isSimilarRequest = /এই\s*টাইপের\s*আরেক|অনুরূপ\s*প্রশ্ন|similar\s*type|একই\s*সূত্রের/i.test(userMessage);
-    if (isSimilarRequest && toolCall && (toolCall.name === "get_mcq_quiz" || toolCall.name === "get_creative_question")) {
+    if (isSimilarReq && (!toolCall || toolCall.name !== "find_similar_type_questions")) {
       const targetQ = state.active_question || state.last_served_question;
       const idMatch = userMessage.match(/\[ID:\s*(q_\d+)\]/i);
       const qId = idMatch ? idMatch[1] : (targetQ?.id || undefined);
       toolCall = {
-        id: toolCall.id || `call_${Date.now()}`,
+        id: toolCall?.id || `call_${Date.now()}`,
         name: "find_similar_type_questions",
         input: {
           subject: activeSubject || targetQ?.subject_id || undefined,

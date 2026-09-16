@@ -35,8 +35,10 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
       const rawAns = q?.answer || '';
       const normAns = toBnAns[rawAns] || rawAns || 'ক';
       const bTag = q?.formatted_source || formatTag(q?.tags) || "বোর্ড প্রামাণিক প্রশ্ন";
+      const qId = q?.id || '';
 
       return {
+        id: qId,
         chapter: rawResult.actual_chapter?.display || rawResult.actual_chapter?.name || toolArgs?.chapter || "",
         board: bTag,
         question: q?.question_text,
@@ -47,7 +49,7 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
           "ঘ": q?.option_d
         },
         answer_code: normAns,
-        mentor_guide: `উপস্থাপনার নিয়ম: কোনো <...> বা কাল্পনিক ট্যাগ লিখবে না। প্রথমে ১ বাক্যে স্বাভাবিক বাংলায় ভূমিকা দাও (যেমন: '${bTag}-এর একটি গুরুত্বপূর্ণ বহুনির্বাচনী প্রশ্ন নিচে দেওয়া হলো—')। প্রশ্নের নিচে আলাদা লাইনে [বোর্ড: ${bTag}] উল্লেখ করবে। এরপর প্রশ্ন, ৪টি অপশন এবং শেষে [ans: ${normAns}] দেবে। ভুলেও সরাসরি উত্তর বা ব্যাখ্যা লিখবে না যাতে কুইজ স্পয়েল না হয়।`
+        mentor_guide: `উপস্থাপনার নিয়ম: প্রথমে ১ বাক্যে স্বাভাবিক বাংলায় ভূমিকা দাও। প্রশ্নের শুরুতে আলাদা লাইনে [বোর্ড: ${bTag}] উল্লেখ করবে। এরপর প্রশ্ন এবং ৪টি বিকল্প (ক, খ, গ, ঘ) তুলে ধরবে। শিক্ষার্থী উত্তর দেওয়ার আগে ভুলেও উত্তর বা ব্যাখ্যা লিখবে না! মেসেজের একদম শেষে অবিকল [ans: ${normAns}] [qid: ${qId}] ট্যাগ দুটি দেবে।`
       };
     }
 
@@ -60,8 +62,10 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
       }
       const ch = rawResult.actual_chapter?.display || rawResult.actual_chapter?.name || rawResult.chapter_name || toolArgs?.chapter || "";
       const bTag = rawResult.board_tag || rawResult.formatted_source || formatTag(rawResult.raw_tag || rawResult.tags) || "বোর্ড প্রামাণিক প্রশ্ন";
+      const qId = rawResult.id || rawResult.qid || '';
 
       return {
+        id: qId,
         chapter: ch,
         board: bTag,
         stem: rawResult.stem || rawResult.question_text,
@@ -69,7 +73,7 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
         part_kha: rawResult.part_kha,
         part_ga: rawResult.part_ga,
         part_gha: rawResult.part_gha,
-        mentor_guide: `উপস্থাপনার নিয়ম: মার্জিত ও প্রাতিষ্ঠানিক অ্যাকাডেমিক কথনে শিরোনামে অধ্যায় এবং [বোর্ড: ${bTag}] উল্লেখ করবে। উদ্দীপক এবং ক, খ, গ, ঘ অংশের প্রশ্ন ও নম্বর বণ্টন উল্লেখ করে সুন্দর মার্কডাউনে উপস্থাপন করো। ভুলেও 'আসল প্রশ্ন', 'আসল CQ' বা কোনো কাল্পনিক ট্যাগ লিখবে না।`
+        mentor_guide: `উপস্থাপনার নিয়ম: মার্জিত অ্যাকাডেমিক কথনে শিরোনামে অধ্যায় এবং শুরুতে [বোর্ড: ${bTag}] উল্লেখ করবে। উদ্দীপক এবং ক, খ, গ, ঘ অংশের প্রশ্ন ও নম্বর বণ্টন উল্লেখ করে সুন্দর মার্কডাউনে উপস্থাপন করো। শেষে [qid: ${qId}] দেবে।`
       };
     }
 
@@ -115,9 +119,11 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
       const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
       const rawAns = q?.answer || '';
       const normAns = toBnAns[rawAns] || rawAns || 'ক';
-      const bTag = formatTag(q?.board || q?.raw_tag) || "বোর্ড স্ট্যান্ডার্ড";
+      const bTag = formatTag(q?.board || q?.raw_tag) || "বোর্ড প্রামাণিক প্রশ্ন";
+      const qId = q?.id || '';
 
       return {
+        id: qId,
         chapter: rawResult.chapter_name || toolArgs?.chapter || "",
         board: bTag,
         question: q?.question,
@@ -128,7 +134,7 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
           "ঘ": q?.options?.[3]
         },
         answer_code: normAns,
-        mentor_guide: `অনুরূপ প্রশ্ন: বড় ভাইয়াসুলভ কথনে আগের প্রশ্নের মূল টাইপ ও সূত্রের সাথে এই প্রশ্নের মিল ধরিয়ে দাও। শেষে [ans: ${normAns}] দেবে।`
+        mentor_guide: `উপস্থাপনার নিয়ম: এটি আসল বোর্ড ডেটাবেসের অনুরূপ প্রশ্ন। প্রথমে ১ বাক্যে আগের টাইপের সাথে মিল রেখে বড় ভাইয়াসুলভ ভূমিকা দাও। প্রশ্নের শুরুতে আলাদা লাইনে [বোর্ড: ${bTag}] উল্লেখ করবে। এরপর প্রশ্ন ও ৪টি বিকল্প (ক, খ, গ, ঘ) তুলে ধরো। শিক্ষার্থী চেষ্টা করার আগে ভুলেও উত্তর বা ব্যাখ্যা প্রকাশ করবে না! মেসেজের শেষে অবিকল [ans: ${normAns}] [qid: ${qId}] ট্যাগ দুটি দেবে।`
       };
     }
 
