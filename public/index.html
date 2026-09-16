@@ -1964,6 +1964,19 @@
       }
 
       if (clusters.length >= 2) {
+        const resolveClusterMath = (str) => {
+          if (!str) return '';
+          return str
+            .replace(/%%%MATH_D_(\d+)%%%/g, (m, idx) => {
+              const code = displayMath[parseInt(idx, 10)];
+              return code ? `$$${code}$$` : m;
+            })
+            .replace(/%%%MATH_I_(\d+)%%%/g, (m, idx) => {
+              const code = inlineMath[parseInt(idx, 10)];
+              return code ? `$${code}$` : m;
+            });
+        };
+
         const extractedExamQuestions = [];
         for (let c = 0; c < clusters.length; c++) {
           const cluster = clusters[c];
@@ -1972,11 +1985,11 @@
           const stemLine = (sIdx >= 0 && lines[sIdx]) ? lines[sIdx].replace(/^#+\s*|\d+[\.\)]\s*|প্রশ্ন\s*[:\d]\s*/gi, '').trim() : `প্রশ্ন ${c + 1}`;
           
           extractedExamQuestions.push({
-            question_text: stemLine,
-            option_a: cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || '',
-            option_b: cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || '',
-            option_c: cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || '',
-            option_d: cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || '',
+            question_text: resolveClusterMath(stemLine),
+            option_a: resolveClusterMath(cluster.items.find(it => normLetter(it.letter) === 'ক')?.text || cluster.items[0]?.text || ''),
+            option_b: resolveClusterMath(cluster.items.find(it => normLetter(it.letter) === 'খ')?.text || cluster.items[1]?.text || ''),
+            option_c: resolveClusterMath(cluster.items.find(it => normLetter(it.letter) === 'গ')?.text || cluster.items[2]?.text || ''),
+            option_d: resolveClusterMath(cluster.items.find(it => normLetter(it.letter) === 'ঘ')?.text || cluster.items[3]?.text || ''),
             answer: detectedAns || 'ক',
             solution: 'বোর্ড স্ট্যান্ডার্ড সমাধান ও নির্ভুল বিশ্লেষণ',
             tags: extraBoardTag || ''
@@ -1995,34 +2008,16 @@
         html = escapeHtml(clean);
       }
 
-      if (clusters.length >= 2) {
-        const launchBannerHtml = `
-          <div class="my-3.5 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/[0.14] via-teal-500/[0.10] to-indigo-500/[0.14] border border-emerald-500/30 flex items-center justify-between gap-3 shadow-[0_4px_24px_rgba(16,185,129,0.12)] backdrop-blur-md">
-            <div class="flex items-center gap-3 min-w-0">
-              <span class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-500/30 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.2)]">🎯</span>
-              <div class="min-w-0">
-                <h4 class="text-xs sm:text-sm font-bold text-white tracking-wide truncate">মক টেস্ট মোড প্রস্তুত (${toBnDigits(clusters.length)}টি প্রশ্ন)</h4>
-                <p class="text-[11px] text-emerald-300/80 truncate">কাউন্টডাউন টাইমার ও পূর্ণাঙ্গ সমাধানসহ লাইভ পরীক্ষা দাও</p>
-              </div>
-            </div>
-            <button type="button" onclick="launchActiveChatExam()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs shadow-[0_0_14px_rgba(16,185,129,0.4)] active:scale-95 transition-all duration-150 cursor-pointer shrink-0">
-              পরীক্ষা শুরু করো
-            </button>
-          </div>
-        `;
-        html = launchBannerHtml + html;
-      }
-
-      // 6b. Inject Exam Launcher Card if present
-      if (clean.includes('%%%EXAM_LAUNCHER_PLACEHOLDER%%%') || examLauncherData) {
-        const totVal = examLauncherData?.total || (extraQuizData?.length || 5);
+      // 6b. Inject Exam Launcher Card if present OR if multi-MCQ cluster detected
+      if (clean.includes('%%%EXAM_LAUNCHER_PLACEHOLDER%%%') || examLauncherData || clusters.length >= 2) {
+        const totVal = examLauncherData?.total || (extraQuizData?.length || (clusters.length >= 2 ? clusters.length : 5));
         const totBn = toBnDigits(totVal);
         const subjStr = examLauncherData?.subject || currentSelectedSubject?.name || 'এসএসসি বিষয়';
-        const chStr = examLauncherData?.chapter || 'অধ্যায়ভিত্তিক মূল্যায়ন পরীক্ষা';
+        const chStr = examLauncherData?.chapter || (clusters.length >= 2 ? 'অধ্যায়ভিত্তিক মূল্যায়ন পরীক্ষা' : 'মূল্যায়ন পরীক্ষা');
         const qListToEmbed = (extraQuizData && Array.isArray(extraQuizData) && extraQuizData.length > 0)
           ? extraQuizData
-          : (globalActiveExamQuestions && globalActiveExamQuestions.length >= totVal ? globalActiveExamQuestions.slice(0, totVal) : null);
-        const qJsonAttr = qListToEmbed ? `data-questions="${escapeHtml(JSON.stringify(qListToEmbed))}"` : '';
+          : (globalActiveExamQuestions && globalActiveExamQuestions.length >= totVal ? globalActiveExamQuestions.slice(0, totVal) : globalActiveExamQuestions);
+        const qJsonAttr = qListToEmbed && qListToEmbed.length > 0 ? `data-questions="${escapeHtml(JSON.stringify(qListToEmbed))}"` : '';
 
         const launcherCardHtml = `
           <div class="exam-launcher-card my-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#0d1f18]/90 via-[#0d1624]/90 to-[#141226]/90 border border-emerald-500/35 shadow-[0_8px_32px_rgba(16,185,129,0.12),inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-all duration-300 hover:border-emerald-500/55"
@@ -2052,15 +2047,27 @@
         `;
         if (html.includes('%%%EXAM_LAUNCHER_PLACEHOLDER%%%')) {
           html = html.replace(/<p>\s*%%%EXAM_LAUNCHER_PLACEHOLDER%%%\s*<\/p>|%%%EXAM_LAUNCHER_PLACEHOLDER%%%/g, launcherCardHtml);
-        } else {
+        } else if (!html.includes('exam-launcher-card')) {
           html += launcherCardHtml;
         }
       }
 
-      // 7. Inject MCQ Cards
-      for (const card of cards) {
-        const reg = new RegExp(`<p>\\s*${card.placeholder}\\s*<\\/p>|${card.placeholder}`, 'g');
-        html = html.replace(reg, card.cardHtml);
+      // 7. Inject MCQ Cards: ONLY for Single MCQ practice! If multi-MCQ, card placeholders are collapsed into the launcher card!
+      if (clusters.length >= 2) {
+        // Multi-MCQ: suppress duplicate individual question cards from chat
+        for (const card of cards) {
+          const reg = new RegExp(`<p>\\s*${card.placeholder}\\s*<\\/p>|${card.placeholder}`, 'g');
+          html = html.replace(reg, '');
+        }
+        // Clean up individual numbered stems from chat text
+        html = html.replace(/<p>\s*<strong>[০-৯0-9]+[\.\)][^<]*<\/strong>\s*<\/p>/gi, '');
+        html = html.replace(/<p>\s*[০-৯0-9]+[\.\)][^<]*<\/p>/gi, '');
+      } else {
+        // Single MCQ: inject interactive card directly into chat
+        for (const card of cards) {
+          const reg = new RegExp(`<p>\\s*${card.placeholder}\\s*<\\/p>|${card.placeholder}`, 'g');
+          html = html.replace(reg, card.cardHtml);
+        }
       }
 
       // 7b. Format Examiner Traps & Master Tricks inside blockquotes into glowing glassmorphic cards
@@ -2185,6 +2192,83 @@
       }
       if (katexCache.size < 1200) katexCache.set(key, rendered);
       return rendered;
+    }
+
+    // Specialized high-speed math & science formula formatter for exam modal and question cards
+    function formatExamMath(raw) {
+      if (!raw) return '';
+      let str = String(raw).trim();
+
+      // If marked/HTML already leaked in, strip outer <p> and </p>
+      str = str.replace(/^<p>([\s\S]*?)<\/p>$/i, '$1').trim();
+
+      // 0. Safety cleanup for any residual placeholders
+      str = str.replace(/%%%MATH_D_(\d+)%%%/g, (m, idx) => {
+        return (typeof displayMath !== 'undefined' && displayMath[idx]) ? `$$${displayMath[idx]}$$` : m;
+      }).replace(/%%%MATH_I_(\d+)%%%/g, (m, idx) => {
+        return (typeof inlineMath !== 'undefined' && inlineMath[idx]) ? `$${inlineMath[idx]}$` : m;
+      });
+
+      const mathItems = [];
+      const placeholder = (idx) => `%%%EXAM_M_${idx}%%%`;
+
+      // Helper to convert Bengali digits to ASCII digits for LaTeX engine
+      const toAsciiMathDigits = (s) => s.replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+
+      // 1. Display Math: $$...$$ and \[...\]
+      str = str.replace(/(?:\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\])/g, (m, c1, c2) => {
+        const code = (c1 !== undefined ? c1 : c2).trim();
+        mathItems.push({ code: toAsciiMathDigits(code), display: true });
+        return placeholder(mathItems.length - 1);
+      });
+
+      // 2. Inline Math: $...$ and \(...\)
+      str = str.replace(/(?:(?<!\\)\$([^\$\n]+?)(?<!\\)\$|\\\(([^\\\n]*?)\\\))/g, (m, c1, c2) => {
+        const code = (c1 !== undefined ? c1 : c2).trim();
+        mathItems.push({ code: toAsciiMathDigits(code), display: false });
+        return placeholder(mathItems.length - 1);
+      });
+
+      // 3. Standalone scientific notations with multiplication:
+      // e.g. "3.011 × 10^{23}", "3.011 \times 10^{23}", "3.011 x 10^23", "6.022 × 10^23", "৬.০২ × ১০^{২৩}", "3 × 10^8 m/s"
+      str = str.replace(/([০-৯0-9]+(?:\.[০-৯0-9]+)?\s*(?:×|\\times|\*|x)\s*(?:10|১০)\^\{?[+-]?[০-৯0-9]+\}?(?:\s*[a-zA-Z\/]+(?:\^\{?[+-]?[০-৯0-9]+\}?)?)?)/gi, (m) => {
+        let clean = toAsciiMathDigits(m).replace(/×|\*|(?<=\s)x(?=\s)/g, '\\times ');
+        mathItems.push({ code: clean, display: false });
+        return placeholder(mathItems.length - 1);
+      });
+
+      // 4. Standalone LaTeX commands: e.g. \times, \frac{...}{...}, \mathrm{...}, \sqrt{...}
+      str = str.replace(/(\\[a-zA-Z]+(?:\{[^\}\n]*\})*(?:[\s_^\-\+*\/=<>]+[a-zA-Z0-9\(\)\{\}\\]+)*)/g, (m) => {
+        mathItems.push({ code: toAsciiMathDigits(m.trim()), display: false });
+        return placeholder(mathItems.length - 1);
+      });
+
+      // 5. Chemical formulas with subscripts (e.g. CO_2, H_2SO_4, CaCO_3, NaHCO_3, KMnO_4, H_2O, Fe_2O_3, NO_2)
+      str = str.replace(/\b((?:[A-Z][a-z]?)+(?:_\d+|\^\{?[+-]?\d+\}?)+(?:[A-Z][a-z]?(?:_\d+|\^\{?[+-]?\d+\}?)*)*)\b/g, (m) => {
+        mathItems.push({ code: `\\mathrm{${m}}`, display: false });
+        return placeholder(mathItems.length - 1);
+      });
+
+      // 6. Standalone powers of 10 or variables with exponents: e.g. 10^{23}, ১০^{২৩}, 10^8, 10^{-3}, ms^{-1}, ms^{-2}, v^2, u^2
+      str = str.replace(/((?:10|১০)\^\{?[+-]?[০-৯0-9]+\}?|\b[a-zA-Z]\^\{?[+-]?[০-৯0-9]+\}?)/g, (m) => {
+        mathItems.push({ code: toAsciiMathDigits(m), display: false });
+        return placeholder(mathItems.length - 1);
+      });
+
+      // 7. Light markdown formatting for text (bold, italic, code)
+      str = str
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-white/[0.06] font-mono text-xs">$1</code>');
+
+      // 8. Restore all math items using high-performance getRenderedKaTeX
+      str = str.replace(/%%%EXAM_M_(\d+)%%%/g, (m, idx) => {
+        const item = mathItems[parseInt(idx, 10)];
+        if (!item) return m;
+        return getRenderedKaTeX(item.code, item.display);
+      });
+
+      return str;
     }
 
     function renderFormattedContentWithCursor(rawText, isStreaming = false, extraBoardTag = null, extraAns = null, extraQuizData = null) {
@@ -3052,13 +3136,13 @@
         }
       }
 
-      // Question Stem
+      // Question Stem with full KaTeX math support
       const stemEl = document.getElementById('examQStem');
       if (stemEl) {
-        stemEl.innerHTML = renderFormattedContent(q.question_text || q.stem || '');
+        stemEl.innerHTML = formatExamMath(q.question_text || q.stem || '');
       }
 
-      // Options
+      // Options with full KaTeX math support
       const optContainer = document.getElementById('examOptionsGrid');
       const selectedLetter = currentExamState.userAnswers[idx];
       const correctLetter = normLetter(q.answer || q.correct_answer_bn || 'ক');
@@ -3095,20 +3179,20 @@
               <span class="opt-letter w-7 h-7 rounded-lg bg-white/[0.05] text-zinc-300 font-mono text-xs flex items-center justify-center font-bold shrink-0 border border-white/[0.08] transition-all group-hover:border-white/20">
                 ${opt.letter}
               </span>
-              <span class="opt-text text-xs sm:text-[13.5px] text-zinc-200 transition-colors font-normal leading-snug">${opt.text}</span>
+              <span class="opt-text text-xs sm:text-[13.5px] text-zinc-200 transition-colors font-normal leading-snug">${formatExamMath(opt.text)}</span>
             </div>
             ${badgeHtml}
           </button>
         `;
       }).join('');
 
-      // Explanation Card
+      // Explanation Card with full KaTeX math support
       const expCard = document.getElementById('examExplanationCard');
       if (selectedLetter !== undefined) {
         expCard.classList.remove('hidden');
         document.getElementById('examCorrectAnsBadge').innerText = `সঠিক উত্তর: (${correctLetter})`;
         const expContent = q.solution || q.explanation || 'এই প্রশ্নের মূল ধারণার সঠিক প্রয়োগ বিশ্লেষণ উপরের বিকল্পে দেখানো হয়েছে।';
-        document.getElementById('examExplanationContent').innerHTML = renderFormattedContent(expContent);
+        document.getElementById('examExplanationContent').innerHTML = formatExamMath(expContent);
       } else {
         expCard.classList.add('hidden');
       }
@@ -3205,7 +3289,7 @@
 
           const rawSol = (q.solution || q.explanation || '').trim();
           const hasValidSol = rawSol && rawSol.toLowerCase() !== 'upgrade' && rawSol !== 'none';
-          const solHtml = hasValidSol ? `<div class="leading-relaxed text-zinc-400 pt-1">${renderFormattedContent(rawSol)}</div>` : '';
+          const solHtml = hasValidSol ? `<div class="leading-relaxed text-zinc-400 pt-1">${formatExamMath(rawSol)}</div>` : '';
           const boardTagDisplay = (q.tags || q.formatted_source) ? formatFullBoardTags(q.tags || q.formatted_source) : '';
 
           return `
@@ -3214,7 +3298,7 @@
                 <span class="text-xs font-mono font-semibold text-zinc-400">প্রশ্ন ${toBnDigits(idx + 1)}</span>
                 ${statusBadge}
               </div>
-              <h5 class="text-sm font-medium text-white leading-relaxed">${renderFormattedContent(q.question_text || q.stem || '')}</h5>
+              <h5 class="text-sm font-medium text-white leading-relaxed">${formatExamMath(q.question_text || q.stem || '')}</h5>
               <div class="p-3 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20 text-xs text-zinc-300 space-y-1.5">
                 <div class="flex items-center justify-between gap-2 flex-wrap">
                   <div class="flex items-center gap-2 font-semibold text-indigo-300">

@@ -439,12 +439,21 @@ Quality Standards:
             }
           };
         } else if (isMcqRequest) {
+          let countVal = 1;
+          const countMatch = userMessage.match(/(\d+|[১-৯][০-৯]*)\s*(?:টি|টা)?\s*(?:mcq|কুইজ|বহুনির্বাচন|নৈর্ব্যক্তিক|প্রশ্ন|মক\s*টেস্ট)/i) ||
+                             userMessage.match(/(?:mcq|কুইজ|বহুনির্বাচন|নৈর্ব্যক্তিক|মক\s*টেস্ট)\s*(\d+|[১-৯][০-৯]*)\s*(?:টি|টা)?/i);
+          if (countMatch) {
+            const toEn = { '১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9','০':'0' };
+            const numStr = countMatch[1].replace(/[০-৯]/g, d => toEn[d] || d);
+            countVal = parseInt(numStr, 10) || 1;
+          }
           toolCall = {
             id: `call_${Date.now()}`,
             name: "get_mcq_quiz",
             input: {
               subject: activeSubject || undefined,
               chapter: activeChapter || undefined,
+              count: countVal,
               query: userMessage,
               academic_intent: stepContent ? stepContent.replace(/<\/?thought>/gi, '').trim() : "শিক্ষার্থীর অনুরোধ অনুযায়ী বোর্ড বহুনির্বাচনী প্রশ্ন অনুসন্ধান করছি..."
             }

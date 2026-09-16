@@ -31,6 +31,20 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
     return INTENT_TYPES.QUIZ_ANSWER;
   }
 
+  // MCQ / Quiz / Mock test (Highest Priority for question generation)
+  if (
+    /(?:mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|মক\s*টেস্ট|mock\s*test|পরীক্ষা\s*নাও|টেস্ট\s*দাও)/i.test(lower)
+  ) {
+    return INTENT_TYPES.MCQ_QUIZ;
+  }
+
+  // CQ / Creative question
+  if (
+    /(?:সৃজনশীল|cq|উদ্দীপক|ক\s*খ\s*গ\s*ঘ|গ\s*ও\s*ঘ|creative)/i.test(lower)
+  ) {
+    return INTENT_TYPES.CQ_CREATIVE;
+  }
+
   // Syllabus / Chapter list
   if (
     /(?:সবগুলো|সকল|সকল\s*অধ্যায়|অধ্যায়গুলোর|অধ্যায়\s*কয়টি|অধ্যায়\s*তালিকা|সিলেবাস|syllabus|chapter\s*list|all\s*chapters|গদ্য\s*ও\s*কবিতা|গদ্য\s*কয়টা|কবিতা\s*কয়টা)/i.test(lower)
@@ -43,27 +57,6 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
     /(?:৮০\/২০|80\/20|গুরুত্বপূর্ণ|ইম্পর্টেন্ট|important|priorit|আগে\s*পড়ব|কোনগুলো\s*পড়ব|সহজ\s*কোনটা|বেশি\s*আসে|কম\s*পড়ে)/i.test(lower)
   ) {
     return INTENT_TYPES.IMPORTANCE_RANKING;
-  }
-
-  // Similar type or pattern analysis
-  if (
-    /(?:এই\s*টাইপের|অনুরূপ|similar|একই\s*সূত্রের|মাস্টার\s*টাইপ|ব্লুপ্রিন্ট|blueprint|pattern)/i.test(lower)
-  ) {
-    return INTENT_TYPES.SIMILAR_PATTERN;
-  }
-
-  // MCQ / Quiz / Mock test
-  if (
-    /(?:mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|মক\s*টেস্ট|mock\s*test|পরীক্ষা\s*নাও|টেস্ট\s*দাও)/i.test(lower)
-  ) {
-    return INTENT_TYPES.MCQ_QUIZ;
-  }
-
-  // CQ / Creative question
-  if (
-    /(?:সৃজনশীল|cq|উদ্দীপক|ক\s*খ\s*গ\s*ঘ|গ\s*ও\s*ঘ|creative)/i.test(lower)
-  ) {
-    return INTENT_TYPES.CQ_CREATIVE;
   }
 
   // SQL / Deep Database Analytics
