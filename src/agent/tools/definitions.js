@@ -132,12 +132,12 @@ export const AGENT_TOOLS = [
           },
           count: {
             type: "number",
-            description: "Number of MCQs (default 1, max 10 for exam mode)"
+            description: "Number of MCQs requested by student (default 1, up to 30 for mock test or multi-question exam)"
           },
           mode: {
             type: "string",
             enum: ["practice", "mock_test"],
-            description: "Mode: 'practice' (with solution) or 'mock_test' (interactive test)"
+            description: "Mode: 'practice' (single MCQ) or 'mock_test' (interactive test)"
           }
         }
       }

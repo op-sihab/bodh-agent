@@ -1785,7 +1785,7 @@
     }
 
     // Content Formatter (Markdown + KaTeX Math + Robust Multi-MCQ Extraction)
-    function renderFormattedContent(rawText, extraBoardTag = null, extraAns = null) {
+    function renderFormattedContent(rawText, extraBoardTag = null, extraAns = null, extraQuizData = null) {
       if (!rawText) return "";
 
       let clean = String(rawText)
@@ -1804,6 +1804,22 @@
       if (/^<\/?\s*(?:th?o?u?g?h?t?|th?i?n?k?i?n?g?)[^>]*$/i.test(clean)) {
         return "";
       }
+
+      // 0. Extract Exam Launcher Tag (e.g. [exam_launcher: {"total": 7, "subject": "রসায়ন", "chapter": "অধ্যায় ৪: পর্যায় সারণি"}])
+      let examLauncherData = null;
+      clean = clean.replace(/\[exam_launcher:\s*(\{[\s\S]*?\}|[\d০-৯]+)\]/gi, (m, payload) => {
+        try {
+          const trimmed = payload.trim();
+          if (trimmed.startsWith('{')) {
+            examLauncherData = JSON.parse(trimmed);
+          } else {
+            examLauncherData = { total: parseInt(trimmed) || 5 };
+          }
+        } catch (e) {
+          examLauncherData = { total: 5 };
+        }
+        return '%%%EXAM_LAUNCHER_PLACEHOLDER%%%';
+      });
 
       // 1. Extract Board Reference Tag (cleanly removes tag from text without leaking placeholder)
       let boardTagsHtml = "";
@@ -2051,6 +2067,48 @@
           </div>
         `;
         html = launchBannerHtml + html;
+      // 6b. Inject Exam Launcher Card if present
+      if (clean.includes('%%%EXAM_LAUNCHER_PLACEHOLDER%%%') || examLauncherData) {
+        const totVal = examLauncherData?.total || (extraQuizData?.length || 5);
+        const totBn = toBnDigits(totVal);
+        const subjStr = examLauncherData?.subject || currentSelectedSubject?.name || 'এসএসসি বিষয়';
+        const chStr = examLauncherData?.chapter || 'অধ্যায়ভিত্তিক মূল্যায়ন পরীক্ষা';
+        const qListToEmbed = (extraQuizData && Array.isArray(extraQuizData) && extraQuizData.length > 0)
+          ? extraQuizData
+          : (globalActiveExamQuestions && globalActiveExamQuestions.length >= totVal ? globalActiveExamQuestions.slice(0, totVal) : null);
+        const qJsonAttr = qListToEmbed ? `data-questions="${escapeHtml(JSON.stringify(qListToEmbed))}"` : '';
+
+        const launcherCardHtml = `
+          <div class="exam-launcher-card my-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#0d1f18]/90 via-[#0d1624]/90 to-[#141226]/90 border border-emerald-500/35 shadow-[0_8px_32px_rgba(16,185,129,0.12),inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-all duration-300 hover:border-emerald-500/55"
+            data-subject="${escapeHtml(subjStr)}"
+            data-chapter="${escapeHtml(chStr)}"
+            data-total="${totVal}"
+            ${qJsonAttr}>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-center gap-3.5 min-w-0">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-500/15 border border-emerald-500/40 flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(16,185,129,0.25)] shrink-0">
+                  🎯
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-sm sm:text-base font-bold text-white tracking-wide truncate">${escapeHtml(subjStr)}</h4>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold shrink-0">লাইভ টেস্ট</span>
+                  </div>
+                  <p class="text-xs text-emerald-300/80 mt-0.5 truncate">${escapeHtml(chStr)} • মোট ${totBn}টি প্রশ্ন • ${totBn} মিনিট সময়</p>
+                </div>
+              </div>
+              <button type="button" onclick="startExamFromCard(this)" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-zinc-950 font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 transition-all duration-150 cursor-pointer shrink-0 flex items-center justify-center gap-2">
+                <span>🚀 পরীক্ষা শুরু করো</span>
+                <svg class="w-4 h-4 text-zinc-950" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+        `;
+        if (html.includes('%%%EXAM_LAUNCHER_PLACEHOLDER%%%')) {
+          html = html.replace(/<p>\s*%%%EXAM_LAUNCHER_PLACEHOLDER%%%\s*<\/p>|%%%EXAM_LAUNCHER_PLACEHOLDER%%%/g, launcherCardHtml);
+        } else {
+          html += launcherCardHtml;
+        }
       }
 
       // 7. Inject MCQ Cards
@@ -2183,12 +2241,12 @@
       return rendered;
     }
 
-    function renderFormattedContentWithCursor(rawText, isStreaming = false, extraBoardTag = null, extraAns = null) {
+    function renderFormattedContentWithCursor(rawText, isStreaming = false, extraBoardTag = null, extraAns = null, extraQuizData = null) {
       if (!rawText) return "";
       
       // Clean up empty trailing table pipes
       let cleanText = rawText.replace(/\|\s*\|\s*$/gm, '|');
-      let html = renderFormattedContent(cleanText, extraBoardTag, extraAns);
+      let html = renderFormattedContent(cleanText, extraBoardTag, extraAns, extraQuizData);
       if (!isStreaming) return html;
 
       const cursorHtml = '<span class="streaming-cursor"></span>';
@@ -2620,8 +2678,9 @@
           contentEl.classList.remove('hidden');
           const extraBoardTag = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.all_board_tags || toolDoneEvt.result?.quiz?.[0]?.formatted_source || (toolDoneEvt.args?.board ? toolDoneEvt.args.board + ' বোর্ড' : '')) : null;
           const extraAns = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz?.[0]?.answer || '') : null;
+          const extraQuizData = toolDoneEvt?.tool === 'get_mcq_quiz' ? (toolDoneEvt.result?.quiz || null) : null;
           if (cleanFinal) {
-            contentEl.innerHTML = renderFormattedContentWithCursor(cleanFinal, false, extraBoardTag, extraAns);
+            contentEl.innerHTML = renderFormattedContentWithCursor(cleanFinal, false, extraBoardTag, extraAns, extraQuizData);
           }
           // Thoroughly purge any residual cursors
           contentEl.querySelectorAll('.streaming-cursor, .thought-cursor').forEach(el => el.remove());
@@ -2790,6 +2849,9 @@
                 toolDoneEvt = data;
                 hasTool = true;
                 pendingToolDone = data;
+                if (data.tool === "get_mcq_quiz" && data.result?.quiz && Array.isArray(data.result.quiz) && data.result.quiz.length > 0) {
+                  globalActiveExamQuestions = data.result.quiz;
+                }
               }
 
               // 2b. Generating Start -> Flag or show writing pulse
@@ -3185,6 +3247,11 @@
             statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-400 font-mono text-[11px] font-semibold">ভুল (${userAns})</span>`;
           }
 
+          const rawSol = (q.solution || q.explanation || '').trim();
+          const hasValidSol = rawSol && rawSol.toLowerCase() !== 'upgrade' && rawSol !== 'none';
+          const solHtml = hasValidSol ? `<div class="leading-relaxed text-zinc-400 pt-1">${renderFormattedContent(rawSol)}</div>` : '';
+          const boardTagDisplay = (q.tags || q.formatted_source) ? formatFullBoardTags(q.tags || q.formatted_source) : '';
+
           return `
             <div class="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.07] space-y-3">
               <div class="flex items-center justify-between">
@@ -3193,14 +3260,43 @@
               </div>
               <h5 class="text-sm font-medium text-white leading-relaxed">${renderFormattedContent(q.question_text || q.stem || '')}</h5>
               <div class="p-3 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20 text-xs text-zinc-300 space-y-1.5">
-                <div class="flex items-center gap-2 font-semibold text-indigo-300">
-                  <span>সঠিক উত্তর: (${correctAns})</span>
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <div class="flex items-center gap-2 font-semibold text-indigo-300">
+                    <span>সঠিক উত্তর: (${correctAns})</span>
+                  </div>
+                  ${boardTagDisplay ? `<span class="text-[10px] font-mono text-zinc-400 px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.06]">${escapeHtml(boardTagDisplay)}</span>` : ''}
                 </div>
-                <div class="leading-relaxed text-zinc-400">${renderFormattedContent(q.solution || q.explanation || 'বিকল্পের সঠিক যুক্তি প্রযোজ্য।')}</div>
+                ${solHtml}
+              </div>
+              <div class="pt-1 flex items-center justify-end">
+                <button type="button" onclick="askAiToExplainQuestion(${idx})" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 hover:text-white border border-indigo-500/25 hover:border-indigo-500/40 text-[11.5px] font-medium transition-all active:scale-95 cursor-pointer shadow-[0_0_12px_rgba(99,102,241,0.08)]">
+                  <span>💡 বড় ভাইয়া, এই প্রশ্নটি বুঝিয়ে দাও</span>
+                  <svg class="w-3.5 h-3.5 text-indigo-400 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
               </div>
             </div>
           `;
         }).join('');
+
+        if (wrong > 0 || unans > 0) {
+          const problemCount = wrong + unans;
+          const batchReviewCard = `
+            <div class="mt-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-indigo-500/10 border border-indigo-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_4px_24px_rgba(99,102,241,0.12)]">
+              <div>
+                <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                  <span>ভুল কনসেপ্টগুলো মাস্টার করতে চাও?</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30 font-semibold">${toBnDigits(problemCount)}টি প্রশ্ন</span>
+                </h4>
+                <p class="text-[11.5px] text-zinc-300 mt-1">যে প্রশ্নগুলোতে ভুল বা বাদ পড়েছে, বড় ভাইয়ার কাছে এক ক্লিকে পরিষ্কার সমাধান ও পরীক্ষার কৌশল জেনে নাও।</p>
+              </div>
+              <button type="button" onclick="askAiToExplainAllMistakes()" class="px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-xs sm:text-sm shadow-[0_0_16px_rgba(99,102,241,0.3)] active:scale-95 transition-all cursor-pointer shrink-0 flex items-center justify-center gap-2">
+                <span>🎓 সব ভুলের ব্যাখ্যা নাও</span>
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </button>
+            </div>
+          `;
+          reviewList.innerHTML += batchReviewCard;
+        }
       }
 
       document.getElementById('examQuestionView').classList.add('hidden');
@@ -3215,6 +3311,113 @@
         subjectName: currentExamState.subjectName,
         topicName: currentExamState.topicName
       });
+    }
+
+    function askAiToExplainQuestion(idx) {
+      closeExamModal();
+      const q = currentExamState.questions[idx];
+      if (!q) return;
+      const userAns = currentExamState.userAnswers[idx] || 'উত্তর দিইনি';
+      const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+      const stem = (q.question_text || q.stem || '').replace(/\n+/g, ' ').slice(0, 160);
+      const optA = q.option_a || q.options?.[0] || '';
+      const optB = q.option_b || q.options?.[1] || '';
+      const optC = q.option_c || q.options?.[2] || '';
+      const optD = q.option_d || q.options?.[3] || '';
+      
+      const prompt = `ভাইয়া, এই MCQ-তে আমার ভুল হয়েছিল। সঠিক উত্তর কেন (${correctAns}) হলো এবং এর পেছনের মূল কনসেপ্ট/সূত্র বুঝিয়ে দাও:\n\nপ্রশ্ন: ${stem}\n(ক) ${optA}  (খ) ${optB}  (গ) ${optC}  (ঘ) ${optD}\nআমার উত্তর ছিল: (${userAns}), সঠিক উত্তর: (${correctAns})`;
+      submitPrompt(prompt);
+    }
+
+    function askAiToExplainAllMistakes() {
+      closeExamModal();
+      const wrongItems = [];
+      currentExamState.questions.forEach((q, idx) => {
+        const userAns = currentExamState.userAnswers[idx];
+        const correctAns = normLetter(q.answer || q.correct_answer_bn || 'ক');
+        if (userAns !== correctAns) {
+          const stem = (q.question_text || q.stem || '').replace(/\n+/g, ' ').slice(0, 100);
+          wrongItems.push(`- প্রশ্ন ${idx + 1}: "${stem}" (আমার উত্তর: ${userAns || 'বাদ'}, সঠিক: ${correctAns})`);
+        }
+      });
+      if (wrongItems.length === 0) return;
+      const prompt = `ভাইয়া, আমি ${currentExamState.subjectName} (${currentExamState.topicName})-এর মক টেস্ট দিয়েছি। এই প্রশ্নগুলোতে আমার ভুল হয়েছিল, দয়া করে এগুলোর পেছনের মূল নিয়ম ও কনসেপ্ট বুঝিয়ে দাও:\n${wrongItems.join('\n')}`;
+      submitPrompt(prompt);
+    }
+
+    function launchActiveChatExam() {
+      if (globalActiveExamQuestions && globalActiveExamQuestions.length > 0) {
+        openExamModal({
+          questions: globalActiveExamQuestions,
+          subjectName: currentSelectedSubject?.name || 'এসএসসি প্রস্তুতি',
+          topicName: 'অধ্যায়ভিত্তিক মূল্যায়ন পরীক্ষা'
+        });
+      }
+    }
+
+    async function startExamFromCard(btn) {
+      const card = btn.closest('.exam-launcher-card');
+      if (!card) return;
+
+      const subj = card.getAttribute('data-subject') || currentSelectedSubject?.name || 'এসএসসি বিষয়';
+      const ch = card.getAttribute('data-chapter') || 'মূল্যায়ন পরীক্ষা';
+      const total = parseInt(card.getAttribute('data-total')) || 5;
+
+      // 1. Check if questions are already embedded in the card
+      const rawQ = card.getAttribute('data-questions');
+      if (rawQ) {
+        try {
+          const qList = JSON.parse(rawQ);
+          if (qList && qList.length > 0) {
+            openExamModal({
+              questions: qList,
+              subjectName: subj,
+              topicName: ch
+            });
+            return;
+          }
+        } catch (e) {}
+      }
+
+      // 2. Check if global active questions are available
+      if (globalActiveExamQuestions && globalActiveExamQuestions.length > 0) {
+        openExamModal({
+          questions: globalActiveExamQuestions,
+          subjectName: subj,
+          topicName: ch
+        });
+        return;
+      }
+
+      // 3. Dynamic fetch from /api/quiz/generate
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<span class="inline-block w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin"></span> <span>লোড হচ্ছে...</span>`;
+      btn.disabled = true;
+
+      try {
+        const subjId = currentSelectedSubject?.id || 'ssc_physics';
+        const res = await fetch(`/api/quiz/generate?subject=${encodeURIComponent(subjId)}&chapter=${encodeURIComponent(ch)}&count=${total}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.questions && data.questions.length > 0) {
+            card.setAttribute('data-questions', JSON.stringify(data.questions));
+            openExamModal({
+              questions: data.questions,
+              subjectName: subj,
+              topicName: ch
+            });
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load exam questions:", err);
+      }
+
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+      alert("দুঃখিত, এই মুহূর্তেই প্রশ্নগুলো লোড করা সম্ভব হয়নি। আবার চেষ্টা করুন।");
     }
 
     // =========================================================

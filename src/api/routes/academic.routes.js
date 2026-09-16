@@ -9,6 +9,7 @@ import {
   getQuiz,
   searchQuestions
 } from "../../core/db/index.js";
+import { handleGetMcqQuiz } from "../../agent/tools/handlers/quiz-handler.js";
 
 export const academicRoutes = new Hono();
 
@@ -53,4 +54,36 @@ academicRoutes.get("/search", async (c) => {
   const q = c.req.query("q") || "";
   const result = await searchQuestions(q, 10);
   return c.json({ success: true, fromCache: result.fromCache, latency: `${result.durationMs}ms`, data: result.data });
+});
+
+// Dedicated Instant Exam Generator Endpoint (0 LLM token cost)
+academicRoutes.all("/quiz/generate", async (c) => {
+  let body = {};
+  if (c.req.method === "POST") {
+    try {
+      body = await c.req.json();
+    } catch (e) {}
+  }
+  const query = c.req.query() || {};
+  const params = { ...query, ...body };
+  const count = Math.min(Math.max(parseInt(params.count) || 5, 1), 30);
+
+  const result = await handleGetMcqQuiz({
+    subject: params.subject || params.subject_id,
+    chapter: params.chapter,
+    topic: params.topic,
+    board: params.board,
+    year: params.year,
+    difficulty: params.difficulty,
+    count,
+    mode: params.mode || "mock_test"
+  });
+
+  return c.json({
+    success: true,
+    subject: result.subject,
+    chapter: result.actual_chapter,
+    total: result.quiz?.length || 0,
+    questions: result.quiz || []
+  });
 });

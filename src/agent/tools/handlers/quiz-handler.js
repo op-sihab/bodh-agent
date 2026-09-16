@@ -35,7 +35,7 @@ export async function handleGetMcqQuiz(args) {
 
   // Difficulty level
   const diff = args.difficulty || (args.board ? "standard" : "medium");
-  const count = Math.min(Math.max(parseInt(args.count) || 1, 1), 10);
+  const count = Math.min(Math.max(parseInt(args.count) || 1, 1), 30);
   const isMockTest = args.mode === "mock_test";
 
   // Extract search keywords for this chapter/topic

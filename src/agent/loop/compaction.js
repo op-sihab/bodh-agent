@@ -6,14 +6,32 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
 
   switch (toolName) {
     case "get_mcq_quiz": {
-      const q = rawResult.quiz?.[0];
-      if (!q || !q.question_text) {
+      if (!rawResult.quiz || rawResult.quiz.length === 0) {
         return {
           status: "not_found",
           message: "নির্দিষ্ট অধ্যায়ে কোনো বহুনির্বাচনী প্রশ্ন পাওয়া যায়নি। শিক্ষার্থীকে আন্তরিকভাবে বিষয় বা অন্য কোনো অধ্যায় উল্লেখ করতে বলো।"
         };
       }
+
       const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
+
+      // MULTI-QUESTION / MOCK TEST MODE (> 1 MCQs)
+      if (rawResult.quiz.length > 1) {
+        const total = rawResult.quiz.length;
+        const chDisplay = rawResult.actual_chapter?.display || rawResult.actual_chapter?.name || toolArgs?.chapter || "অধ্যায়";
+        const subjName = rawResult.subject || "এসএসসি";
+
+        return {
+          mode: "exam_launcher",
+          total_questions: total,
+          subject: subjName,
+          chapter: chDisplay,
+          mentor_guide: `উপস্থাপনার নিয়ম (মাল্টিপল বহুনির্বাচনী / লাইভ মক টেস্ট): শিক্ষার্থী ${total}টি বহুনির্বাচনী প্রশ্ন চেয়েছে। চ্যাটে প্রশ্নগুলোর তালিকা বড় করে লিখবে না! মাত্র ১-২ বাক্যে বড় ভাইয়াসুলভ উৎসাহী ভূমিকা দাও এবং নিচে [exam_launcher: {"total": ${total}, "subject": "${subjName}", "chapter": "${chDisplay}"}] ট্যাগটি অবিকল রাখবে। ফ্রন্টএন্ড নিজে থেকেই সুন্দর লাইভ টেস্ট কার্ড ও মোডাল রেন্ডার করবে যাতে ক্লিক করে শিক্ষার্থী পরীক্ষা শুরু করতে পারে।`
+        };
+      }
+
+      // SINGLE QUESTION PRACTICE MODE (= 1 MCQ)
+      const q = rawResult.quiz[0];
       const rawAns = q?.answer || '';
       const normAns = toBnAns[rawAns] || rawAns || 'ক';
       const bTag = q?.formatted_source || formatTag(q?.tags) || "বোর্ড প্রামাণিক প্রশ্ন";
