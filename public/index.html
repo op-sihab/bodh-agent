@@ -2345,27 +2345,31 @@
           <!-- Message Meta & Telemetry Strip -->
           <div id="meta_${msgId}" class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/[0.04] text-[11px] text-zinc-500 font-mono hidden select-none">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="inline-flex items-center gap-1 text-zinc-400" title="রেসপন্স সময়">
-                <svg class="w-3 h-3 text-amber-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <span class="inline-flex items-center gap-1.5 text-zinc-400" title="রেসপন্স সময়">
+                <svg class="w-3 h-3 text-amber-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4l2.5 2.5M10 2h4"/></svg>
                 <span id="latency_${msgId}">--</span>
               </span>
               <span class="text-zinc-600">•</span>
-              <span class="inline-flex items-center gap-1 text-zinc-400" title="টোটাল টোকেন">
-                <svg class="w-3 h-3 text-indigo-400/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 12h8"/></svg>
+              <span class="inline-flex items-center gap-1.5 text-zinc-400" title="টোটাল টোকেন">
+                <svg class="w-3 h-3 text-indigo-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 12h8"/></svg>
                 <span id="tokens_${msgId}">--</span>
               </span>
               <span class="text-zinc-600">•</span>
-              <span class="inline-flex items-center gap-1 text-emerald-400 font-medium" title="প্রকৃত খরচ (USD ও BDT)">
+              <span class="inline-flex items-center gap-1.5 text-emerald-400 font-medium" title="প্রকৃত খরচ (USD ও BDT)">
+                <svg class="w-3 h-3 text-emerald-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9.5a2.5 2.5 0 0 0-5 0c0 3 5 2 5 5a2.5 2.5 0 0 1-5 0"/></svg>
                 <span id="cost_${msgId}">--</span>
               </span>
-              <span class="text-zinc-600 hidden sm:inline">•</span>
-              <span id="savings_${msgId}" class="hidden sm:inline text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20 text-[10px]" title="বড় ভাইয়া রাউটার ও টুল কম্প্যাকশন সাশ্রয়">--</span>
+              <span id="savings_${msgId}" class="hidden items-center gap-1 text-teal-300 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20 text-[10px] font-medium" title="বড় ভাইয়া রাউটার ও টুল কম্প্যাকশন সাশ্রয়">
+                <svg class="w-2.5 h-2.5 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                <span id="savingsText_${msgId}">--</span>
+              </span>
             </div>
 
             <div class="flex items-center gap-1.5">
-              <button type="button" onclick="openMessageGatewayModal('${msgId}')" class="text-[11px] text-zinc-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.08] px-2 py-0.5 rounded-md border border-white/[0.08] transition flex items-center gap-1 cursor-pointer" title="গেটওয়ে ব্রেকডাউন">
+              <button type="button" onclick="openMessageGatewayModal('${msgId}')" class="text-[11px] text-zinc-400 hover:text-indigo-300 bg-white/[0.03] hover:bg-indigo-500/10 px-2 py-0.5 rounded-md border border-white/[0.08] hover:border-indigo-500/30 transition flex items-center gap-1.5 cursor-pointer group" title="গেটওয়ে ব্রেকডাউন">
+                <svg class="w-3 h-3 text-indigo-400/80 group-hover:text-indigo-400 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                 <span>গেটওয়ে বিশ্লেষণ</span>
-                <svg class="w-3 h-3 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                <svg class="w-2.5 h-2.5 text-zinc-500 group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
               </button>
               <button type="button" onclick="copyMessageText('${contentId}', this)" class="text-zinc-500 hover:text-zinc-300 p-1 hover:bg-white/[0.06] rounded transition cursor-pointer" title="কপি করো">
                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -2709,9 +2713,15 @@
           }
 
           const savEl = document.getElementById(`savings_${msgId}`);
+          const savTextEl = document.getElementById(`savingsText_${msgId}`);
           if (savEl && gw.savings_percent > 0) {
-            savEl.innerText = `${toBnDigits(gw.savings_percent)}% সাশ্রয়`;
+            if (savTextEl) {
+              savTextEl.innerText = `${toBnDigits(gw.savings_percent)}% সাশ্রয়`;
+            } else {
+              savEl.innerText = `${toBnDigits(gw.savings_percent)}% সাশ্রয়`;
+            }
             savEl.classList.remove('hidden');
+            savEl.classList.add('inline-flex');
           }
 
           // Store for details modal
@@ -3494,15 +3504,38 @@
       const modal = document.getElementById('gatewayMessageDetailsModal');
       if (!modal) return;
 
-      document.getElementById('msgCostUsd').innerText = gw.cost_formatted_usd || '$0.00';
-      document.getElementById('msgCostBdt').innerText = gw.cost_formatted_bdt || '৳০.০০';
-      document.getElementById('msgTotalTokens').innerText = toBnDigits(gw.total_tokens || (gw.input_tokens + gw.output_tokens));
-      document.getElementById('msgInputTokens').innerText = toBnDigits(gw.input_tokens || 0);
-      document.getElementById('msgOutputTokens').innerText = toBnDigits(gw.output_tokens || 0);
-      document.getElementById('msgSavings').innerText = `${toBnDigits(gw.savings_percent || 0)}% (${gw.baseline_cost_usd ? '$' + gw.baseline_cost_usd : '$0.00'} থেকে সাশ্রয়)`;
-      document.getElementById('msgModel').innerText = gw.model || 'openai/gpt-5.6-luna';
-      document.getElementById('msgGatewayLatency').innerText = gw.gateway_latency_ms ? `${toBnDigits(gw.gateway_latency_ms)} ms` : `${toBnDigits(item.latencyMs || 0)} ms`;
+      const costUsd = gw.cost_formatted_usd || '$0.00';
+      const costBdt = gw.cost_formatted_bdt || '৳০.০০';
+      const inTokens = gw.input_tokens || 0;
+      const outTokens = gw.output_tokens || 0;
+      const totalTokens = gw.total_tokens || (inTokens + outTokens);
+      const savingsPct = gw.savings_percent || 0;
+      const baselineCost = gw.baseline_cost_usd ? `$${gw.baseline_cost_usd.toFixed(6)}` : '$0.00';
+
+      const inPct = totalTokens > 0 ? Math.max(5, Math.round((inTokens / totalTokens) * 100)) : 80;
+      const outPct = Math.max(5, 100 - inPct);
+
+      document.getElementById('msgCostUsd').innerText = costUsd;
+      document.getElementById('msgCostBdt').innerText = `(${costBdt})`;
+      document.getElementById('msgSavingsPercent').innerText = `${toBnDigits(savingsPct)}%`;
+      document.getElementById('msgBaselineNote').innerText = `বেসলাইন আনঅপ্টিমাইজড খরচ: ${baselineCost}`;
+
+      document.getElementById('msgInputLegend').innerText = toBnDigits(inTokens);
+      document.getElementById('msgInputPct').innerText = `${toBnDigits(inPct)}%`;
+      document.getElementById('msgOutputLegend').innerText = toBnDigits(outTokens);
+      document.getElementById('msgOutputPct').innerText = `${toBnDigits(outPct)}%`;
+
+      document.getElementById('msgBarInput').style.width = `${inPct}%`;
+      document.getElementById('msgBarOutput').style.width = `${outPct}%`;
+
+      document.getElementById('msgInputTokens').innerText = `${toBnDigits(inTokens)}`;
+      document.getElementById('msgOutputTokens').innerText = `${toBnDigits(outTokens)}`;
+      document.getElementById('msgTotalTokens').innerText = `${toBnDigits(totalTokens)} টোকেন`;
+
+      const lat = gw.gateway_latency_ms || item.latencyMs || 0;
+      document.getElementById('msgGatewayLatency').innerText = lat >= 1000 ? `${toBnDigits((lat / 1000).toFixed(1))}s` : `${toBnDigits(lat)} ms`;
       document.getElementById('msgSteps').innerText = toBnDigits(gw.steps_count || 1);
+      document.getElementById('msgModel').innerText = gw.model || 'openai/gpt-5.6-luna';
 
       modal.classList.remove('hidden');
       modal.classList.add('flex');
@@ -3526,82 +3559,121 @@
   <!-- ========================================================= -->
   <!-- MODAL: GLOBAL GATEWAY & COST DASHBOARD                     -->
   <!-- ========================================================= -->
-  <div id="gatewayDashboardModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
-    <div class="relative w-full max-w-lg bg-[#15151c] border border-white/[0.12] rounded-3xl p-6 shadow-[0_16px_48px_rgba(0,0,0,0.8)] space-y-5 animate-fadeIn">
+  <!-- ========================================================= -->
+  <!-- MODAL: GLOBAL GATEWAY & COST DASHBOARD                     -->
+  <!-- ========================================================= -->
+  <div id="gatewayDashboardModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-4">
+    <div class="relative w-full max-w-lg bg-gradient-to-b from-[#14141e] via-[#101017] to-[#0d0d14] border border-white/[0.14] rounded-3xl p-5 sm:p-6 shadow-[0_24px_64px_rgba(0,0,0,0.85),inset_0_1px_0_0_rgba(255,255,255,0.08)] space-y-4 sm:space-y-5 animate-fadeIn">
       
       <!-- Modal Header -->
-      <div class="flex items-center justify-between border-b border-white/[0.08] pb-4">
+      <div class="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg shadow-[0_0_16px_rgba(16,185,129,0.2)]">
-            ⚡
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-500/10 border border-emerald-500/35 flex items-center justify-center text-emerald-400 font-bold shadow-[0_0_18px_rgba(16,185,129,0.25)] shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
           <div>
-            <h3 class="text-base font-bold text-white font-sans tracking-tight">Merge.dev AI Gateway ও লাইভ খরচ</h3>
+            <h3 class="text-base font-bold text-white tracking-tight font-sans">Merge.dev AI Gateway ও সার্বিক খরচ</h3>
             <div class="flex items-center gap-2 mt-0.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span class="text-xs font-mono text-zinc-400">লাইভ ট্র্যাকিং • এক্সচেঞ্জ রেট ১ USD = ১২২.৫০ ৳</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-[11px] font-mono text-zinc-400">লাইভ ট্র্যাকিং • ১ USD = ১২২.৫০ ৳</span>
             </div>
           </div>
         </div>
-        <button type="button" onclick="closeGatewayDashboardModal()" class="text-zinc-500 hover:text-white p-2 rounded-xl hover:bg-white/[0.06] transition cursor-pointer">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        <button type="button" onclick="closeGatewayDashboardModal()" class="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white flex items-center justify-center transition border border-white/[0.06] cursor-pointer">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
 
-      <!-- 4 High-Tech Stat Bento Cards -->
+      <!-- 4 High-Tech Stat Bento Cards with SVGs -->
       <div class="grid grid-cols-2 gap-3">
-        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1">
-          <span class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">মোট বিলিং (USD)</span>
+        <!-- Total Cost Card -->
+        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.07] space-y-1 hover:border-emerald-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-zinc-400 uppercase tracking-wider">মোট বিলিং (USD)</span>
+            <div class="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9.5a2.5 2.5 0 0 0-5 0c0 3 5 2 5 5a2.5 2.5 0 0 1-5 0"/></svg>
+            </div>
+          </div>
           <div class="text-xl font-bold font-mono text-white tracking-tight" id="gdwTotalCostUsd">$0.00</div>
           <span class="text-[11px] font-mono text-emerald-400 font-medium" id="gdwTotalCostBdt">৳০.০০</span>
         </div>
 
-        <div class="p-3.5 rounded-2xl bg-emerald-500/[0.08] border border-emerald-500/25 space-y-1">
-          <span class="text-[11px] font-mono text-emerald-300 uppercase tracking-wider">মোট সাশ্রয়</span>
+        <!-- Savings Card -->
+        <div class="p-3.5 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/25 space-y-1 hover:border-emerald-500/40 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-emerald-300 uppercase tracking-wider">মোট সাশ্রয়</span>
+            <div class="w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center border border-emerald-500/30">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+          </div>
           <div class="text-xl font-bold font-mono text-emerald-400 tracking-tight" id="gdwSavingsPercent">০%</div>
-          <span class="text-[11px] font-mono text-zinc-400">বাঁচানো হয়েছে: <span id="gdwSavedUsd" class="text-white">$0.00</span></span>
+          <span class="text-[10.5px] font-mono text-zinc-400">বাঁচানো হয়েছে: <span id="gdwSavedUsd" class="text-white font-medium">$0.00</span></span>
         </div>
 
-        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1">
-          <span class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">মোট টোকেন</span>
+        <!-- Total Tokens Card -->
+        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.07] space-y-1 hover:border-sky-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-zinc-400 uppercase tracking-wider">মোট টোকেন</span>
+            <div class="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            </div>
+          </div>
           <div class="text-lg font-bold font-mono text-zinc-200 tracking-tight" id="gdwTotalTokens">০</div>
-          <span class="text-[11px] font-mono text-zinc-500">ইন: <span id="gdwInTokens" class="text-zinc-400">০</span> • আউট: <span id="gdwOutTokens" class="text-zinc-400">০</span></span>
+          <span class="text-[10.5px] font-mono text-zinc-500">ইন: <span id="gdwInTokens" class="text-zinc-400">০</span> • আউট: <span id="gdwOutTokens" class="text-zinc-400">০</span></span>
         </div>
 
-        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1">
-          <span class="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">কুয়েরি প্রতি গড় খরচ</span>
+        <!-- Avg Cost Card -->
+        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.07] space-y-1 hover:border-amber-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-zinc-400 uppercase tracking-wider">কুয়েরি প্রতি গড় খরচ</span>
+            <div class="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            </div>
+          </div>
           <div class="text-lg font-bold font-mono text-amber-400 tracking-tight" id="gdwAvgCostUsd">$0.00</div>
           <span class="text-[11px] font-mono text-zinc-400" id="gdwAvgCostBdt">৳০.০০</span>
         </div>
       </div>
 
       <!-- Granular Details List -->
-      <div class="p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2 text-xs font-mono">
+      <div class="p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2.5 text-xs font-mono">
         <div class="flex items-center justify-between text-zinc-400">
-          <span>গেটওয়ে প্রোভাইডার:</span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            <span>গেটওয়ে প্রোভাইডার:</span>
+          </span>
           <span class="text-white font-medium">Merge.dev AI Gateway</span>
         </div>
         <div class="flex items-center justify-between text-zinc-400">
-          <span>সক্রিয় মডেল:</span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg>
+            <span>সক্রিয় মডেল:</span>
+          </span>
           <span class="text-emerald-400 font-medium truncate max-w-[200px]" id="gdwModelName">openai/gpt-5.6-luna</span>
         </div>
         <div class="flex items-center justify-between text-zinc-400">
-          <span>মোট সম্পন্ন প্রশ্ন:</span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            <span>মোট সম্পন্ন প্রশ্ন:</span>
+          </span>
           <span class="text-white font-medium" id="gdwTotalQueries">০</span>
         </div>
         <div class="flex items-center justify-between text-zinc-400">
-          <span>অপ্টিমাইজেশন স্ট্র্যাটেজি:</span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>অপ্টিমাইজেশন কৌশল:</span>
+          </span>
           <span class="text-teal-400 font-medium">বড় ভাইয়া রাউটার + টুল কম্প্যাকশন</span>
         </div>
       </div>
 
       <!-- Action Footer -->
-      <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-white/[0.08]">
         <button type="button" onclick="openGatewayDashboardModal()" class="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 text-xs font-medium transition cursor-pointer flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           <span>রিফ্রেশ</span>
         </button>
-        <button type="button" onclick="closeGatewayDashboardModal()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold transition cursor-pointer">
+        <button type="button" onclick="closeGatewayDashboardModal()" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold transition cursor-pointer active:scale-95 shadow-[0_0_14px_rgba(16,185,129,0.3)]">
           ঠিক আছে
         </button>
       </div>
@@ -3611,63 +3683,143 @@
   <!-- ========================================================= -->
   <!-- MODAL: SINGLE MESSAGE GATEWAY TELEMETRY                   -->
   <!-- ========================================================= -->
-  <div id="gatewayMessageDetailsModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
-    <div class="relative w-full max-w-md bg-[#15151c] border border-white/[0.12] rounded-3xl p-5 shadow-[0_16px_48px_rgba(0,0,0,0.8)] space-y-4 animate-fadeIn">
+  <div id="gatewayMessageDetailsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-3 sm:p-4">
+    <div class="relative w-full max-w-lg bg-gradient-to-b from-[#14141e] via-[#101017] to-[#0d0d14] border border-white/[0.14] rounded-3xl p-5 sm:p-6 shadow-[0_24px_64px_rgba(0,0,0,0.85),inset_0_1px_0_0_rgba(255,255,255,0.08)] space-y-4 sm:space-y-5 animate-fadeIn">
       
-      <div class="flex items-center justify-between border-b border-white/[0.08] pb-3">
-        <div class="flex items-center gap-2.5">
-          <span class="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-sm">📊</span>
-          <h4 class="text-sm font-bold text-white font-sans">এই উত্তরের গেটওয়ে খরচ ও বিশ্লেষণ</h4>
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-white/[0.08] pb-3.5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-[0_0_16px_rgba(99,102,241,0.2)] shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-sm sm:text-base font-bold text-white tracking-tight">এই উত্তরের গেটওয়ে খরচ ও বিশ্লেষণ</h4>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <p class="text-[11px] text-zinc-400 font-mono">Merge.dev AI Gateway • রিয়েল-টাইম নির্ভুল টেলিমেট্রি</p>
+            </div>
+          </div>
         </div>
-        <button type="button" onclick="closeMessageGatewayModal()" class="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-white/[0.06] transition cursor-pointer">
+        <button type="button" onclick="closeMessageGatewayModal()" class="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white flex items-center justify-center transition border border-white/[0.06] cursor-pointer">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
 
-      <!-- Bento Cards -->
+      <!-- Hero Cost & Savings Showcase -->
+      <div class="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-zinc-900/60 to-indigo-950/30 border border-emerald-500/30 shadow-[0_8px_32px_rgba(16,185,129,0.12)] space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <span class="text-[10.5px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9.5a2.5 2.5 0 0 0-5 0c0 3 5 2 5 5a2.5 2.5 0 0 1-5 0"/></svg>
+              <span>প্রকৃত কোয়েরি খরচ</span>
+            </span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl sm:text-3xl font-bold font-mono text-emerald-400 tracking-tight" id="msgCostUsd">$0.00</span>
+              <span class="text-xs sm:text-sm font-mono text-zinc-300 font-medium" id="msgCostBdt">(৳০.০০)</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold shadow-[0_0_14px_rgba(16,185,129,0.2)]" id="msgSavingsBadge">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span id="msgSavingsPercent">০%</span> সাশ্রয়
+            </span>
+            <p class="text-[10.5px] text-zinc-400 font-mono mt-1" id="msgBaselineNote">বেসলাইন খরচ: $0.00</p>
+          </div>
+        </div>
+
+        <!-- Segmented Token Breakdown Bar -->
+        <div class="space-y-1.5 pt-2 border-t border-white/[0.06]">
+          <div class="flex items-center justify-between text-[11px] font-mono">
+            <span class="text-sky-300 flex items-center gap-1">
+              <span class="w-2 h-2 rounded-sm bg-sky-400 inline-block"></span>
+              ইনপুট: <strong id="msgInputLegend" class="text-white">০</strong> (<span id="msgInputPct">০%</span>)
+            </span>
+            <span class="text-emerald-300 flex items-center gap-1">
+              <span class="w-2 h-2 rounded-sm bg-emerald-400 inline-block"></span>
+              আউটপুট: <strong id="msgOutputLegend" class="text-white">০</strong> (<span id="msgOutputPct">০%</span>)
+            </span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-black/50 p-0.5 border border-white/[0.08] flex overflow-hidden">
+            <div id="msgBarInput" class="h-full rounded-l-full bg-gradient-to-r from-sky-500 to-blue-500 transition-all duration-500 shadow-[0_0_8px_rgba(56,189,248,0.4)]" style="width: 80%"></div>
+            <div id="msgBarOutput" class="h-full rounded-r-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" style="width: 20%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 High-Tech Bento Cards with SVGs -->
       <div class="grid grid-cols-2 gap-2.5">
-        <div class="p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1">
-          <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">এই উত্তরের খরচ</span>
-          <div class="text-lg font-bold font-mono text-emerald-400 tracking-tight" id="msgCostUsd">$0.00</div>
-          <span class="text-[11px] font-mono text-zinc-400" id="msgCostBdt">৳০.০০</span>
+        <!-- Input Tokens Card -->
+        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1 hover:border-sky-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-zinc-400">ইনপুট (Prompt)</span>
+            <div class="w-6 h-6 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16l5 5m0 0l5-5m-5 5V3"/></svg>
+            </div>
+          </div>
+          <div class="text-base sm:text-lg font-bold font-mono text-sky-300" id="msgInputTokens">০</div>
+          <p class="text-[10px] text-zinc-500 font-mono">সিস্টেম ও প্রম্পট কনটেক্সট</p>
         </div>
 
-        <div class="p-3 rounded-2xl bg-teal-500/[0.08] border border-teal-500/25 space-y-1">
-          <span class="text-[10px] font-mono text-teal-300 uppercase tracking-wider">টোকেন সাশ্রয়</span>
-          <div class="text-xs font-bold font-mono text-teal-300 tracking-tight leading-snug pt-1" id="msgSavings">০% সাশ্রয়</div>
+        <!-- Output Tokens Card -->
+        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1 hover:border-emerald-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-zinc-400">আউটপুট (Generated)</span>
+            <div class="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+          <div class="text-base sm:text-lg font-bold font-mono text-emerald-300" id="msgOutputTokens">০</div>
+          <p class="text-[10px] text-zinc-500 font-mono">শিক্ষার্থীর জন্য জেনারেটেড উত্তর</p>
+        </div>
+
+        <!-- Latency Card -->
+        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1 hover:border-amber-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-zinc-400">গেটওয়ে লেটেন্সি</span>
+            <div class="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4l2.5 2.5M10 2h4"/></svg>
+            </div>
+          </div>
+          <div class="text-base sm:text-lg font-bold font-mono text-amber-300" id="msgGatewayLatency">০ ms</div>
+          <p class="text-[10px] text-zinc-500 font-mono">নেটওয়ার্ক ও টিটিএফটি রেসপন্স</p>
+        </div>
+
+        <!-- ReAct Steps Card -->
+        <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-1 hover:border-purple-500/30 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="text-[10.5px] font-mono text-zinc-400">ReAct পদক্ষেপ</span>
+            <div class="w-6 h-6 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center border border-purple-500/20">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 6.5h4a2 2 0 0 1 2 2v5.5"/></svg>
+            </div>
+          </div>
+          <div class="text-base sm:text-lg font-bold font-mono text-purple-300"><span id="msgSteps">১</span> ধাপ</div>
+          <p class="text-[10px] text-zinc-500 font-mono">অটোনোমাস চিন্তা ও সিন্থেসিস</p>
         </div>
       </div>
 
-      <div class="p-3.5 rounded-2xl bg-black/40 border border-white/[0.06] space-y-2 text-xs font-mono">
-        <div class="flex items-center justify-between text-zinc-400">
-          <span>মোট ব্যবহৃত টোকেন:</span>
-          <span class="text-white font-semibold" id="msgTotalTokens">০</span>
+      <!-- Infrastructure Pill -->
+      <div class="p-3 rounded-2xl bg-black/40 border border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+          <span class="text-zinc-400">মডেল:</span>
+          <span class="text-emerald-400 font-semibold truncate max-w-[200px]" id="msgModel">openai/gpt-5.6-luna</span>
         </div>
-        <div class="flex items-center justify-between text-zinc-400">
-          <span>ইনপুট (Prompt) টোকেন:</span>
-          <span class="text-zinc-300" id="msgInputTokens">০</span>
-        </div>
-        <div class="flex items-center justify-between text-zinc-400">
-          <span>আউটপুট (Generated) টোকেন:</span>
-          <span class="text-zinc-300" id="msgOutputTokens">০</span>
-        </div>
-        <div class="flex items-center justify-between text-zinc-400">
-          <span>মডেল:</span>
-          <span class="text-emerald-400 truncate max-w-[180px]" id="msgModel">openai/gpt-5.6-luna</span>
-        </div>
-        <div class="flex items-center justify-between text-zinc-400">
-          <span>গেটওয়ে লেটেন্সি:</span>
-          <span class="text-amber-400" id="msgGatewayLatency">০ ms</span>
-        </div>
-        <div class="flex items-center justify-between text-zinc-400">
-          <span>ReAct ধাপ (Steps):</span>
-          <span class="text-white" id="msgSteps">১</span>
+        <div class="flex items-center gap-2 text-zinc-400">
+          <span>মোট:</span>
+          <span class="text-white font-bold" id="msgTotalTokens">০</span>
         </div>
       </div>
 
-      <div class="flex items-center justify-end pt-1">
-        <button type="button" onclick="closeMessageGatewayModal()" class="px-5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-medium transition cursor-pointer">
-          বন্ধ করুন
+      <!-- Action Footer -->
+      <div class="flex items-center justify-between pt-1 border-t border-white/[0.08]">
+        <button type="button" onclick="closeMessageGatewayModal(); openGatewayDashboardModal();" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 transition cursor-pointer font-medium">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+          <span>পূর্ণ ড্যাশবোর্ড দেখুন</span>
+        </button>
+        <button type="button" onclick="closeMessageGatewayModal()" class="px-5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-semibold transition cursor-pointer active:scale-95">
+          ঠিক আছে
         </button>
       </div>
     </div>
