@@ -17,15 +17,18 @@ import { findChapterCached, getAllChaptersCached } from "../helpers.js";
 export async function handleGetMcqQuiz(args) {
   let subjId = normalizeSubject(args.subject);
 
-  const matchedChapterInfo = await findChapterCached(args, subjId);
   const rawT = [args.chapter, args.topic, args.query].filter(Boolean).join(" ");
+  const isFullSyllabus = /সম্পূর্ণ|পুরো|সব\s*অধ্যায়|সকল\s*অধ্যায়|ফুল\s*বই|ফুল\s*সিলেবাস|full\s*(?:syllabus|book)|all\s*chapters/i.test(args.chapter || "") ||
+                         /সম্পূর্ণ\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|পুরো\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|সব\s*অধ্যায়|সকল\s*অধ্যায়|ফুল\s*বই|ফুল\s*সিলেবাস/i.test(rawT);
+
+  const matchedChapterInfo = isFullSyllabus ? null : await findChapterCached(args, subjId);
   if (matchedChapterInfo && matchedChapterInfo.subject_id) {
     subjId = matchedChapterInfo.subject_id;
   }
   const matchedMcqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
 
   // Granular Topic / Story tokens (e.g. 'নিমগাছ', 'কপোতাক্ষ নদ', 'জারণ-বিজারণ')
-  const directTopicTokens = extractDirectTopicTokens(rawT, matchedChapterInfo);
+  const directTopicTokens = isFullSyllabus ? [] : extractDirectTopicTokens(rawT, matchedChapterInfo);
 
   // Board filter
   const boardTag = normalizeBoard(args.board);
@@ -39,17 +42,17 @@ export async function handleGetMcqQuiz(args) {
   const isMockTest = args.mode === "mock_test";
 
   // Extract search keywords for this chapter/topic
-  const chapterKeywords = extractChapterKeywords(rawT, matchedChapterInfo, subjId);
+  const chapterKeywords = isFullSyllabus ? [] : extractChapterKeywords(rawT, matchedChapterInfo, subjId);
 
   let chapterConditionSql = matchedMcqChapterId ? `chapter_id = '${matchedMcqChapterId}'` : "";
-  if (!chapterConditionSql && chapterKeywords.length > 0) {
+  if (!chapterConditionSql && chapterKeywords.length > 0 && !isFullSyllabus) {
     const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
     chapterConditionSql = `(${kwSql})`;
   }
 
   // If specific story/topic tokens exist, enforce topic-level filtering
   let topicConditionSql = "";
-  if (directTopicTokens.length > 0) {
+  if (directTopicTokens.length > 0 && !isFullSyllabus) {
     const tKw = directTopicTokens.map(t => `(question_text LIKE '%${t.replace(/'/g, "''")}%' OR question_html LIKE '%${t.replace(/'/g, "''")}%')`).join(' OR ');
     topicConditionSql = `(${tKw})`;
   }
@@ -223,10 +226,10 @@ export async function handleGetMcqQuiz(args) {
   const normAns = toBnAns[rawAns] || rawAns || 'খ';
 
   const allChapters = await getAllChaptersCached();
-  const chObj = allChapters.find(c => c.id === (res.rows[0]?.chapter_id || matchedMcqChapterId));
-  const chName = chObj?.name || matchedChapterInfo?.name || "";
-  const chOrder = chObj?.order_num || matchedChapterInfo?.order_num || "";
-  const chapterDisplay = chName ? `অধ্যায় ${toBnDigits(chOrder)}: ${chName}` : "";
+  const chObj = isFullSyllabus ? null : allChapters.find(c => c.id === (res.rows[0]?.chapter_id || matchedMcqChapterId));
+  const chName = isFullSyllabus ? "সম্পূর্ণ বই" : (chObj?.name || matchedChapterInfo?.name || "");
+  const chOrder = isFullSyllabus ? "all" : (chObj?.order_num || matchedChapterInfo?.order_num || "");
+  const chapterDisplay = isFullSyllabus ? "সম্পূর্ণ বই" : (chName ? `অধ্যায় ${toBnDigits(chOrder)}: ${chName}` : "");
 
   const qTag = res.rows[0]?.tags || "";
   const hasMatchedBoard = boardTag ? qTag.includes(boardTag) : true;
@@ -250,10 +253,10 @@ export async function handleGetMcqQuiz(args) {
   return {
     subject: subjId || "all",
     actual_chapter: {
-      id: res.rows[0]?.chapter_id || matchedMcqChapterId,
+      id: isFullSyllabus ? "all" : (res.rows[0]?.chapter_id || matchedMcqChapterId),
       order_num: chOrder,
-      name: specificTopicName || chName,
-      display: specificTopicName ? `'${specificTopicName}'` : chapterDisplay
+      name: isFullSyllabus ? "সম্পূর্ণ বই" : (specificTopicName || chName),
+      display: isFullSyllabus ? "সম্পূর্ণ বই" : (specificTopicName ? `'${specificTopicName}'` : chapterDisplay)
     },
     board: args.board || "all",
     year: args.year || "all",

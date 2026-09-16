@@ -3217,13 +3217,48 @@
         `;
       }).join('');
 
-      // Explanation Card with full KaTeX math support
+      // Explanation & Analysis Card with full KaTeX math support
       const expCard = document.getElementById('examExplanationCard');
       if (selectedLetter !== undefined) {
         expCard.classList.remove('hidden');
         document.getElementById('examCorrectAnsBadge').innerText = `সঠিক উত্তর: (${correctLetter})`;
-        const expContent = q.solution || q.explanation || 'এই প্রশ্নের মূল ধারণার সঠিক প্রয়োগ বিশ্লেষণ উপরের বিকল্পে দেখানো হয়েছে।';
-        document.getElementById('examExplanationContent').innerHTML = formatExamMath(expContent);
+
+        const isUserCorrect = selectedLetter === correctLetter;
+        const rawSol = (q.solution || q.explanation || '').trim();
+        const hasValidSol = rawSol && !/^(?:upgrade|premium|none|null|n\/a)$/i.test(rawSol);
+
+        let contentHtml = '';
+        if (isUserCorrect) {
+          contentHtml += `
+            <div class="flex items-center gap-2 text-emerald-400 font-semibold text-xs sm:text-[13px]">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+              <span>দারুণ! তোমার উত্তরটি সঠিক হয়েছে।</span>
+            </div>
+          `;
+        } else {
+          contentHtml += `
+            <div class="flex items-center gap-2 text-rose-400 font-semibold text-xs sm:text-[13px]">
+              <span class="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></span>
+              <span>তোমার উত্তর (${selectedLetter}) সঠিক নয়, সঠিক উত্তর হলো (${correctLetter})।</span>
+            </div>
+          `;
+        }
+
+        if (hasValidSol) {
+          contentHtml += `<div class="mt-2.5 pt-2 border-t border-indigo-500/20 text-zinc-300 leading-relaxed">${formatExamMath(rawSol)}</div>`;
+        } else {
+          contentHtml += `
+            <div class="mt-2.5 pt-2 border-t border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <span class="text-[11.5px] text-zinc-400">এই প্রশ্নটির বিস্তারিত কনসেপ্ট বা সূত্র বুঝতে চাও?</span>
+              <button type="button" onclick="askAiToExplainQuestion(${idx})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-semibold cursor-pointer transition shadow-[0_0_12px_rgba(99,102,241,0.15)] active:scale-95 shrink-0">
+                <span>💡 বড় ভাইয়ার কাছে ব্যাখ্যা নাও</span>
+                <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+              </button>
+            </div>
+          `;
+        }
+
+        document.getElementById('examExplanationContent').innerHTML = contentHtml;
       } else {
         expCard.classList.add('hidden');
       }
@@ -3319,7 +3354,7 @@
           }
 
           const rawSol = (q.solution || q.explanation || '').trim();
-          const hasValidSol = rawSol && rawSol.toLowerCase() !== 'upgrade' && rawSol !== 'none';
+          const hasValidSol = rawSol && !/^(?:upgrade|premium|none|null|n\/a)$/i.test(rawSol);
           const solHtml = hasValidSol ? `<div class="leading-relaxed text-zinc-400 pt-1">${formatExamMath(rawSol)}</div>` : '';
           const boardTagDisplay = (q.tags || q.formatted_source) ? formatFullBoardTags(q.tags || q.formatted_source) : '';
 

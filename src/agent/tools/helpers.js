@@ -105,6 +105,12 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     if (directCh) return directCh;
   }
 
+  // Broad Syllabus / Entire Book check: do not map to a single chapter
+  const isBroadSyllabus = /সম্পূর্ণ|পুরো\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|সব\s*অধ্যায়|সকল\s*অধ্যায়|ফুল\s*বই|ফুল\s*সিলেবাস|full\s*(?:syllabus|book)|all\s*chapters/i.test(fullContext);
+  if (isBroadSyllabus && !targetChapterNum) {
+    return null;
+  }
+
   const rawClean = normalizeAcademicString(fullContext);
   const extractedNum = targetChapterNum;
   const queryTokens = [...new Set(rawClean.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t)))];
