@@ -1,7 +1,7 @@
 // Chat and SSE Streaming Routes
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import { runAgenticConversation } from "../../agent/loop/index.js";
+import { runAgenticConversation, globalCreditManager } from "../../agent/loop/index.js";
 
 export const chatRoutes = new Hono();
 
@@ -22,6 +22,20 @@ chatRoutes.post("/chat/stream", async (c) => {
   c.header("X-Accel-Buffering", "no");
 
   return streamSSE(c, async (stream) => {
+    // Check demo user credits
+    if (!globalCreditManager.hasEnoughCredit()) {
+      await stream.writeSSE({
+        data: JSON.stringify({
+          type: "credit_exhausted",
+          error: "আপনার ক্রেডিট শেষ হয়ে গেছে! আর কোনো প্রশ্ন করতে অনুগ্রহ করে ক্রেডিট রিচার্জ করুন।",
+          remainingCredits: 0,
+          totalCredits: 500,
+          credits: globalCreditManager.getStatus()
+        })
+      });
+      return;
+    }
+
     try {
       await runAgenticConversation(message, async (event) => {
         await stream.writeSSE({
@@ -45,6 +59,17 @@ chatRoutes.post("/chat", async (c) => {
 
   if (!message.trim()) {
     return c.json({ error: "Message is required" }, 400);
+  }
+
+  if (!globalCreditManager.hasEnoughCredit()) {
+    return c.json({
+      success: false,
+      credit_exhausted: true,
+      error: "আপনার ক্রেডিট শেষ হয়ে গেছে! আর কোনো প্রশ্ন করতে অনুগ্রহ করে ক্রেডিট রিচার্জ করুন।",
+      remainingCredits: 0,
+      totalCredits: 500,
+      credits: globalCreditManager.getStatus()
+    }, 402);
   }
 
   let finalResponse = null;

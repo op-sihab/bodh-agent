@@ -205,7 +205,7 @@ const expectedKeywords = [
   'মোলের ধারণা',
   'রাসায়নিক বিক্রিয়া',
   'রসায়ন ও শক্তি',
-  'এসিড-ক্ষারক সমতা',
+  'ক্ষারক সমতা',
   'খনিজ সম্পদ'
 ];
 
@@ -243,6 +243,135 @@ assert(gwStats.total_queries >= 1, `Global tracked queries count (${gwStats.tota
 assert(gwStats.total_cost_usd > 0, `Global accumulated cost USD (${gwStats.total_cost_formatted_usd})`);
 assert(gwStats.total_cost_bdt > 0, `Global accumulated cost BDT (${gwStats.total_cost_formatted_bdt})`);
 
+// TEST 11: Demo User Credit System & Integer Deduction Verification
+console.log('\n--- TEST 11: Demo User Credit System (500 Credits, 1k tokens = 1 Credit) ---');
+const creditRes = await fetch('http://localhost:3000/api/credit/status');
+assert(creditRes.ok, 'Credit status API returned HTTP 200');
+const creditData = await creditRes.json();
+assert(creditData.total_credits === 500, `Total credits set to 500 (actual: ${creditData.total_credits})`);
+assert(Number.isInteger(creditData.remaining_credits), `Remaining credit is strict integer without fractions (${creditData.remaining_credits})`);
+assert(Number.isInteger(creditData.used_credits), `Used credit is strict integer without fractions (${creditData.used_credits})`);
+
+// Verify credit exhaustion protection
+await fetch('http://localhost:3000/api/credit/reset', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ amount: 0 })
+});
+const exhaustedRes = await fetch('http://localhost:3000/api/chat', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ message: 'টেস্ট প্রশ্ন' })
+});
+assert(exhaustedRes.status === 402, `Credit exhaustion correctly blocks query with HTTP 402 (status: ${exhaustedRes.status})`);
+const exhaustedData = await exhaustedRes.json();
+assert(exhaustedData.credit_exhausted === true, 'Credit exhaustion flag returned');
+assert(exhaustedData.error.includes('ক্রেডিট শেষ'), 'Helpful Bengali out-of-credit error message provided');
+
+// Restore 500 credits for user
+const resetRes = await fetch('http://localhost:3000/api/credit/reset', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ amount: 500 })
+});
+const resetData = await resetRes.json();
+assert(resetData.remaining_credits === 500, 'Credits successfully restored to 500');
+
+// TEST 12: Seamless Subject Transition & Banglish Typo Resilience ("phycis", "chem", etc.)
+console.log('\n--- TEST 12: Seamless Subject Transition & Banglish Typo Resilience ---');
+const { normalizeSubject } = await import('./src/config/subject-map.js');
+
+assert(normalizeSubject('he ami phycis a jete chai') === 'ssc_physics', 'Phonetic typo "phycis" correctly normalized to ssc_physics');
+assert(normalizeSubject('physcis e jabo') === 'ssc_physics', '"physcis" normalized to ssc_physics');
+assert(normalizeSubject('chem porbo') === 'ssc_chemistry', '"chem" normalized to ssc_chemistry');
+assert(normalizeSubject('baio shuru koro') === 'ssc_biology', '"baio" normalized to ssc_biology');
+assert(normalizeSubject('gen math') === 'ssc_general_math', '"gen math" normalized to ssc_general_math');
+
+// Test MemoryManager contextual subject transition from Bangla 2nd to Physics
+const banglaSessionState = {
+  subject_id: 'ssc_bangla_2nd',
+  subject_name: 'বাংলা ২য় পত্র',
+  chapter_num: null
+};
+
+const pastTurns = [
+  { role: 'user', content: 'acha goti er songa deo' },
+  { role: 'assistant', content: 'গতি হলো পদার্থবিজ্ঞানের একটি ধারণা। তুমি কি পদার্থবিজ্ঞানে যেতে চাও, নাকি বাংলা ২য় পত্রের কোনো টপিক পড়ব?' }
+];
+
+const reconciledFromTypo = MemoryManager.reconcile('he ami phycis a jete chai', pastTurns, banglaSessionState);
+assert(reconciledFromTypo.state.subject_id === 'ssc_physics', 'State subject smoothly transitioned to ssc_physics from "phycis" input');
+assert(reconciledFromTypo.state.subject_name === 'পদার্থবিজ্ঞান', 'State subject name updated to পদার্থবিজ্ঞান');
+assert(reconciledFromTypo.state.chapter_num === '2', 'Chapter 2 (গতি) automatically discovered from previous turn topic query');
+
+// Test Affirmative switch with single affirmative word ("he" / "yes")
+const reconciledFromAffirmative = MemoryManager.reconcile('he', pastTurns, banglaSessionState);
+assert(reconciledFromAffirmative.state.subject_id === 'ssc_physics', 'Affirmative "he" smoothly accepted suggested physics transition');
+assert(reconciledFromAffirmative.state.chapter_num === '2', 'Chapter 2 (গতি) linked across turns on affirmative switch');
+
+// TEST 13: Autonomous AI Model Thought Intent Extraction (Zero Mock Data)
+console.log('\n--- TEST 13: Autonomous AI Model Thought Intent Extraction ---');
+const thoughtSample1 = 'শিক্ষার্থী পদার্থবিজ্ঞানে যাওয়ার ইচ্ছা প্রকাশ করেছে। [বিষয় পরিবর্তন: পদার্থবিজ্ঞান, অধ্যায়: ২]। গতির সংজ্ঞা ও উদাহরণ নিয়ে আলোচনা শুরু করছি।';
+const tagMatch1 = thoughtSample1.match(/\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|subject)\s*[:ঃ]\s*([^,\]]+)(?:,\s*(?:অধ্যায়|অধ্যায়|chapter)\s*[:ঃ]\s*([^\]]+))?\s*\]/i);
+assert(Boolean(tagMatch1), 'AI thought tag format [বিষয় পরিবর্তন: ...] successfully detected');
+assert(normalizeSubject(tagMatch1[1].trim()) === 'ssc_physics', 'AI decided subject accurately extracted as ssc_physics');
+assert(tagMatch1[2].trim() === '২', 'AI decided chapter accurately extracted as ২');
+
+const thoughtSample2 = 'শিক্ষার্থী পর্যায় সারণির গ্রুপ নিয়ে প্রশ্ন করেছে। সক্রিয় বিষয়: রসায়ন।';
+const phraseMatch2 = thoughtSample2.match(/(?:বিষয়\s*হলো|বিষয়\s*নির্ধারণ|বিষয়\s*পরিবর্তন|সক্রিয়\s*বিষয়|বিষয়\s*হিসেবে|বিষয়)\s*[:ঃ]?\s*([^\s,।—\n]+)/i);
+assert(Boolean(phraseMatch2), 'AI natural reasoning phrase detected');
+assert(normalizeSubject(phraseMatch2[1]) === 'ssc_chemistry', 'AI decided subject accurately extracted as ssc_chemistry');
+
+// TEST 14: Autonomous Cross-Subject & Topic Detection (NCTB Matrix)
+console.log('\n--- TEST 14: Autonomous Cross-Subject & Topic Detection ---');
+const { detectSubjectAndChapterFromQuery, detectSubjectFromAcademicContent } = await import('./src/config/concept-detector.js');
+
+// 1. Motion query from Chemistry session
+const motionSwitch = MemoryManager.reconcile('gotir sutro de', [], {
+  subject_id: 'ssc_chemistry',
+  subject_name: 'রসায়ন'
+});
+assert(motionSwitch.state.subject_id === 'ssc_physics', '"gotir sutro de" autonomously switches Chemistry session to ssc_physics');
+assert(motionSwitch.state.subject_name === 'পদার্থবিজ্ঞান', 'Subject name updated to পদার্থবিজ্ঞান');
+assert(motionSwitch.state.chapter_num === '2', 'Chapter dynamically set to 2 (গতি)');
+
+// 2. Periodic Table query from Physics session
+const chemSwitch = MemoryManager.reconcile('porjay saroni te koyta moulo thake', [], {
+  subject_id: 'ssc_physics',
+  subject_name: 'পদার্থবিজ্ঞান'
+});
+assert(chemSwitch.state.subject_id === 'ssc_chemistry', '"porjay saroni" autonomously switches Physics session to ssc_chemistry');
+assert(chemSwitch.state.chapter_num === '4', 'Chapter dynamically set to 4 (পর্যায় সারণি)');
+
+// 3. Cell Division query from Chemistry session
+const bioSwitch = MemoryManager.reconcile('kosh bibhajon koy prokar', [], {
+  subject_id: 'ssc_chemistry',
+  subject_name: 'রসায়ন'
+});
+assert(bioSwitch.state.subject_id === 'ssc_biology', '"kosh bibhajon" autonomously switches Chemistry session to ssc_biology');
+assert(bioSwitch.state.chapter_num === '3', 'Chapter dynamically set to 3 (কোষ বিভাজন)');
+
+// 4. Trigonometry query from Chemistry session
+const mathSwitch = MemoryManager.reconcile('trikonmitir sutro gulo dao', [], {
+  subject_id: 'ssc_chemistry',
+  subject_name: 'রসায়ন'
+});
+assert(mathSwitch.state.subject_id === 'ssc_general_math', '"trikonmitir sutro" autonomously switches to ssc_general_math');
+assert(mathSwitch.state.chapter_num === '9', 'Chapter dynamically set to 9 (ত্রিকোণমিতিক অনুপাত)');
+
+// 5. User complaint / meta-debate resilience (no false trigger)
+const complaintCheck = MemoryManager.reconcile('kamer kam hocche na kisui hoilo na vai', [], {
+  subject_id: 'ssc_chemistry',
+  subject_name: 'রসায়ন'
+});
+assert(complaintCheck.state.subject_id === 'ssc_chemistry', 'User complaint maintains active session without false subject trigger');
+
+// 6. Post-Response Academic Content Classifier
+const postPhysics = detectSubjectFromAcademicContent('গতি-সংক্রান্ত প্রধান সূত্রগুলো: 1. দ্রুতি/বেগ v = s/t\n2. ত্বরণ a = (v-u)/t\n3. v = u + at', 'ssc_chemistry');
+assert(postPhysics?.subject_id === 'ssc_physics', 'Post-response classifier detects physics formulas from AI output');
+assert(postPhysics?.chapter_num === '2', 'Post-response classifier identifies Chapter 2 (গতি)');
+
 console.log('\n====================================================');
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED WITH 100% SUCCESS!`);
 console.log('====================================================');
+

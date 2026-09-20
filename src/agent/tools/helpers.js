@@ -15,6 +15,18 @@ let chapterTokensMap = new Map();
 let isCorpusIndexed = false;
 const dynamicDbLookupCache = new Map();
 
+export function stemBnToken(t) {
+  if (!t || t.length <= 3) return t;
+  if (t.endsWith('ের') && t.length >= 5) return t.slice(0, -2);
+  if (t.endsWith('গুলো') && t.length >= 6) return t.slice(0, -4);
+  if (t.endsWith('গুলি') && t.length >= 6) return t.slice(0, -4);
+  if (t.endsWith('তে') && t.length >= 4) return t.slice(0, -2);
+  if (t.endsWith('কে') && t.length >= 4) return t.slice(0, -2);
+  if (t.endsWith('র') && t.length >= 4) return t.slice(0, -1);
+  if (t.endsWith('ে') && t.length >= 4) return t.slice(0, -1);
+  return t;
+}
+
 function buildCorpusIndex(chapters) {
   if (!chapters || chapters.length === 0) return;
   tokenDocFreq.clear();
@@ -25,7 +37,9 @@ function buildCorpusIndex(chapters) {
     const titleTokens = normName.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
     const concepts = CHAPTER_CONCEPTS_MAP[ch.subject_id]?.[String(ch.order_num)] || [];
     const conceptTokens = concepts.flatMap(c => normalizeAcademicString(c).split(' ')).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
-    const allTokens = [...new Set([...titleTokens, ...conceptTokens])];
+    const combined = [...titleTokens, ...conceptTokens];
+    const stemmed = combined.map(stemBnToken).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
+    const allTokens = [...new Set([...combined, ...stemmed])];
     chapterTokensMap.set(ch.id, allTokens);
     for (const t of allTokens) {
       tokenDocFreq.set(t, (tokenDocFreq.get(t) || 0) + 1);
@@ -113,7 +127,11 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
 
   const rawClean = normalizeAcademicString(fullContext);
   const extractedNum = targetChapterNum;
-  const queryTokens = [...new Set(rawClean.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t)))];
+  const rawTokens = rawClean.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
+  const queryTokens = [...new Set([
+    ...rawTokens,
+    ...rawTokens.map(stemBnToken).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t))
+  ])];
 
   let bestMatch = null;
   let highestScore = -99999;
@@ -148,9 +166,17 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     let matchedWeight = 0;
     let matchedCount = 0;
     for (const qt of queryTokens) {
-      if (chTokens.includes(qt) || chTokens.some(ct => ct.includes(qt) || qt.includes(ct))) {
+      // Avoid false positive on "function of X" queries matching Physics Chapter 4 (কাজ, ক্ষমতা ও শক্তি)
+      const isWorkGeneric = (qt === 'কাজ' && /(?:এর|\w+ের|\w+র)\s*কাজ\s*(?:কি|কী|গুলো|বর্ণনা|লিখ)/i.test(fullContext));
+      if (isWorkGeneric && c.subject_id === 'ssc_physics') {
+        continue;
+      }
+
+      const isExact = chTokens.includes(qt);
+      const isSub = !isExact && chTokens.some(ct => (ct.length >= 4 && qt.length >= 4 && (ct.includes(qt) || qt.includes(ct))));
+      if (isExact || isSub) {
         const idf = getIDF(qt, totalChapters);
-        matchedWeight += idf * 150;
+        matchedWeight += idf * (isExact ? 180 : 100);
         matchedCount++;
       }
     }
@@ -163,7 +189,10 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
       score += (queryOverlapRatio * 400) + (chOverlapRatio * 250);
 
       // Dynamic mutual exclusion penalty
-      const missingTokens = queryTokens.filter(qt => !chTokens.includes(qt) && !chTokens.some(ct => ct.includes(qt) || qt.includes(ct)));
+      const missingTokens = queryTokens.filter(qt => {
+        if (qt === 'কাজ' && /(?:এর|\w+ের|\w+র)\s*কাজ/i.test(fullContext)) return false;
+        return !chTokens.includes(qt) && !chTokens.some(ct => (ct.length >= 4 && qt.length >= 4 && (ct.includes(qt) || qt.includes(ct))));
+      });
       for (const mt of missingTokens) {
         if (tokenDocFreq.has(mt)) {
           score -= getIDF(mt, totalChapters) * 180;
@@ -173,8 +202,12 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
 
     // 4. Curriculum Concept Map Matching
     const concepts = CHAPTER_CONCEPTS_MAP[c.subject_id]?.[String(c.order_num)] || [];
+    const isWorkGenericContext = /(?:এর|\w+ের|\w+র)\s*কাজ\s*(?:কি|কী|গুলো|বর্ণনা|লিখ)/i.test(fullContext);
     for (const con of concepts) {
       const normCon = normalizeAcademicString(con);
+      if (normCon === 'কাজ' && c.subject_id === 'ssc_physics' && isWorkGenericContext) {
+        continue;
+      }
       if (normCon.length >= 2 && (rawClean.includes(normCon) || queryTokens.includes(normCon))) {
         score += 850;
       }

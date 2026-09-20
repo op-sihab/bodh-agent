@@ -1,5 +1,6 @@
 import { normalizeSubject, SUBJECT_DISPLAY_NAMES, toBnDigits } from "../../config/subject-map.js";
 import { extractChapterNum, findChapterNumByKeywords } from "../../config/chapter-map.js";
+import { detectSubjectAndChapterFromQuery } from "../../config/concept-detector.js";
 import { formatTag } from "../../config/tag-map.js";
 import { createInitialState } from "./state.js";
 
@@ -40,13 +41,69 @@ export class MemoryManager {
     }
 
     if (!isMetaDebate && !isSubjectRejection && !isQuestioningSubject && !isAnswering) {
-      const explicitSubject = normalizeSubject(cleanMsg);
+      let explicitSubject = normalizeSubject(cleanMsg);
+
+      // Context-aware subject switch: If user gave an affirmative confirmation to a suggested subject
+      // (e.g. "he", "yes", "ha", "sure", "jete chai", "oitate jabo", "physics a jete chai", "change koro")
+      if (!explicitSubject && pastHistory && pastHistory.length > 0) {
+        const isAffirmative = /^(?:he|yes|ha|hmm|sure|thik ache|হাঁ|হ্যাঁ|যেতে চাই|চাই|jete chai|change koro|oita|oi sub|ঐ\s*বিষয়ে|ওই\s*বিষয়ে|oitate jabo|cholo|ok)\b/i.test(cleanMsg);
+        if (isAffirmative) {
+          for (let i = pastHistory.length - 1; i >= 0; i--) {
+            const turn = pastHistory[i];
+            const text = typeof turn.content === "string" ? turn.content : "";
+            
+            // 1. Look for explicit invitation like "তুমি কি [বিষয়]-এ যেতে চাও"
+            const offerMatch = text.match(/তুমি কি (?:বিষয় পরিবর্তন করে\s*)?([^\s,।—?]+?)(?:ে|এ)?\s*যেতে চাও/i);
+            if (offerMatch) {
+              const suggested = normalizeSubject(offerMatch[1]);
+              if (suggested && suggested !== state.subject_id) {
+                explicitSubject = suggested;
+                break;
+              }
+            }
+
+            // 2. Look for any other subject mentioned in the assistant turn that differs from current state
+            const segments = text.split(/(?:,|\s+|।|\?|—|;|:)+/);
+            for (const seg of segments) {
+              const s = normalizeSubject(seg);
+              if (s && s !== state.subject_id) {
+                explicitSubject = s;
+                break;
+              }
+            }
+            if (explicitSubject) break;
+          }
+        }
+      }
+
+      // Autonomous Cross-Subject & Topic Detection:
+      // If user asks about a formula, chapter, or topic belonging to a specific subject (e.g. "gotir sutro de", "kosh bibhajon ki")
+      const detectedTopic = detectSubjectAndChapterFromQuery(cleanMsg, state.subject_id);
+      if (!explicitSubject && detectedTopic && detectedTopic.subject_id) {
+        explicitSubject = detectedTopic.subject_id;
+      }
+
       if (explicitSubject && explicitSubject !== state.subject_id) {
         state.subject_id = explicitSubject;
         state.subject_name = SUBJECT_DISPLAY_NAMES[explicitSubject] || explicitSubject;
-        state.chapter_num = null;
-        state.chapter_name = null;
+        state.chapter_num = (detectedTopic?.subject_id === explicitSubject) ? (detectedTopic.chapter_num || null) : null;
+        state.chapter_name = (detectedTopic?.subject_id === explicitSubject) ? (detectedTopic.chapter_name || null) : null;
         state.active_question = null;
+
+        // Check if user previously asked about a specific concept for this newly switched subject
+        if (!state.chapter_num) {
+          for (const turn of pastHistory.slice().reverse()) {
+            const text = typeof turn.content === "string" ? turn.content : "";
+            const ch = findChapterNumByKeywords(text, state.subject_id);
+            if (ch) {
+              state.chapter_num = ch;
+              break;
+            }
+          }
+        }
+      } else if (detectedTopic && detectedTopic.subject_id === state.subject_id && detectedTopic.chapter_num) {
+        state.chapter_num = detectedTopic.chapter_num;
+        state.chapter_name = detectedTopic.chapter_name || state.chapter_name;
       }
     }
 

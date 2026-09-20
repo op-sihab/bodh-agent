@@ -11,4 +11,4 @@ serve({
   fetch: app.fetch,
   port: PORT
 });
-console.log(`✨ BODH AI (বোধ) ready at http://localhost:${PORT}`);
+console.log(`✨ BODH AI (বোধ) ready at http://localhost:${PORT} [Live-Reload: Intent State Sync Active]`);

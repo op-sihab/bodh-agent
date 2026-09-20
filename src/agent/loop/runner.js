@@ -1,12 +1,16 @@
 // Multi-turn Autonomous ReAct Agent Execution Loop with Tool Calling & Token Streaming
 import { AGENT_TOOLS, executeAgentTool } from "../tools/index.js";
+import { findChapterCached } from "../tools/helpers.js";
 import { MemoryManager } from "../memory/memory-manager.js";
-import { SUBJECT_DISPLAY_NAMES, toBnDigits } from "../../config/subject-map.js";
+import { SUBJECT_DISPLAY_NAMES, toBnDigits, normalizeSubject } from "../../config/subject-map.js";
+import { extractChapterNum, findChapterNumByKeywords } from "../../config/chapter-map.js";
+import { detectSubjectFromAcademicContent, detectSubjectAndChapterFromQuery } from "../../config/concept-detector.js";
 import { ENV } from "../../config/env.js";
 import { SYSTEM_PROMPT } from "../prompts/system-prompt.js";
 import { compactToolResult } from "./compaction.js";
 import { classifyIntent, getScopedTools, pruneHistoryForContext, getMaxTokensForIntent, calculateTokenTelemetry, INTENT_TYPES } from "./router.js";
 import { calculateStepCost, calculateBaselineCost, formatCostUsd, formatCostBdt, recordGatewayCall, USD_TO_BDT_RATE } from "./gateway-metrics.js";
+import { globalCreditManager } from "./credit-manager.js";
 
 // Helpers for student-friendly, empathetic tool progress labels
 function getToolHumanLabel(tool, args) {
@@ -100,6 +104,163 @@ async function streamWords(text, onEvent) {
   }
 }
 
+export function stripInternalThoughts(text) {
+  if (!text) return "";
+  return text
+    .replace(/<[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>/gi, '')
+    .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>[\s\S]*?(?:\n\n|$)/gi, '')
+    .replace(/(?:<[\s]*\/?)?(?:thought|thinking|থought|থট)[\s>]*\[[\s\S]*?\]/gi, '')
+    .replace(/\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|subject)[^\]]*\]/gi, '')
+    .replace(/<\/?[\s]*(?:thought|thinking)[\s]*>/gi, '');
+}
+
+// Dynamically extract AI model's autonomous reasoning, subject choice, and chapter from thought or leading text
+function extractAiAcademicIntent(thoughtText) {
+  if (!thoughtText) return null;
+
+  // 1. Explicit tag declaration: [বিষয়: ...] or [বিষয়: ...] or [subject: ...]
+  const tagMatch = thoughtText.match(/\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|subject)\s*[:ঃ]\s*([^,\]]+)(?:,\s*(?:অধ্যায়|অধ্যায়|chapter)\s*[:ঃ]\s*([^\]]+))?\s*\]/i) ||
+                   thoughtText.match(/(?:thought|thinking|থought|থট)[\s>]*\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|subject)\s*[:ঃ]\s*([^,\]]+)(?:,\s*(?:অধ্যায়|অধ্যায়|chapter)\s*[:ঃ]\s*([^\]]+))?\s*\]/i);
+  if (tagMatch) {
+    const rawSubj = tagMatch[1].trim();
+    const rawCh = tagMatch[2] ? tagMatch[2].trim() : null;
+    const normSubj = normalizeSubject(rawSubj);
+    if (normSubj) {
+      return {
+        subject: normSubj,
+        chapter: rawCh ? (extractChapterNum(rawCh) || findChapterNumByKeywords(rawCh, normSubj)) : null
+      };
+    }
+  }
+
+  // 2. Natural Bengali reasoning: "বিষয়: বাংলাদেশ ও বিশ্বপরিচয়", "বিষয় পরিবর্তন: পদার্থবিজ্ঞান"
+  const phraseMatch = thoughtText.match(/(?:বিষয়\s*হলো|বিষয়\s*নির্ধারণ|বিষয়\s*পরিবর্তন|সক্রিয়\s*বিষয়|বিষয়\s*হিসেবে|বিষয়)\s*[:ঃ]?\s*([^,।—\n\]]+)/i);
+  if (phraseMatch) {
+    const normSubj = normalizeSubject(phraseMatch[1].trim());
+    if (normSubj) {
+      const chMatch = thoughtText.match(/(?:অধ্যায়|অধ্যায়|chapter)\s*([০-৯0-9]+)/i) ||
+                      thoughtText.match(/([০-৯0-9]+)\s*(?:তম|ম|র্থ|ষ্ঠ|ম|য়|ই|য়)?\s*(?:অধ্যায়|অধ্যায়)/i);
+      const ch = chMatch ? extractChapterNum(chMatch[1]) : null;
+      return { subject: normSubj, chapter: ch };
+    }
+  }
+
+  // 3. Autonomous canonical subject mention in thought reasoning
+  const canonicalSubjects = [
+    { name: "বাংলাদেশ ও বিশ্বপরিচয়", id: "ssc_bgs" },
+    { name: "বাংলাদেশ ও বিশ্ব পরিচয়", id: "ssc_bgs" },
+    { name: "বিজিএস", id: "ssc_bgs" },
+    { name: "পদার্থবিজ্ঞান", id: "ssc_physics" },
+    { name: "রসায়ন", id: "ssc_chemistry" },
+    { name: "রসায়ন", id: "ssc_chemistry" },
+    { name: "জীববিজ্ঞান", id: "ssc_biology" },
+    { name: "উচ্চতর গণিত", id: "ssc_higher_math" },
+    { name: "সাধারণ গণিত", id: "ssc_general_math" },
+    { name: "আইসিটি", id: "ssc_ict" },
+    { name: "তথ্য ও যোগাযোগ", id: "ssc_ict" },
+    { name: "বাংলা ১ম", id: "ssc_bangla_1st" },
+    { name: "বাংলা প্রথম", id: "ssc_bangla_1st" },
+    { name: "বাংলা ২য়", id: "ssc_bangla_2nd" },
+    { name: "বাংলা দ্বিতীয়", id: "ssc_bangla_2nd" },
+    { name: "ইসলাম ও নৈতিক শিক্ষা", id: "ssc_islam" },
+    { name: "ইসলাম শিক্ষা", id: "ssc_islam" }
+  ];
+
+  for (const cs of canonicalSubjects) {
+    if (thoughtText.includes(cs.name)) {
+      const chMatch = thoughtText.match(/(?:অধ্যায়|অধ্যায়|chapter)\s*([০-৯0-9]+)/i) ||
+                      thoughtText.match(/([০-৯0-9]+)\s*(?:তম|ম|র্থ|ষ্ঠ|ম|য়|ই|য়)?\s*(?:অধ্যায়|অধ্যায়)/i);
+      const ch = chMatch ? extractChapterNum(chMatch[1]) : null;
+      return { subject: cs.id, chapter: ch };
+    }
+  }
+
+  // 4. Autonomous concept detection fallback directly from thought content
+  const conceptInThought = detectSubjectAndChapterFromQuery(thoughtText);
+  if (conceptInThought && conceptInThought.subject_id) {
+    return {
+      subject: conceptInThought.subject_id,
+      chapter: conceptInThought.chapter_num || null
+    };
+  }
+
+  return null;
+}
+
+export function formatProfessionalThought(rawThought, subjectId, chapterNum, userMessage = "") {
+  let text = (rawThought || "").trim();
+
+  // Extract tag if present: [বিষয়: ..., অধ্যায়: ...]
+  let tagSubj = "";
+  let tagCh = "";
+  const tagMatch = text.match(/\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|subject)\s*[:ঃ]\s*([^,\]]+)(?:,\s*(?:অধ্যায়|অধ্যায়|chapter)\s*[:ঃ]\s*([^\]]+))?\s*\]/i);
+  if (tagMatch) {
+    tagSubj = tagMatch[1].trim();
+    if (tagMatch[2]) tagCh = tagMatch[2].trim();
+  }
+
+  // Clean raw thought tags and robotic brackets
+  let cleanText = text
+    .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>/gi, '')
+    .replace(/<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>$/gi, '')
+    .replace(/(?:<[\s]*\/?)?(?:thought|thinking|থought|থট)[\s>]*\[[\s\S]*?\]/gi, '')
+    .replace(/\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|subject)[^\]]*\]/gi, '')
+    .trim();
+
+  const activeSubj = tagSubj || SUBJECT_DISPLAY_NAMES[subjectId] || "চলমান বিষয়";
+  const activeChNum = tagCh || chapterNum;
+
+  // If the model only emitted a short tag or minimal text (< 15 chars), synthesize rich pedagogical reasoning
+  if (cleanText.length < 15) {
+    const getOrdinal = (nStr) => {
+      const n = parseInt(String(nStr).replace(/[০-৯]/g, d => ({ '০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9' }[d] || d)), 10);
+      if (n === 1) return '১ম';
+      if (n === 2) return '২য়';
+      if (n === 3) return '৩য়';
+      if (n === 4) return '৪র্থ';
+      if (n === 5) return '৫ম';
+      if (n === 6) return '৬ষ্ঠ';
+      if (n >= 7 && n <= 10) return `${toBnDigits(n)}ম`;
+      return n ? `${toBnDigits(n)}তম` : '';
+    };
+    const chStr = activeChNum ? `${getOrdinal(activeChNum)} অধ্যায়` : 'সংশ্লিষ্ট অধ্যায়';
+    switch (subjectId) {
+      case "ssc_physics":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি এসএসসি পদার্থবিজ্ঞানের ${chStr}-এর মূল বিষয়ের সাথে সম্পর্কিত। না বুঝে মুখস্থের বদলে গাণিতিক সূত্রের প্রতিটি চলক, বাস্তব উদাহরণ ও বোর্ড স্ট্যান্ডার্ড নিয়ম অনুযায়ী ধাপে ধাপে বুঝিয়ে দিচ্ছি।`;
+        break;
+      case "ssc_chemistry":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি এসএসসি রসায়নের ${chStr}-এর গুরুত্বপূর্ণ রাসায়নিক ধারণার সাথে সম্পর্কিত। বিক্রিয়া কৌশল, পদার্থের বৈশিষ্ট্য ও বোর্ড পরীক্ষার প্রাসঙ্গিক তথ্যে ধারণাটি স্পষ্ট করে তুলছি।`;
+        break;
+      case "ssc_biology":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি এসএসসি জীববিজ্ঞানের ${chStr}-এর শারীরবৃত্তীয় বিষয়ের সাথে সম্পর্কিত। জীববৈজ্ঞানিক প্রক্রিয়া, সঠিক সংজ্ঞা ও চিত্রভিত্তিক ধারণা প্রাঞ্জল ভাষায় বুঝিয়ে দিচ্ছি।`;
+        break;
+      case "ssc_higher_math":
+      case "ssc_general_math":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি গণিতের ${chStr}-এর সমস্যা সমাধানের সাথে সম্পর্কিত। সূত্রের নিখুঁত প্রতিপাদন এবং বোর্ড স্ট্যান্ডার্ড নিয়মে ধাপে ধাপে গাণিতিক সমাধান উপস্থাপন করছি।`;
+        break;
+      case "ssc_bgs":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি বাংলাদেশ ও বিশ্বপরিচয় বিষয়ের ${chStr}-এর ঐতিহাসিক ও জাতীয় বিষয়ের সাথে সম্পর্কিত। এনসিটিবি পাঠ্যক্রম অনুযায়ী সঠিক তথ্য, ঐতিহাসিক প্রেক্ষাপট ও গুরুত্ব স্পষ্টভাবে উপস্থাপন করছি।`;
+        break;
+      case "ssc_ict":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি তথ্য ও যোগাযোগ প্রযুক্তি (ICT) বিষয়ের ${chStr}-এর সাথে সম্পর্কিত। ব্যবহারিক ও প্রযুক্তিগত ধারণা বোর্ড সিলেবাসের আলোকে সহজবোধ্য ভাষায় বুঝিয়ে দিচ্ছি।`;
+        break;
+      case "ssc_islam":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি ইসলাম ও নৈতিক শিক্ষা বিষয়ের ${chStr}-এর সাথে সম্পর্কিত। কোরআন, হাদিস ও এনসিটিবি বোর্ড পাঠ্যবইয়ের প্রামাণ্য রেফারেন্স অনুযায়ী মার্জিত ভাষায় উপস্থাপন করছি।`;
+        break;
+      case "ssc_bangla_1st":
+      case "ssc_bangla_2nd":
+        cleanText = `শিক্ষার্থীর প্রশ্নটি বাংলা বিষয়ের ${chStr}-এর সাথে সম্পর্কিত। পাঠ্যবইয়ের মূল ভাব ও ব্যাকরণিক নিয়ম অনুযায়ী বোর্ড মানবণ্টন বজায় রেখে উত্তর সাজিয়ে দিচ্ছি।`;
+        break;
+      default:
+        cleanText = `শিক্ষার্থীর প্রশ্নটির অ্যাকাডেমিক তাৎপর্য বিশ্লেষণ করছি। এনসিটিবি পাঠ্যক্রম অনুযায়ী মুখস্থ করার বদলে বাস্তব উদাহরণ ও স্পষ্ট যুক্তি দিয়ে বিষয়টির গভীর বোধ তৈরি করাই আমার মূল লক্ষ্য।`;
+        break;
+    }
+  }
+
+  const tagStr = `[বিষয়: ${activeSubj}${activeChNum ? `, অধ্যায়: ${toBnDigits(activeChNum)}` : ''}]`;
+  return `${cleanText} ${tagStr}`;
+}
+
 export async function runAgenticConversation(userMessage, onEvent, options = {}) {
   const startTime = performance.now();
   const pastHistory = options.history || [];
@@ -113,6 +274,61 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   let state = memoryReconciliation.state;
   const isAnswering = memoryReconciliation.isAnswering;
   const isMetaDebate = memoryReconciliation.isMetaDebate;
+  // 1b. Dynamic Corpus & Database Fallback Check (Checks all 114 chapters and 50,855 questions)
+  const isBroadSyllabus = /(?:সবগুলো|সব|shob|sob|all)\s*(?:অধ্যায়|অধ্যায়|চ্যাপ্টার|chapter|পাঠ)|(?:অধ্যায়গুলো|অধ্যায়গুলো|অধ্যায়ের\s*তালিকা|অধ্যায়\s*তালিকা|অধ্যায়গুলোর\s*নাম|তালিকা|সিলেবাস|syllabus)/i.test(userMessage);
+  const mentionsCurrentSubj = state.subject_name && (userMessage.includes(state.subject_name) || (state.subject_id && userMessage.toLowerCase().includes(state.subject_id.replace(/^ssc_/, ''))));
+
+  if (!isMetaDebate && !isAnswering && !isBroadSyllabus) {
+    try {
+      // 1. Autonomous concept detection from query (covers both cross-subject and intra-subject chapter shifts)
+      const queryConcept = detectSubjectAndChapterFromQuery(userMessage, state.subject_id);
+      if (queryConcept?.subject_id) {
+        if (queryConcept.subject_id !== state.subject_id) {
+          state.subject_id = queryConcept.subject_id;
+          state.subject_name = SUBJECT_DISPLAY_NAMES[queryConcept.subject_id] || queryConcept.subject_id;
+          state.chapter_num = queryConcept.chapter_num ? String(queryConcept.chapter_num) : null;
+          state.chapter_name = queryConcept.chapter_name || null;
+          state.active_question = null;
+        } else if (queryConcept.chapter_num && String(queryConcept.chapter_num) !== state.chapter_num) {
+          state.chapter_num = String(queryConcept.chapter_num);
+          state.chapter_name = queryConcept.chapter_name || state.chapter_name;
+          state.active_question = null;
+        }
+      } else {
+        const explicitSubj = normalizeSubject(userMessage);
+        if (explicitSubj && explicitSubj !== state.subject_id) {
+          state.subject_id = explicitSubj;
+          state.subject_name = SUBJECT_DISPLAY_NAMES[explicitSubj] || explicitSubj;
+          state.chapter_num = findChapterNumByKeywords(userMessage, explicitSubj);
+          state.active_question = null;
+        } else {
+          const dbChapterMatch = await findChapterCached(userMessage, null, null);
+          if (dbChapterMatch && dbChapterMatch.subject_id) {
+            if (dbChapterMatch.subject_id !== state.subject_id) {
+              state.subject_id = dbChapterMatch.subject_id;
+              state.subject_name = SUBJECT_DISPLAY_NAMES[dbChapterMatch.subject_id] || dbChapterMatch.subject_id;
+              state.chapter_num = String(dbChapterMatch.order_num);
+              state.chapter_name = dbChapterMatch.name;
+              state.active_question = null;
+            } else if (String(dbChapterMatch.order_num) !== state.chapter_num) {
+              state.chapter_num = String(dbChapterMatch.order_num);
+              state.chapter_name = dbChapterMatch.name;
+              state.active_question = null;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[Runner] Dynamic DB chapter lookup error:", e);
+    }
+  }
+
+  // Immediately notify client of subject or chapter switch before token 1 streams
+  const subjectChanged = options.state && state.subject_id && state.subject_id !== options.state.subject_id;
+  const chapterChanged = options.state && state.chapter_num !== options.state.chapter_num;
+  if (subjectChanged || chapterChanged) {
+    await onEvent({ type: "state_sync", state });
+  }
 
   // 2. Classify Intent via Orchestrator Decision Router (Big Boss Router)
   const classifiedIntent = classifyIntent(userMessage, state, isAnswering);
@@ -154,15 +370,18 @@ Respond in natural, warm, inspiring Bengali. Keep greeting crisp (1-2 sentences)
     inputHistory.push({
       type: "message",
       role: "system",
-      content: `ACTIVE ACADEMIC CONTEXT: Subject is ALREADY SELECTED as '${activeSubjBn}' (${activeSubject}) [${chDisplay}].
-STRICT ACADEMIC PERSISTENCE DIRECTIVES:
-1. You are actively tutoring the student in '${activeSubjBn}'. The subject is ALREADY CHOSEN by the student in the top UI.
-2. ABSOLUTE PROHIBITION: STRICTLY NEVER ask "তুমি কোন বিষয় নিয়ে পড়তে চাও?", "কোন বিষয়", or "কোন অধ্যায় বা বিষয়"! NEVER mention "বিষয়" when asking what to read!
-3. If asking what to study, ONLY refer to '${activeSubjBn}' (e.g. "${activeSubjBn}-এর কোন অধ্যায় বা টপিক নিয়ে পড়তে চাও?").
-4. DO NOT change or switch to any other subject based on ambiguous words, typos, short comments, or Banglish slang.
-5. You may ONLY change subjects if the student explicitly specifies a different subject.
-6. The active chapter context is ${chDisplay}. If the student asks about the whole syllabus or a different chapter in ${activeSubjBn}, answer freely for ${activeSubjBn}.
-7. Keep all focus strictly anchored on '${activeSubjBn}'.`
+      content: `ACTIVE ACADEMIC CONTEXT: Currently active session subject is '${activeSubjBn}' (${activeSubject}) [${chDisplay}].
+DYNAMIC MULTI-DISCIPLINARY SSC ACADEMIC ROUTING:
+1. You are "বোধ" (BODH), Bangladesh's premier autonomous academic AI tutor. Students can freely ask questions from ANY SSC subject (পদার্থবিজ্ঞান, রসায়ন, জীববিজ্ঞান, সাধারণ গণিত, উচ্চতর গণিত, বাংলা ১ম পত্র, বাংলা ২য় পত্র, আইসিটি, বাংলাদেশ ও বিশ্বপরিচয়, ইসলাম ও নৈতিক শিক্ষা).
+2. DYNAMIC SUBJECT REASONING: In your initial <thought>...</thought>, autonomously reflect in Bengali like a master teacher: evaluate what SSC subject and chapter the student's question belongs to, plan your clear explanation, and conclude the thought with: [বিষয়: <বিষয়_নাম>, অধ্যায়: <অধ্যায়_নম্বর>]
+   (যেমন: 'গতি' বা 'ত্বরণ' হলে -> [বিষয়: পদার্থবিজ্ঞান, অধ্যায়: ২]; 'কোলেনকাইমা' বা 'কোষ' হলে -> [বিষয়: জীববিজ্ঞান, অধ্যায়: ২]; 'গ্যালভানাইজেশন' বা 'মোল' হলে -> [বিষয়: রসায়ন, অধ্যায়: ১০]; 'সমাস' হলে -> [বিষয়: বাংলা ২য় পত্র, অধ্যায়: ৪]; '৬ দফা' হলে -> [বিষয়: বাংলাদেশ ও বিশ্বপরিচয়, অধ্যায়: ১])
+3. If the question belongs to '${activeSubjBn}': Teach with comprehensive pedagogical mastery, formulas, and diagrams.
+4. If the question belongs to ANOTHER SSC subject:
+   - UNLEASH FULL AI POWER: Deliver a thorough, pedagogically rich explanation of the concept with formal definitions, intuitive real-life examples, and all core formulas.
+   - Elegantly frame the context (যেমন: "এটি মূলত এসএসসি পদার্থবিজ্ঞানের 'গতি' (অধ্যায় ২)-এর মূল বিষয়...").
+   - In your initial <thought>, ALWAYS declare: [বিষয়: <নতুন_বিষয়>, অধ্যায়: <অধ্যায়_নম্বর>] so the session adapts dynamically in real time.
+   - Seamlessly adopt that subject for the ongoing session without artificial barriers or stubborn refusals.
+5. ABSOLUTE PROHIBITION: Never ask "তুমি কোন বিষয় পড়তে চাও?" or refuse to answer. If a student asks any academic question or confirms a switch, answer the concept directly and fully!`
     });
   }
 
@@ -223,7 +442,22 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
   inputHistory.push({
     type: "message",
     role: "system",
-    content: "বাধ্যতামূলক আচরণবিধি: কোনো টুল কল করার প্রয়োজন হলে বা সরাসরি উত্তর দেওয়ার সময় উত্তরের শুরুতে <thought>...</thought> ট্যাগের ভেতরে বাংলায় ১-২ বাক্যে তোমার সুনির্দিষ্ট অ্যাকাডেমিক চিন্তা প্রকাশ করবে। মূল উত্তরের কোনো বাক্যে ভুলেও কোনো কাল্পনিক ট্যাগ বা ব্র্যাকেট (যেমন <...>) লিখবে না—সরাসরি মার্জিত বাংলায় উত্তর লিখবে।"
+    content: `বাধ্যতামূলক অ্যাকাডেমিক চিন্তা ও শিক্ষাদান পরিকল্পনা (<thought>):
+উত্তরের শুরুতে অবশ্যই <thought>...</thought> ট্যাগের মধ্যে বাংলায় ২-৩ বাক্যে একজন প্রাজ্ঞ ও আন্তরিক শিক্ষকের মতো তোমার গভীর চিন্তাভাবনা (pedagogical reasoning) লিখবে:
+১. শিক্ষার্থীর প্রশ্নটির মূল কনসেপ্ট ও এনসিটিবি (NCTB) পাঠ্যক্রম অনুযায়ী বিষয় ও অধ্যায় বিশ্লেষণ।
+২. মুখস্থের বিকল্প হিসেবে কীভাবে কনসেপ্টটি শিক্ষার্থীর কাছে বাস্তব উদাহরণ, স্পষ্ট সূত্র বা প্রাঞ্জল ব্যাখ্যা দিয়ে সহজবোধ্য করা যায় তার শিক্ষণ পরিকল্পনা।
+৩. চিন্তাটির শেষে সিস্টেমের অ্যাকাডেমিক সমন্বয়ের জন্য ট্যাগ: [বিষয়: <বিষয়_নাম>, অধ্যায়: <অধ্যায়_নম্বর>] (যদি বিষয় পরিবর্তন হয় তবে [বিষয় পরিবর্তন: <নতুন_বিষয়>, অধ্যায়: <অধ্যায়_নম্বর>])।
+
+উদাহরণ ১ (পদার্থবিজ্ঞান):
+<thought>শিক্ষার্থী এসএসসি পদার্থবিজ্ঞানের ২য় অধ্যায় (গতি)-এর মৌলিক সমীকরণগুলো জানতে চেয়েছে। না বুঝে মুখস্থ করার বদলে ৪টি মৌলিক সমীকরণ ($v = u + at$, $s = \\frac{u+v}{2}t$, $s = ut + \\frac{1}{2}at^2$, $v^2 = u^2 + 2as$), প্রতিটি চিহ্নের সুনির্দিষ্ট অর্থ এবং কোন তথ্যের ভিত্তিতে কোন সূত্র প্রয়োগ করতে হয় তা বোর্ড স্ট্যান্ডার্ড নিয়মে ধাপে ধাপে বুঝিয়ে দেব। [বিষয়: পদার্থবিজ্ঞান, অধ্যায়: ২]</thought>
+
+উদাহরণ ২ (বাংলাদেশ ও বিশ্বপরিচয়):
+<thought>শিক্ষার্থীর প্রশ্নটি বাংলাদেশ ও বিশ্বপরিচয় বিষয়ের ১ম অধ্যায় (পূর্ব বাংলার আন্দোলন ও জাতীয়তাবাদের উন্মেষ)-এর ঐতিহাসিক পটভূমি সংক্রান্ত। ৩ মার্চ ১৯৭১ ছাত্র সংগ্রাম পরিষদের ঐতিহাসিক পল্টন জনসভায় 'জাতির পিতা' ঘোষণার প্রেক্ষাপট এবং মহান মুক্তিযুদ্ধে বঙ্গবন্ধু শেখ মুজিবুর রহমানের অবিসংবাদিত নেতৃত্ব এনসিটিবি পাঠ্যবইয়ের আলোকে নির্ভুল ও প্রামাণ্য তথ্যে উপস্থাপন করব। [বিষয়: বাংলাদেশ ও বিশ্বপরিচয়, অধ্যায়: ১]</thought>
+
+উদাহরণ ৩ (জীববিজ্ঞান):
+<thought>শিক্ষার্থীর প্রশ্নটি এসএসসি জীববিজ্ঞান ৪র্থ অধ্যায় (জীবনীশক্তি)-এর সালোকসংশ্লেষণ প্রক্রিয়ার সাথে সম্পর্কিত। উদ্ভিদের খাদ্য তৈরির এই প্রধান শারীরবৃত্তীয় প্রক্রিয়া, এর রাসায়নিক সমীকরণ ও পর্যায়গুলো সহজ ও চিত্রভিত্তিক ভাষায় ব্যাখ্যা করব। [বিষয়: জীববিজ্ঞান, অধ্যায়: ৪]</thought>
+
+মূল উত্তরের ভেতরে ভুলেও কোনো <thought> বা কাল্পনিক ট্যাগ রাখবে না—সরাসরি প্রমিত ও মার্জিত বাংলায় পাঠদান করবে।`
   });
 
   // Add current user message
@@ -394,8 +628,11 @@ CRITICAL DIRECTIVES:
     let buffer = "";
     let toolCall = null;
     let stepContent = "";
-    let inLeadingThought = currentStep > 1;
+    let thoughtState = "pending"; // "pending" | "inside" | "none"
     let streamEmittedLength = 0;
+    let streamEmittedThoughtLength = 0;
+    let thoughtDoneEmitted = false;
+    let syncedSubjectFromStream = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -429,36 +666,93 @@ CRITICAL DIRECTIVES:
                 toolCall = item;
               } else if (item.type === "text" && item.text) {
                 stepContent = item.text;
-
-                if (inLeadingThought) {
-                  const trimmedStart = stepContent.trimStart();
-                  if (/^<\s*(?:thought|thinking)/i.test(trimmedStart)) {
-                    const closeMatch = stepContent.match(/<[\s]*\/[\s]*(?:thought|thinking)[\s]*>([\s\S]*)$/i);
-                    if (closeMatch) {
-                      inLeadingThought = false;
-                      const answerPortion = closeMatch[1].replace(/^\n+/, '');
-                      streamEmittedLength = stepContent.length;
-                      if (answerPortion && !(currentStep === 1 && requiresQuestionTool)) {
-                        if (!firstTokenTime) firstTokenTime = Math.round(performance.now() - startTime);
-                        await onEvent({ type: "content_delta", delta: answerPortion });
-                      }
+                // Continuously inspect full text for thought intent to update subject in real time
+                if (!syncedSubjectFromStream) {
+                  const aiDecisions = extractAiAcademicIntent(stepContent);
+                  if (aiDecisions?.subject) {
+                    if (aiDecisions.subject !== state.subject_id) {
+                      syncedSubjectFromStream = true;
+                      state.subject_id = aiDecisions.subject;
+                      state.subject_name = SUBJECT_DISPLAY_NAMES[aiDecisions.subject] || aiDecisions.subject;
+                      if (aiDecisions.chapter && !isBroadSyllabus) state.chapter_num = aiDecisions.chapter;
+                      await onEvent({ type: "state_sync", state });
+                    } else if (aiDecisions.chapter && !isBroadSyllabus && aiDecisions.chapter !== state.chapter_num) {
+                      syncedSubjectFromStream = true;
+                      state.chapter_num = aiDecisions.chapter;
+                      await onEvent({ type: "state_sync", state });
                     }
-                  } else {
-                    inLeadingThought = false;
                   }
                 }
 
-                if (!inLeadingThought && item.text.length > streamEmittedLength) {
-                  const delta = item.text.slice(streamEmittedLength);
-                  streamEmittedLength = item.text.length;
-                  if (delta && !(currentStep === 1 && requiresQuestionTool)) {
-                    if (!firstTokenTime) {
-                      firstTokenTime = Math.round(performance.now() - startTime);
+                const trimmedStart = stepContent.trimStart();
+                const startsWithTag = trimmedStart.startsWith("<");
+                const openThoughtMatch = stepContent.match(/<[\s]*(?:thought|thinking)[\s]*>/i);
+                const closeThoughtMatch = stepContent.match(/<[\s]*\/[\s]*(?:thought|thinking)[\s]*>/i);
+
+                // 1. If actively streaming inside unclosed thought block
+                if (startsWithTag && !closeThoughtMatch) {
+                  if (openThoughtMatch) {
+                    const rawAfterOpen = stepContent.slice(openThoughtMatch.index + openThoughtMatch[0].length);
+                    const curThought = rawAfterOpen.replace(/<\/?[\s]*(?:thought|thinking)?[^>]*$/i, '');
+                    if (curThought.length > streamEmittedThoughtLength) {
+                      const delta = curThought.slice(streamEmittedThoughtLength);
+                      streamEmittedThoughtLength = curThought.length;
+                      if (delta) {
+                        await onEvent({
+                          type: "thought_delta",
+                          delta,
+                          thought: curThought
+                        });
+                      }
                     }
-                    await onEvent({
-                      type: "content_delta",
-                      delta
-                    });
+                  }
+                  // CRITICAL: NEVER emit content_delta while waiting for thought to close!
+                  continue;
+                }
+
+                // 2. Thought tag just closed
+                if (closeThoughtMatch && !thoughtDoneEmitted) {
+                  thoughtDoneEmitted = true;
+                  const thoughtInner = openThoughtMatch
+                    ? stepContent.slice(openThoughtMatch.index + openThoughtMatch[0].length, closeThoughtMatch.index).trim()
+                    : stepContent.slice(0, closeThoughtMatch.index).replace(/^<[\s]*(?:thought|thinking)[\s]*>/i, '').trim();
+                  const professionalT = formatProfessionalThought(thoughtInner, state.subject_id, state.chapter_num, userMessage);
+                  await onEvent({
+                    type: "thought_done",
+                    thought: professionalT
+                  });
+                } else if (!startsWithTag && !thoughtDoneEmitted && stepContent.length >= 10) {
+                  // Direct answer without thought tag from model: synthesize pedagogical thought so Thinking is never bypassed
+                  thoughtDoneEmitted = true;
+                  const synthT = formatProfessionalThought("", state.subject_id, state.chapter_num, userMessage);
+                  await onEvent({
+                    type: "thought_done",
+                    thought: synthT
+                  });
+                }
+
+                // 3. Extract answer strictly AFTER the closing thought tag
+                let answerSlice = "";
+                if (closeThoughtMatch) {
+                  answerSlice = stepContent.slice(closeThoughtMatch.index + closeThoughtMatch[0].length).trimStart();
+                } else if (!startsWithTag && thoughtDoneEmitted) {
+                  answerSlice = stepContent.trimStart();
+                }
+
+                if (answerSlice) {
+                  const cleanSoFar = stripInternalThoughts(answerSlice).replace(/^\n+/, '');
+                  if (cleanSoFar.length > streamEmittedLength) {
+                    const delta = cleanSoFar.slice(streamEmittedLength);
+                    streamEmittedLength = cleanSoFar.length;
+                    if (delta && !(currentStep === 1 && requiresQuestionTool)) {
+                      if (!firstTokenTime) {
+                        firstTokenTime = Math.round(performance.now() - startTime);
+                      }
+                      await onEvent({
+                        type: "content_delta",
+                        delta
+                      });
+                    }
                   }
                 }
               }
@@ -466,6 +760,18 @@ CRITICAL DIRECTIVES:
           }
         } catch (e) {}
       }
+    }
+
+    // Ensure thought_done is always emitted for every turn even if closed without tag
+    if (!thoughtDoneEmitted) {
+      const thoughtMatch = stepContent.match(/<[\s]*(?:thought|thinking)[\s]*>([\s\S]*?)(?:<[\s]*\/[\s]*(?:thought|thinking)[\s]*>|$)/i);
+      const rawT = thoughtMatch ? thoughtMatch[1].trim() : "";
+      const professionalT = formatProfessionalThought(rawT, state.subject_id, state.chapter_num, userMessage);
+      thoughtDoneEmitted = true;
+      await onEvent({
+        type: "thought_done",
+        thought: professionalT
+      });
     }
 
     // Capture exact token usage and cost for this step from Merge Gateway
@@ -513,7 +819,10 @@ CRITICAL DIRECTIVES:
           await onEvent({ type: "content_delta", delta: "</thought>\n\n" });
           stepContent += "</thought>\n\n";
         }
-        await onEvent({ type: "thought_done", thought: stepContent });
+        const thoughtMatch = stepContent.match(/<[\s]*(?:thought|thinking)[\s]*>([\s\S]*?)(?:<[\s]*\/[\s]*(?:thought|thinking)[\s]*>|$)/i);
+        const rawT = thoughtMatch ? thoughtMatch[1].trim() : stepContent;
+        const professionalT = formatProfessionalThought(rawT, state.subject_id, state.chapter_num, userMessage);
+        await onEvent({ type: "thought_done", thought: professionalT });
 
         if (isSimilarReq) {
           const targetQ = state.active_question || state.last_served_question;
@@ -603,10 +912,19 @@ CRITICAL DIRECTIVES:
         }
       } else {
         if (stepContent && /<[\s]*thought[\s]*>/i.test(stepContent) && !/<[\s]*\/[\s]*thought[\s]*>/i.test(stepContent)) {
-          await onEvent({ type: "content_delta", delta: "</thought>\n\n" });
           stepContent += "</thought>\n\n";
         }
-        finalResponseContent = stepContent;
+        const thoughtMatch = stepContent.match(/<[\s]*thought[\s]*>([\s\S]*?)(?:<[\s]*\/[\s]*thought[\s]*>|$)/i);
+        if (thoughtMatch) {
+          const aiDecisions = extractAiAcademicIntent(thoughtMatch[1]);
+          if (aiDecisions?.subject && aiDecisions.subject !== state.subject_id) {
+            state.subject_id = aiDecisions.subject;
+            state.subject_name = SUBJECT_DISPLAY_NAMES[aiDecisions.subject] || aiDecisions.subject;
+            if (aiDecisions.chapter) state.chapter_num = aiDecisions.chapter;
+            await onEvent({ type: "state_sync", state });
+          }
+        }
+        finalResponseContent = stripInternalThoughts(stepContent).trim();
         break reactLoop;
       }
     }
@@ -656,9 +974,13 @@ CRITICAL DIRECTIVES:
       stepContent += "</thought>\n\n";
     }
 
+    const thoughtMatch = stepContent.match(/<[\s]*(?:thought|thinking)[\s]*>([\s\S]*?)(?:<[\s]*\/[\s]*(?:thought|thinking)[\s]*>|$)/i);
+    const rawT = thoughtMatch ? thoughtMatch[1].trim() : (toolArgs.academic_intent || stepContent);
+    const professionalT = formatProfessionalThought(rawT, state.subject_id, state.chapter_num, userMessage);
+
     await onEvent({
       type: "thought_done",
-      thought: stepContent.replace(/<\/?[\s]*(?:thought|thinking)[\s]*>/gi, '').trim()
+      thought: professionalT
     });
 
     // 1. Tool Start Event
@@ -667,7 +989,7 @@ CRITICAL DIRECTIVES:
       tool: toolName,
       args: toolArgs,
       label: getToolHumanLabel(toolName, toolArgs),
-      intent: stepContent.replace(/<\/?[\s]*(?:thought|thinking)[\s]*>/gi, '').trim()
+      intent: professionalT
     });
 
     // 2. Execute Tool against Live DB
@@ -756,6 +1078,9 @@ CRITICAL DIRECTIVES:
     costSavedUsd
   });
 
+  // Deduct demo user credits (1 credit per 1k tokens, strict whole integers, never 0.5)
+  const creditTelemetry = globalCreditManager.deductCredits(cumulativeTotalTokens);
+
   const gatewayTelemetry = {
     provider: "Merge.dev AI Gateway",
     model: detectedModelUsed,
@@ -774,6 +1099,33 @@ CRITICAL DIRECTIVES:
     steps_count: currentStep
   };
 
+  // Post-response Subject State Reconciliation:
+  // If the agent clearly transitions subject (e.g. "এখন থেকে আমরা এসএসসি পদার্থবিজ্ঞান পড়ব" or "আমরা পদার্থবিজ্ঞানে চলে এসেছি")
+  if (finalResponseContent) {
+    const switchMatch = finalResponseContent.match(/(?:এখন থেকে আমরা|আমরা এখন|সেশনটি এখন|চলে এসেছি|এটি মূলত এসএসসি|এটি এসএসসি|বিষয়টি এসএসসি)\s*(?:এসএসসি\s*)?([^\s,।—\n]+)/i);
+    if (switchMatch) {
+      const declaredSubj = normalizeSubject(switchMatch[1]);
+      if (declaredSubj && declaredSubj !== state.subject_id) {
+        state.subject_id = declaredSubj;
+        state.subject_name = SUBJECT_DISPLAY_NAMES[declaredSubj] || declaredSubj;
+        if (!state.chapter_num) {
+          state.chapter_num = findChapterNumByKeywords(finalResponseContent, declaredSubj);
+        }
+      }
+    }
+
+    // Safety Net: Inspect generated answer content for dominant academic subject concepts/formulas
+    const contentDetection = detectSubjectFromAcademicContent(finalResponseContent, state.subject_id);
+    if (contentDetection && contentDetection.subject_id && contentDetection.subject_id !== state.subject_id) {
+      state.subject_id = contentDetection.subject_id;
+      state.subject_name = SUBJECT_DISPLAY_NAMES[contentDetection.subject_id] || contentDetection.subject_id;
+      if (contentDetection.chapter_num) {
+        state.chapter_num = contentDetection.chapter_num;
+        state.chapter_name = contentDetection.chapter_name || state.chapter_name;
+      }
+    }
+  }
+
   await onEvent({
     type: "done",
     content: finalResponseContent,
@@ -782,6 +1134,8 @@ CRITICAL DIRECTIVES:
     ttft: firstTokenTime,
     tokenTelemetry,
     gatewayTelemetry,
+    creditTelemetry,
+    credits: creditTelemetry,
     state
   });
   return;

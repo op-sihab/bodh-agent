@@ -9,3 +9,5 @@ Thumbs.db
 .dev.vars
 scratch_*.mjs
 test_*.mjs
+.freebuff/
+scratch/
