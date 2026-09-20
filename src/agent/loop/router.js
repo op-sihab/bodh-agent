@@ -208,23 +208,23 @@ export function pruneHistoryForContext(pastHistory = [], maxTurns = 4) {
 export function getMaxTokensForIntent(intent) {
   switch (intent) {
     case INTENT_TYPES.GREETING:
-      return 250; // Ultra-fast, minimal greeting response
+      return 500; // Ultra-fast, minimal greeting response
     case INTENT_TYPES.QUIZ_ANSWER:
-      return 600; // Crisp grading, gentle encouragement & scientific principle
+      return 1200; // Crisp grading, gentle encouragement & scientific principle
     case INTENT_TYPES.MCQ_QUIZ:
-      return 750; // Stem, board tag, 4 options, and [ans: ...]
+      return 1500; // Stem, board tag, 4 options, and [ans: ...]
     case INTENT_TYPES.SYLLABUS_ROADMAP:
-      return 1000; // Complete official chapter roadmap with division breakdown
+      return 4096; // Complete official chapter roadmap with division breakdown
     case INTENT_TYPES.CQ_CREATIVE:
-      return 1500; // Full authentic stem + complete Ka, Kha, Ga, Gha levels
+      return 4096; // Full authentic stem + complete Ka, Kha, Ga, Gha levels
     case INTENT_TYPES.IMPORTANCE_RANKING:
-      return 1200; // Priority chapters, 80/20 breakdown & board tips
+      return 4096; // Priority chapters, 80/20 breakdown & board tips
     case INTENT_TYPES.BOARD_QUESTIONS:
-      return 3500; // Full token budget for complete 25-MCQ board question paper
+      return 4096; // Full token budget for complete 25-MCQ board question paper
     case INTENT_TYPES.SIMILAR_PATTERN:
-      return 1100; // Deep pattern analysis & formula matching
+      return 4096; // Deep pattern analysis & formula matching
     default:
-      return 1600; // Full masterclass pedagogical depth for concepts & math problems
+      return 4096; // Generous ceiling so full masterclass lessons, formulas, and KaTeX math never truncate midway
   }
 }
 

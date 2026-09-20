@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BODH (বোধ) — Autonomous Academic Intelligence</title>
-  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="icon" type="image/svg+xml" href="/assets/bodh-monogram.svg">
+  <link rel="alternate icon" type="image/png" href="/assets/favicon.png">
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -14,12 +15,12 @@
         extend: {
           colors: {
             app: {
-              bg: '#08080a',
-              sidebar: '#0c0c0f',
-              surface: '#111115',
-              surfaceElevated: '#17171d',
+              bg: '#08080d',
+              sidebar: '#0c0d14',
+              surface: '#12131e',
+              surfaceElevated: '#181a28',
               border: '#ffffff12',
-              borderHover: '#ffffff24',
+              borderHover: '#6366f130',
               text: '#f4f4f5',
               muted: '#8b8b94'
             }
@@ -54,7 +55,7 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeLegibility;
-      background-color: #08080a;
+      background-color: #08080d;
       color: #f4f4f5;
     }
 
@@ -63,7 +64,7 @@
       position: fixed;
       inset: 0;
       pointer-events: none;
-      background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.035) 0%, transparent 60%);
+      background: radial-gradient(circle at 50% 8%, rgba(79, 70, 229, 0.08) 0%, rgba(56, 189, 248, 0.025) 30%, transparent 65%);
       z-index: 0;
     }
 
@@ -78,26 +79,29 @@
     .chatgpt-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
     .chatgpt-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
 
-    /* Exact Reference: Lightbulb Thinking Shimmer Beam */
+    /* Precision Royal Indigo & Electric Cyan Thinking Shimmer Wave (Slow Luxurious Wave) */
     @keyframes thinkingBeam {
-      0% { background-position: -150% 0; }
-      100% { background-position: 150% 0; }
+      0% { background-position: -260% 0; }
+      100% { background-position: 260% 0; }
     }
     .thinking-shimmer {
       background: linear-gradient(
         90deg,
         #71717a 0%,
-        #71717a 20%,
-        #ffffff 50%,
-        #71717a 80%,
+        #818cf8 25%,
+        #38bdf8 45%,
+        #ffffff 52%,
+        #38bdf8 60%,
+        #818cf8 78%,
         #71717a 100%
       );
-      background-size: 200% 100%;
+      background-size: 260% 100%;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      animation: thinkingBeam 2.4s infinite ease-in-out;
+      animation: thinkingBeam 4.6s infinite cubic-bezier(0.4, 0, 0.2, 1);
       display: inline-block;
       vertical-align: middle;
+      filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.4));
     }
 
     /* Exact Reference: Dotted Thought Tree */
@@ -218,22 +222,22 @@
     .markdown-body blockquote p { margin: 0; }
 
     /* Inline Streaming Cursor (Zero floating/orphan pipes) */
-    /* Precision Inline Streaming Cursor (Terminal Glow) */
+    /* Precision Inline Streaming Cursor (Fluid Cyan Glow) */
     .streaming-cursor {
       display: inline-block;
       width: 2.5px;
       height: 1.15em;
-      background: #10b981;
-      box-shadow: 0 0 8px rgba(16, 185, 129, 0.75);
+      background: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
       margin-left: 3px;
       margin-right: 1px;
       vertical-align: -0.16em;
-      animation: cursorPulse 0.7s ease-in-out infinite alternate;
-      border-radius: 2px;
+      animation: cursorPulse 0.65s ease-in-out infinite alternate;
+      border-radius: 9999px;
     }
     @keyframes cursorPulse {
-      0% { opacity: 0.25; transform: scaleY(0.85); }
-      100% { opacity: 1; transform: scaleY(1); }
+      0% { opacity: 0.3; transform: scaleY(0.85); box-shadow: 0 0 4px rgba(56, 189, 248, 0.4); }
+      100% { opacity: 1; transform: scaleY(1); box-shadow: 0 0 12px rgba(56, 189, 248, 0.9); }
     }
 
     .exam-launcher-card {
@@ -282,7 +286,7 @@
       content: "•";
       position: absolute;
       left: 0.25rem;
-      color: #10b981;
+      color: #38bdf8;
       font-weight: bold;
     }
     #dedicatedExamPage .markdown-body ol {
@@ -344,16 +348,16 @@
 
     /* AI Input Container (Spotlight Glass) */
     .ai-input-card {
-      background: linear-gradient(180deg, rgba(20, 20, 26, 0.85) 0%, rgba(13, 13, 17, 0.95) 100%);
+      background: linear-gradient(180deg, rgba(18, 19, 30, 0.85) 0%, rgba(12, 13, 21, 0.95) 100%);
       border: 1px solid rgba(255, 255, 255, 0.10);
-      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 16px 40px -12px rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .ai-input-card:focus-within {
-      border-color: rgba(255, 255, 255, 0.22);
-      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.16), 0 20px 48px -10px rgba(0, 0, 0, 0.8), 0 0 24px rgba(255, 255, 255, 0.03);
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.14), 0 20px 48px -10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(79, 70, 229, 0.15);
     }
 
     /* MCQ Option Card (Clean Tactical State - Anti-Slop) */
@@ -436,6 +440,19 @@
       display: none;
       margin: 0;
     }
+
+    /* Bodh 3D Monogram Matching Gradient Brand Typography */
+    .bodh-gradient-text {
+      background: linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 40%, #93C5FD 75%, #38BDF8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .bodh-gradient-hero {
+      background: linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 35%, #A5B4FC 70%, #38BDF8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 8px rgba(79, 70, 229, 0.2));
+    }
   </style>
 </head>
 <body class="min-h-screen flex overflow-hidden bg-app-bg text-app-text">
@@ -453,9 +470,9 @@
     <div class="pt-4 px-3.5 pb-2 space-y-3">
       <!-- Brand Row with Logo & Collapse Toggle (Clean Gemini Style) -->
       <div class="flex items-center justify-between px-0.5">
-        <div class="flex items-center gap-2 cursor-pointer group py-0.5" onclick="resetToHome()" title="বোধ">
-          <img src="/assets/bodh-tight.png" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] group-hover:scale-105 transition-transform" />
-          <span class="text-[15px] font-semibold tracking-tight text-white font-sans">বোধ</span>
+        <div class="flex items-center gap-2.5 cursor-pointer group py-0.5" onclick="resetToHome()" title="বোধ">
+          <img src="/assets/bodh-monogram.svg" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_2px_10px_rgba(79,70,229,0.4)] group-hover:scale-110 transition-all duration-200" />
+          <span class="text-[15px] font-bold tracking-tight font-sans bodh-gradient-text">বোধ</span>
         </div>
 
         <button onclick="toggleSidebar()" class="text-zinc-400 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-white/[0.06] transition cursor-pointer" title="সাইডবার বন্ধ করুন">
@@ -494,10 +511,10 @@
       <button onclick="openProfileModal()" class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition group cursor-pointer text-left">
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="relative shrink-0">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 flex items-center justify-center text-white font-bold text-xs shadow-sm ring-1 ring-white/20">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 flex items-center justify-center text-white font-bold text-xs shadow-sm ring-1 ring-white/20">
               এস
             </div>
-            <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-app-sidebar"></span>
+            <span class="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-app-sidebar"></span>
           </div>
           <div class="min-w-0 flex-1">
             <div class="text-[13px] font-semibold text-zinc-200 group-hover:text-white truncate">শিক্ষার্থী ডেমো</div>
@@ -529,15 +546,15 @@
             <line x1="9" y1="3" x2="9" y2="21"/>
           </svg>
         </button>
-        <div class="flex items-center gap-2 cursor-pointer group py-0.5" onclick="resetToHome()" title="হোমপেজে ফিরুন">
-          <img src="/assets/bodh-tight.png" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] group-hover:scale-105 transition-transform" />
-          <span class="text-[15px] font-semibold tracking-tight text-white font-sans">বোধ</span>
+        <div class="flex items-center gap-2.5 cursor-pointer group py-0.5" onclick="resetToHome()" title="হোমপেজে ফিরুন">
+          <img src="/assets/bodh-monogram.svg" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_2px_10px_rgba(79,70,229,0.4)] group-hover:scale-110 transition-all duration-200" />
+          <span class="text-[15px] font-bold tracking-tight font-sans bodh-gradient-text">বোধ</span>
         </div>
       </div>
       
       <!-- Active Subject Pill in Header (When in active chat) -->
-      <div id="activeSubjectHeaderBadge" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium select-none animate-fadeIn">
-        <span id="activeSubjectHeaderIcon" class="w-3.5 h-3.5 flex items-center justify-center text-emerald-400">
+      <div id="activeSubjectHeaderBadge" class="hidden items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-indigo-300 text-xs font-medium select-none animate-fadeIn">
+        <span id="activeSubjectHeaderIcon" class="w-3.5 h-3.5 flex items-center justify-center text-sky-400">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
             <path d="M8.5 2h7"/>
@@ -553,9 +570,9 @@
         <!-- Live Gateway Cost & Telemetry Pill in Header -->
         <button id="gatewayCostHeaderBadge" onclick="openGatewayDashboardModal()" 
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/20 text-zinc-300 hover:text-white text-xs font-mono transition cursor-pointer shadow-sm" title="Merge.dev গেটওয়ে খরচ ও অ্যানালিটিক্স">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
           <span class="text-zinc-400 text-[11px] hidden sm:inline">খরচ:</span>
-          <span id="headerTotalCost" class="font-semibold text-emerald-400 text-[11px]">$0.00</span>
+          <span id="headerTotalCost" class="font-semibold text-sky-400 text-[11px]">$0.00</span>
           <svg class="w-3 h-3 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
         </button>
 
@@ -578,16 +595,15 @@
           <!-- HERO VIEW (Centered Home) -->
           <div id="heroView" class="w-full max-w-3xl mx-auto my-auto flex flex-col items-center text-center space-y-4">
             
-            <!-- Clean, Standalone Emblem (No Box, No Background, Pure Transparent) -->
-            <div class="flex items-center justify-center pt-2">
-              <img src="/assets/bodh-tight.png" alt="বোধ" 
-                class="w-12 h-14 sm:w-14 sm:h-16 object-contain select-none pointer-events-none filter drop-shadow-[0_0_18px_rgba(255,255,255,0.45)] hover:scale-105 transition-transform duration-300" />
-            </div>
-
-            <div class="space-y-1 text-center -mt-1">
-              <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
-                বোধ
-              </h1>
+            <!-- Hero Brand Lockup: 3D Monogram & Bodh Name Side-by-Side (Prominent Scale) -->
+            <div class="space-y-2.5 text-center pt-1">
+              <div class="inline-flex items-center justify-center gap-4 group select-none">
+                <img src="/assets/bodh-monogram.svg" alt="বোধ" 
+                  class="w-[52px] h-[52px] sm:w-[62px] sm:h-[62px] object-contain filter drop-shadow-[0_4px_16px_rgba(79,70,229,0.35)] group-hover:scale-105 transition-transform duration-200" />
+                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight font-sans bodh-gradient-hero leading-none">
+                  বোধ
+                </h1>
+              </div>
               <p class="text-xs sm:text-sm text-zinc-400 font-normal">
                 না বুঝে মুখস্থ নয়, পড়াশোনায় এবার গভীর বোধ
               </p>
@@ -630,10 +646,10 @@
                 
                 <div class="flex items-center justify-between pt-2.5 border-t border-white/[0.07]">
                   <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-[11px] font-mono text-zinc-400">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
                     <span>৫০,৮৫৫টি বোর্ড ও কলেজ প্রশ্ন</span>
                   </div>
-                  <button type="submit" class="h-8 px-3.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-medium text-xs flex items-center gap-1.5 shadow-[0_2px_8px_rgba(255,255,255,0.15)] hover:shadow-[0_4px_16px_rgba(255,255,255,0.25)] active:scale-95 transition-all duration-150 cursor-pointer">
+                  <button type="submit" class="h-8 px-4 rounded-xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-sky-500 hover:from-indigo-400 hover:to-sky-400 text-white font-medium text-xs flex items-center gap-1.5 shadow-[0_2px_12px_rgba(79,70,229,0.35)] hover:shadow-[0_4px_20px_rgba(56,189,248,0.4)] active:scale-95 transition-all duration-150 cursor-pointer">
                     <span>জিজ্ঞাসা করো</span>
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"/></svg>
                   </button>
@@ -654,7 +670,7 @@
         </div>
 
         <!-- DOCKED STICKY BOTTOM INPUT (When Chat is Active) -->
-        <div id="dockedBar" class="hidden absolute bottom-0 inset-x-0 pb-4 pt-6 px-4 bg-gradient-to-t from-[#09090b] via-[#09090b]/90 to-transparent z-20 pointer-events-none">
+        <div id="dockedBar" class="hidden absolute bottom-0 inset-x-0 pb-4 pt-6 px-4 bg-gradient-to-t from-[#08080d] via-[#08080d]/90 to-transparent z-20 pointer-events-none">
           <div class="max-w-2xl mx-auto pointer-events-auto">
             <div class="rounded-2xl ai-input-card p-2.5 sm:p-3">
               <form onsubmit="handleDockedSubmit(event)" class="flex items-end gap-2.5">
@@ -663,10 +679,10 @@
                   onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); handleDockedSubmit(event); }"></textarea>
                 
                 <button id="sendBtn" type="submit" 
-                  class="h-8 w-8 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(255,255,255,0.15)] hover:shadow-[0_4px_16px_rgba(255,255,255,0.25)] active:scale-95 transition-all duration-150 cursor-pointer mb-0.5 mr-0.5"
+                  class="h-8 w-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-sky-400 hover:from-indigo-400 hover:to-sky-300 text-white flex items-center justify-center shrink-0 shadow-[0_2px_10px_rgba(79,70,229,0.35)] hover:shadow-[0_4px_16px_rgba(56,189,248,0.4)] active:scale-95 transition-all duration-150 cursor-pointer mb-0.5 mr-0.5"
                   title="পাঠাও">
                   <svg class="send-icon w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  <svg class="stop-icon hidden w-3 h-3 text-zinc-950" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2.5"/></svg>
+                  <svg class="stop-icon hidden w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2.5"/></svg>
                 </button>
               </form>
             </div>
@@ -685,9 +701,9 @@
     <!-- 3A. Dedicated Exam Navigation Bar (56px) -->
     <header class="h-14 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between bg-[#0c0c0e]/95 backdrop-blur-md shrink-0 z-20">
       <div class="flex items-center gap-3 min-w-0">
-        <div class="flex items-center gap-2 cursor-pointer group shrink-0" onclick="confirmExitExam()" title="পরীক্ষা প্রস্থান করুন">
-          <img src="/assets/bodh-tight.png" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] group-hover:scale-105 transition-transform" />
-          <span class="text-sm font-semibold tracking-tight text-white font-sans hidden sm:inline">বোধ এক্সাম এরিনা</span>
+        <div class="flex items-center gap-2.5 cursor-pointer group shrink-0" onclick="confirmExitExam()" title="পরীক্ষা প্রস্থান করুন">
+          <img src="/assets/bodh-monogram.svg" alt="বোধ" class="w-6 h-6 object-contain filter drop-shadow-[0_2px_10px_rgba(79,70,229,0.4)] group-hover:scale-110 transition-all duration-200" />
+          <span class="text-sm font-bold tracking-tight font-sans hidden sm:inline bodh-gradient-text">বোধ এক্সাম এরিনা</span>
         </div>
         <span class="text-zinc-600 hidden sm:inline">/</span>
         <div class="flex items-center gap-2 min-w-0">
@@ -704,7 +720,7 @@
         </div>
         
         <div id="examTimerBadge" class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono font-medium text-zinc-200 shadow-sm">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
           <span id="examTimerText">০৫:০০</span>
         </div>
       </div>
@@ -714,7 +730,7 @@
         <button type="button" onclick="toggleExamFullscreen()" class="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition cursor-pointer hidden sm:flex" title="ফুলস্ক্রিন টগল">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
         </button>
-        <button type="button" onclick="confirmExitExam()" class="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 text-zinc-300 hover:text-rose-400 border border-white/[0.08] hover:border-rose-500/20 text-xs font-medium transition cursor-pointer flex items-center gap-1.5">
+        <button type="button" onclick="confirmExitExam()" class="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-rose-500/10 text-zinc-300 hover:rose-400 border border-white/[0.08] hover:border-rose-500/20 text-xs font-medium transition cursor-pointer flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           <span class="hidden sm:inline">প্রস্থান</span>
         </button>
@@ -729,9 +745,9 @@
         <span id="tabExamCountBadge" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/10 font-bold">১/৫</span>
       </button>
       <button type="button" id="tabMobileCopilotBtn" onclick="switchDedicatedExamTab('copilot')" class="flex-1 py-1.5 px-3 rounded-xl text-xs font-medium text-zinc-400 hover:text-white bg-white/[0.04] border border-white/[0.06] flex items-center justify-center gap-1.5 transition cursor-pointer">
-        <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         <span>কো-পাইলট</span>
-        <span id="copilotUnreadBadge" class="hidden w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span id="copilotUnreadBadge" class="hidden w-2 h-2 rounded-full bg-sky-400"></span>
       </button>
     </div>
 
@@ -747,7 +763,7 @@
         <div id="examPaletteArea" class="px-5 py-2.5 border-b border-white/[0.06] bg-black/20 flex items-center justify-between gap-3 overflow-x-auto shrink-0">
           <div class="flex items-center gap-1.5" id="examPaletteButtons"></div>
           <div class="text-[11px] font-mono text-zinc-500 shrink-0">
-            উত্তর সম্পন্ন: <span id="examAnsweredCount" class="text-emerald-400 font-semibold">০</span>/<span id="examTotalCount">৫</span>
+            উত্তর সম্পন্ন: <span id="examAnsweredCount" class="text-sky-400 font-semibold">০</span>/<span id="examTotalCount">৫</span>
           </div>
         </div>
 
@@ -790,7 +806,7 @@
           <!-- EXAM RESULT / SCORECARD VIEW (Hidden initially) -->
           <div id="examResultView" class="hidden space-y-6 max-w-2xl mx-auto">
             <div class="text-center p-6 sm:p-8 rounded-2xl bg-white/[0.02] border border-white/[0.08] ring-1 ring-white/[0.03] space-y-4">
-              <div class="inline-flex p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <div class="inline-flex p-3 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                 </svg>
@@ -803,7 +819,7 @@
               <div class="grid grid-cols-3 gap-2.5 max-w-md mx-auto pt-2">
                 <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
                   <div class="text-[10px] font-mono text-zinc-500 uppercase">মোট স্কোর</div>
-                  <div id="resScoreText" class="text-base font-semibold text-emerald-400 font-mono mt-0.5">৪ / ৫</div>
+                  <div id="resScoreText" class="text-base font-semibold text-sky-400 font-mono mt-0.5">৪ / ৫</div>
                 </div>
                 <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
                   <div class="text-[10px] font-mono text-zinc-500 uppercase">সঠিকতার হার</div>
@@ -866,12 +882,12 @@
         <!-- Co-Pilot Subheader -->
         <div class="px-4 py-3 border-b border-white/[0.06] bg-white/[0.01] flex items-center justify-between shrink-0">
           <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
             <span class="text-xs font-medium text-white">বোধ কো-পাইলট</span>
             <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/[0.05] text-zinc-400 border border-white/[0.06]">পরীক্ষার সহকারী</span>
           </div>
           <div class="flex items-center gap-2">
-            <span id="copilotActiveQBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-medium">প্রশ্ন ১ ফোকাস</span>
+            <span id="copilotActiveQBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">প্রশ্ন ১ ফোকাস</span>
             <button type="button" onclick="clearCurrentQuestionCopilot()" class="p-1 text-zinc-500 hover:text-zinc-300 transition rounded hover:bg-white/[0.05]" title="এই প্রশ্নের আলোচনা ক্লিয়ার করুন">
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
@@ -893,7 +909,7 @@
             <span>অপশন বাদ দাও</span>
           </button>
           <button type="button" onclick="triggerExamCoPilot('simplify')" class="group px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] text-xs font-medium transition cursor-pointer flex items-center gap-1.5 active:scale-95" title="প্রশ্নটি সহজ ভাষায় বুঝো">
-            <svg class="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+            <svg class="w-3.5 h-3.5 text-sky-400 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
             <span>সহজ বাংলায়</span>
           </button>
         </div>
@@ -903,7 +919,7 @@
           <!-- Default placeholder (Double-bezel luxury card) -->
           <div id="copilotDefaultPlaceholder" class="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06] ring-1 ring-white/[0.03] text-center space-y-3 my-auto">
             <div class="w-11 h-11 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-zinc-300 flex items-center justify-center mx-auto shadow-inner ring-1 ring-white/[0.05]">
-              <svg class="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <svg class="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
             <div>
               <div class="text-xs font-semibold text-white">বোধ কো-পাইলট এরিনা</div>
@@ -981,13 +997,13 @@
       <div class="p-5 space-y-4">
         <!-- Avatar & Name Card -->
         <div class="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08]">
-          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 flex items-center justify-center text-white font-bold text-lg shadow-md ring-1 ring-white/20">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 flex items-center justify-center text-white font-bold text-lg shadow-md ring-1 ring-white/20">
             এস
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
               <h4 class="text-sm font-bold text-white truncate">শিক্ষার্থী ডেমো ইউজার</h4>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PRO</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">PRO</span>
             </div>
             <p class="text-xs text-zinc-400 font-mono">SSC 2026 ব্যাচ • ঢাকা শিক্ষা বোর্ড</p>
           </div>
@@ -997,11 +1013,11 @@
         <div class="grid grid-cols-2 gap-2.5 text-xs">
           <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
             <div class="text-[11px] font-mono text-zinc-400">প্রশ্ন আর্কাইভ</div>
-            <div class="text-sm font-bold text-emerald-400 font-mono mt-0.5">৫০,৮৫৫+ প্রশ্ন</div>
+            <div class="text-sm font-bold text-sky-400 font-mono mt-0.5">৫০,৮৫৫+ প্রশ্ন</div>
           </div>
           <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
             <div class="text-[11px] font-mono text-zinc-400">একাডেমিক এআই</div>
-            <div class="text-sm font-bold text-cyan-400 font-mono mt-0.5">BODH AI v2.6</div>
+            <div class="text-sm font-bold bodh-gradient-text font-mono mt-0.5 flex items-center gap-1.5"><img src="/assets/bodh-monogram.svg" class="w-4 h-4 object-contain" /> BODH AI v2.6</div>
           </div>
         </div>
 
@@ -1013,8 +1029,8 @@
           </div>
           <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
             <span class="text-zinc-400">সিস্টেম কানেকশন</span>
-            <span class="text-emerald-400 flex items-center gap-1.5 font-mono">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-sky-400 flex items-center gap-1.5 font-mono">
+              <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
               অ্যাক্টিভ ও প্রস্তুত
             </span>
           </div>
@@ -2408,11 +2424,32 @@
         cleanIntroLines.push('\n%%%EXAM_LAUNCHER_PLACEHOLDER%%%\n');
         clean = cleanIntroLines.join('\n');
       } else {
-        // Single MCQ Practice: Interactive card rendered directly in chat
+        // Single MCQ Practice: Interactive visual card rendered directly in chat
         for (let c = clusters.length - 1; c >= 0; c--) {
           const cluster = clusters[c];
           const firstLineIdx = cluster.startIndex;
           let lastLineIdx = cluster.endIndex;
+
+          const startLine = (typeof questionStarts[c] === 'number' && questionStarts[c] >= 0) ? questionStarts[c] : firstLineIdx;
+          const stemLines = [];
+          let boardTagForQ = extraBoardTag || '';
+
+          for (let l = startLine; l < firstLineIdx; l++) {
+            const rawL = (lines[l] || '').trim();
+            if (!rawL) continue;
+            if (/^[-*_]{3,}$/.test(rawL)) continue;
+            const bM = rawL.match(/\[(?:বোর্ড|Board):?\s*([^\]]+)\]/i);
+            if (bM) {
+              boardTagForQ = bM[1];
+              continue;
+            }
+            if (/^(?:#{1,4}\s*)?(?:প্রশ্ন|MCQ|Q)[\s\d:০-৯\.\)]*$/i.test(rawL)) continue;
+            const cleanL = rawL.replace(/^(?:#{1,4}\s*)?(?:প্রশ্ন\s*[:\d০-৯\.\)]*|\d+[\.\)]\s*)/i, '').trim();
+            if (cleanL) stemLines.push(cleanL);
+          }
+
+          const questionStemText = stemLines.join(' ').trim();
+          const effectiveStartLine = (stemLines.length > 0 && startLine < firstLineIdx) ? startLine : firstLineIdx;
 
           let explanationLines = [];
           let foundAnsInExp = null;
@@ -2450,16 +2487,18 @@
           }
 
           const targetAns = detectedAns || foundAnsInExp || '';
+          const effectiveBoardTag = boardTagForQ || (boardTagsHtml ? boardTagsHtml.replace(/<[^>]+>/g, '').trim() : '');
+
           const optionsHtml = cluster.items.map(it => `
             <button type="button" 
-              class="mcq-opt group flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-xl text-left w-full cursor-pointer relative overflow-hidden"
+              class="mcq-opt group flex items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl text-left w-full cursor-pointer relative overflow-hidden bg-white/[0.025] border border-white/[0.08] hover:bg-white/[0.06] hover:border-white/20 transition-all duration-150 ring-1 ring-white/[0.02]"
               data-letter="${it.letter}"
               onclick="handleOptionClick(this, '${it.letter}')">
               <div class="flex items-center gap-3 min-w-0">
-                <span class="opt-letter w-7 h-7 rounded-lg bg-white/[0.05] text-zinc-300 font-mono text-xs flex items-center justify-center font-bold shrink-0 border border-white/[0.08] transition-all group-hover:border-white/20">
+                <span class="opt-letter w-7 h-7 rounded-lg bg-white/[0.05] text-zinc-300 font-mono text-xs flex items-center justify-center font-bold shrink-0 border border-white/[0.08] transition-all group-hover:border-indigo-400/50 group-hover:bg-indigo-500/10 group-hover:text-white">
                   ${it.letter}
                 </span>
-                <span class="opt-text text-xs sm:text-[13.5px] text-zinc-200 transition-colors font-normal leading-snug">${formatExamMath(it.text)}</span>
+                <span class="opt-text text-xs sm:text-[14px] text-zinc-200 transition-colors font-normal leading-snug">${formatExamMath(it.text)}</span>
               </div>
               <span class="opt-badge hidden text-xs font-bold shrink-0"></span>
             </button>
@@ -2467,32 +2506,54 @@
 
           const placeholder = `%%%MCQ_PLACEHOLDER_${c}%%%`;
           const cardHtml = `
-            <div class="mcq-wrapper my-3.5 bg-gradient-to-b from-[#14141a] to-[#0f0f14] border border-white/[0.10] rounded-2xl p-4 space-y-3.5 shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.06)]" data-correct="${targetAns}">
-              ${boardTagsHtml ? `<div class="flex flex-wrap items-center gap-1.5 pb-2.5 border-b border-white/[0.06]">${boardTagsHtml}</div>` : ''}
-              <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="mcq-wrapper my-4 bg-gradient-to-b from-[#12131e] to-[#0a0a10] border border-white/[0.12] rounded-2xl p-4 sm:p-5 space-y-4 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)] ring-1 ring-white/[0.04] transition-all" data-correct="${targetAns}">
+              <!-- Visual Card Header -->
+              <div class="flex items-center justify-between gap-2 pb-3 border-b border-white/[0.08]">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-semibold shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <span>MCQ অনুশীলন</span>
+                  </span>
+                  ${effectiveBoardTag ? `<span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-white/[0.05] border border-white/[0.08] text-zinc-300 font-medium">${escapeHtml(effectiveBoardTag)}</span>` : ''}
+                </div>
+                <span class="text-[10px] font-mono text-zinc-400 bg-white/[0.04] px-2 py-0.5 rounded-md border border-white/[0.06] tracking-wider">১টি প্রশ্ন • ইন্টারেক্টিভ</span>
+              </div>
+
+              <!-- Question Stem (Clean & Visual) -->
+              ${questionStemText ? `
+              <div class="mcq-stem text-[14px] sm:text-[15px] font-medium text-zinc-100 leading-relaxed font-sans select-text">
+                ${formatExamMath(questionStemText)}
+              </div>` : ''}
+
+              <!-- Interactive Options Grid -->
+              <div class="mcq-options-grid grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
                 ${optionsHtml}
               </div>
-              <div class="pt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06]">
+
+              <!-- Action Bar (Clean Cyan/Indigo Palette) -->
+              <div class="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08]">
                 <button type="button" onclick="submitPrompt('এই টাইপের আরেকটি প্রশ্ন অনুশীলন করতে চাই' + (typeof detectedQid !== 'undefined' && detectedQid ? ' [ID: ' + detectedQid + ']' : ''))" 
-                  class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/[0.08] hover:bg-emerald-500/[0.15] text-emerald-400 hover:text-emerald-300 border border-emerald-500/25 hover:border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
-                  <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-500/[0.08] hover:bg-sky-500/[0.15] text-sky-300 hover:text-sky-200 border border-sky-500/25 hover:border-sky-500/40 shadow-[0_0_12px_rgba(56,189,248,0.06)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
+                  <svg class="w-3.5 h-3.5 text-sky-400 shrink-0 transition-transform duration-300 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                   </svg>
-                  <span>এই টাইপের আরেকটি প্রশ্ন অনুশীলন করো</span>
+                  <span>পরের প্রশ্ন অনুশীলন করো</span>
                 </button>
-                <button type="button" onclick="submitPrompt('এই অধ্যায়ের মাস্টার টাইপ ও পরীক্ষকের ফাঁদগুলো দেখাও')" 
+                <button type="button" onclick="submitPrompt('এই প্রশ্নটির সম্পূর্ণ ব্যাখ্যা ও শর্টকাট ট্রিক বুঝিয়ে দাও')" 
                   class="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-500/[0.08] hover:bg-indigo-500/[0.15] text-indigo-300 hover:text-indigo-200 border border-indigo-500/20 hover:border-indigo-500/35 shadow-[0_0_12px_rgba(99,102,241,0.05)] transition-all duration-150 cursor-pointer font-medium text-[11.5px] active:scale-[0.98]">
                   <svg class="w-3.5 h-3.5 text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="9"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v3m0 12v3M3 12h3m12 0h3m-9-4a4 4 0 100 8 4 4 0 000-8z"/>
                   </svg>
-                  <span>মাস্টার টাইপ ব্লুপ্রিন্ট</span>
+                  <span>ব্যাখ্যা ও ট্রিকস</span>
                 </button>
               </div>
             </div>
           `;
 
-          lines.splice(firstLineIdx, (lastLineIdx - firstLineIdx + 1), placeholder);
+          lines.splice(effectiveStartLine, (lastLineIdx - effectiveStartLine + 1), placeholder);
           cards.push({ placeholder, cardHtml });
         }
         clean = lines.join('\n');
@@ -3189,12 +3250,12 @@
                 <span id="tokens_${msgId}">--</span>
               </span>
               <span class="text-zinc-600">•</span>
-              <span class="inline-flex items-center gap-1.5 text-emerald-400 font-medium" title="প্রকৃত খরচ (USD ও BDT)">
-                <svg class="w-3 h-3 text-emerald-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9.5a2.5 2.5 0 0 0-5 0c0 3 5 2 5 5a2.5 2.5 0 0 1-5 0"/></svg>
+              <span class="inline-flex items-center gap-1.5 text-sky-400 font-medium" title="প্রকৃত খরচ (USD ও BDT)">
+                <svg class="w-3 h-3 text-sky-400/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M15 9.5a2.5 2.5 0 0 0-5 0c0 3 5 2 5 5a2.5 2.5 0 0 1-5 0"/></svg>
                 <span id="cost_${msgId}">--</span>
               </span>
-              <span id="savings_${msgId}" class="hidden items-center gap-1 text-teal-300 bg-teal-500/10 px-1.5 py-0.5 rounded border border-teal-500/20 text-[10px] font-medium" title="BODH ইন্টেলিজেন্ট রাউটার ও টুল কম্প্যাকশন সাশ্রয়">
-                <svg class="w-2.5 h-2.5 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              <span id="savings_${msgId}" class="hidden items-center gap-1 text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/25 text-[10px] font-medium" title="BODH ইন্টেলিজেন্ট রাউটার ও টুল কম্প্যাকশন সাশ্রয়">
+                <svg class="w-2.5 h-2.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                 <span id="savingsText_${msgId}">--</span>
               </span>
             </div>
@@ -3304,7 +3365,7 @@
           const doneData = generateThoughtTreeData(targetDoneEvt.tool, targetDoneEvt.args, targetDoneEvt.result, text);
           const stepToolBadge = document.getElementById(`stepToolBadge_${stepIdx}_${msgId}`);
           if (stepToolBadge) {
-            stepToolBadge.className = "text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20";
+            stepToolBadge.className = "text-[11px] font-mono text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20";
             let countBadge = "";
             if (targetDoneEvt.tool === 'get_subject_chapters') {
               const tot = targetDoneEvt.result?.total_chapters || targetDoneEvt.result?.chapters?.length || (targetDoneEvt.result?.numbered_chapters ? targetDoneEvt.result.numbered_chapters.length : 0);
@@ -3335,7 +3396,7 @@
               const targetEl = proseEl || contentEl;
               targetEl.innerHTML = `
                 <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
-                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>
                   <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
                 </div>
               `;
@@ -3404,6 +3465,82 @@
       }
 
       let renderRafId = null;
+      let targetAnswer = "";
+      let displayedAnswer = "";
+      let smoothStreamRaf = null;
+      let lastRenderedAnswer = "";
+      let pendingFinalData = null;
+      let lastStreamTimestamp = 0;
+
+      function pushStreamText(newFullText) {
+        if (!newFullText) return;
+        targetAnswer = newFullText;
+        if (!smoothStreamRaf) {
+          lastStreamTimestamp = performance.now();
+          smoothStreamRaf = requestAnimationFrame(smoothStreamTick);
+        }
+      }
+
+      function smoothStreamTick(timestamp) {
+        if (!timestamp) timestamp = performance.now();
+        const diff = targetAnswer.length - displayedAnswer.length;
+
+        if (diff > 0) {
+          // Slow, cinematic, organic pacing:
+          // Keep a minimum time interval between character reveals
+          const elapsed = timestamp - lastStreamTimestamp;
+          
+          // Deliberate cadence:
+          // Under small diff: 1 char every ~26ms (~38 chars/sec, natural reading speed)
+          // Under moderate diff (>80): 2 chars every ~22ms
+          // Under larger diff (>200): smooth gentle scale so it never hangs, but never flashes
+          let minInterval = 24;
+          if (diff > 300) minInterval = 12;
+          else if (diff > 120) minInterval = 18;
+
+          if (elapsed >= minInterval) {
+            lastStreamTimestamp = timestamp;
+
+            let step = 1;
+            if (diff > 350) step = Math.min(6, Math.ceil(diff / 40));
+            else if (diff > 150) step = Math.min(4, Math.ceil(diff / 45));
+            else if (diff > 60) step = 2;
+            else step = 1;
+
+            displayedAnswer = targetAnswer.slice(0, displayedAnswer.length + step);
+
+            if (displayedAnswer !== lastRenderedAnswer) {
+              lastRenderedAnswer = displayedAnswer;
+              renderAnswerToDom(displayedAnswer, true);
+            }
+          }
+
+          smoothStreamRaf = requestAnimationFrame(smoothStreamTick);
+        } else {
+          smoothStreamRaf = null;
+          lastStreamTimestamp = 0;
+          if (pendingFinalData) {
+            const d = pendingFinalData;
+            pendingFinalData = null;
+            applyFinalDone(d);
+          }
+        }
+      }
+
+      function renderAnswerToDom(textToRender, isStreaming) {
+        if (!textToRender) return;
+        const contentEl = document.getElementById(contentId);
+        const proseEl = document.getElementById(`prose_${msgId}`);
+        if (contentEl) {
+          contentEl.classList.remove('hidden');
+          const wp = document.getElementById(`writingPulse_${msgId}`);
+          if (wp) wp.remove();
+          const extras = extractToolExtras(toolDoneEvt);
+          const targetEl = proseEl || contentEl;
+          targetEl.innerHTML = renderFormattedContentWithCursor(textToRender, isStreaming, extras.boardTag, extras.ans, extras.quizData, extras.qid, extras.examTitle, true);
+        }
+        scrollToBottom();
+      }
 
       function scheduleStreamRender() {
         if (renderRafId) return;
@@ -3448,18 +3585,7 @@
             if (answerText) {
               const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
               if (cur1) cur1.remove();
-
-              const contentEl = document.getElementById(contentId);
-              const proseEl = document.getElementById(`prose_${msgId}`);
-              if (contentEl) {
-                contentEl.classList.remove('hidden');
-                const wp = document.getElementById(`writingPulse_${msgId}`);
-                if (wp) wp.remove();
-                const extras = extractToolExtras(toolDoneEvt);
-                const targetEl = proseEl || contentEl;
-                targetEl.innerHTML = renderFormattedContentWithCursor(answerText, true, extras.boardTag, extras.ans, extras.quizData, extras.qid, extras.examTitle, true);
-              }
-              scrollToBottom();
+              pushStreamText(answerText);
             }
           } else if (!parsed.inProgress && streamContent.trim()) {
             const statusEl = document.getElementById(statusId);
@@ -3467,38 +3593,17 @@
 
             const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
             if (cur1) cur1.remove();
-
-            const contentEl = document.getElementById(contentId);
-            const proseEl = document.getElementById(`prose_${msgId}`);
-            if (contentEl) {
-              contentEl.classList.remove('hidden');
-              const wp = document.getElementById(`writingPulse_${msgId}`);
-              if (wp) wp.remove();
-              const extras = extractToolExtras(toolDoneEvt);
-              const targetEl = proseEl || contentEl;
-              targetEl.innerHTML = renderFormattedContentWithCursor(streamContent, true, extras.boardTag, extras.ans, extras.quizData, extras.qid, extras.examTitle, true);
-            }
-            scrollToBottom();
+            pushStreamText(streamContent);
           }
         } else {
-          // STEP 2: Tool has already executed -> clean answer tokens stream directly and immediately!
+          // STEP 2: Tool has already executed -> clean answer tokens stream directly and smoothly!
           let cleanAnswer = streamContent
             .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
             .replace(/^<\/?[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
             .trimStart();
           
           if (cleanAnswer) {
-            const contentEl = document.getElementById(contentId);
-            const proseEl = document.getElementById(`prose_${msgId}`);
-            if (contentEl) {
-              contentEl.classList.remove('hidden');
-              const wp = document.getElementById(`writingPulse_${msgId}`);
-              if (wp) wp.remove();
-              const extras = extractToolExtras(toolDoneEvt);
-              const targetEl = proseEl || contentEl;
-              targetEl.innerHTML = renderFormattedContentWithCursor(cleanAnswer, true, extras.boardTag, extras.ans, extras.quizData, extras.qid, extras.examTitle, true);
-            }
-            scrollToBottom();
+            pushStreamText(cleanAnswer);
           }
         }
       }
@@ -3542,6 +3647,44 @@
           cancelAnimationFrame(renderRafId);
           renderRafId = null;
         }
+
+        const final = data?.content || streamContent;
+        const parsed = parseStreamThoughts(final);
+        let cleanFinal = parsed.hasThought ? parsed.answer : final;
+
+        cleanFinal = cleanFinal
+          .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
+          .replace(/^<\/?[\s]*(?:thought|thinking|চিন্তা|ভাবনা|স্ট্যাটাস|status)[\s]*>/gi, '')
+          .trim();
+
+        if (cleanFinal) {
+          targetAnswer = cleanFinal;
+        }
+
+        const statusEl = document.getElementById(statusId);
+        if (statusEl) statusEl.classList.add('hidden');
+
+        const cur1 = document.querySelector(`#step1Text_${msgId} .thought-cursor`);
+        if (cur1) cur1.remove();
+
+        const wp = document.getElementById(`writingPulse_${msgId}`);
+        if (wp) wp.remove();
+
+        // If smooth stream typing is still in progress, let it glide smoothly to the very end!
+        if (smoothStreamRaf && displayedAnswer.length < targetAnswer.length) {
+          pendingFinalData = data;
+          return;
+        }
+
+        applyFinalDone(data);
+      }
+
+      function applyFinalDone(data) {
+        if (smoothStreamRaf) {
+          cancelAnimationFrame(smoothStreamRaf);
+          smoothStreamRaf = null;
+        }
+        pendingFinalData = null;
 
         const final = data?.content || streamContent;
         const parsed = parseStreamThoughts(final);
@@ -3790,7 +3933,7 @@
                     const targetEl = proseEl || contentEl;
                     targetEl.innerHTML = `
                       <div class="flex items-center gap-2 text-xs text-zinc-400 py-1.5 select-none" id="writingPulse_${msgId}">
-                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></span>
                         <span class="thinking-shimmer font-medium tracking-wide text-zinc-300">উত্তর সাজানো হচ্ছে...</span>
                       </div>
                     `;
@@ -3827,6 +3970,8 @@
         const contentEl = document.getElementById(contentId);
         const statusEl = document.getElementById(statusId);
         if (statusEl) statusEl.classList.add('hidden');
+        if (renderRafId) { cancelAnimationFrame(renderRafId); renderRafId = null; }
+        if (smoothStreamRaf) { cancelAnimationFrame(smoothStreamRaf); smoothStreamRaf = null; }
         if (err.name === 'AbortError' || err.name === 'DOMException') {
           // User halted generation via Stop button
           const wp = document.getElementById(`writingPulse_${msgId}`);
@@ -4198,7 +4343,7 @@
         <div id="${cardId}" class="p-3.5 sm:p-4 rounded-2xl bg-white/[0.025] border border-white/[0.08] ring-1 ring-white/[0.03] space-y-2.5 animate-fadeIn text-xs text-zinc-200 leading-relaxed font-sans shadow-lg">
           <div class="flex items-center justify-between text-[11px] text-zinc-400 pb-2 border-b border-white/[0.05]">
             <div class="flex items-center gap-1.5 text-zinc-200 font-medium">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
               <span id="${cardId}_label">বোধ কো-পাইলট বিশ্লেষণ করছে...</span>
             </div>
             <span class="text-[10px] font-mono text-zinc-500 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06]">প্রশ্ন ${toBnDigits(currentExamState.currentIndex + 1)}</span>
@@ -4522,7 +4667,7 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
                   <span>সংক্ষিপ্ত সমাধান ও টিপস</span>
                 </div>
-                <span class="text-[10px] font-mono text-zinc-400">BODH AI</span>
+                <span class="text-[10px] font-mono font-medium bodh-gradient-text inline-flex items-center gap-1"><img src="/assets/bodh-monogram.svg" alt="BODH" class="w-3.5 h-3.5 object-contain" /> BODH AI</span>
               </div>
               <div class="markdown-body text-xs sm:text-[13px] text-zinc-200 leading-relaxed font-sans">${renderExamMarkdownAndMath(q._aiExplanation)}</div>
             </div>
@@ -4695,7 +4840,7 @@
               <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
               <span id="examAiStreamLabel_${idx}">BODH AI নিখুঁত সমাধান প্রস্তুত করছে...</span>
             </div>
-            <span class="text-[10px] font-mono text-zinc-400">BODH AI</span>
+            <span class="text-[10px] font-mono font-medium bodh-gradient-text inline-flex items-center gap-1"><img src="/assets/bodh-monogram.svg" alt="BODH" class="w-3.5 h-3.5 object-contain" /> BODH AI</span>
           </div>
           <div id="examAiStreamText_${idx}" class="markdown-body text-xs sm:text-[13px] text-zinc-200 leading-relaxed font-sans min-h-[36px]">
             <div class="space-y-2 animate-pulse pt-1">

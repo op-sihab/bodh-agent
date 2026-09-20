@@ -1,0 +1,51 @@
+<svg width="139" height="138" viewBox="0 0 139 138" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="p0_monogram" x1="69.6899" y1="0" x2="69.6899" y2="138" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E1B4B"/>
+      <stop offset="0.5" stop-color="#312E81"/>
+      <stop offset="1" stop-color="#4F46E5"/>
+    </linearGradient>
+    <linearGradient id="p1_monogram" x1="68" y1="43" x2="94" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.5" stop-color="#E0E7FF"/>
+      <stop offset="1" stop-color="#A5B4FC"/>
+    </linearGradient>
+    <linearGradient id="p2_monogram" x1="43" y1="69.5" x2="76" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#818CF8"/>
+    </linearGradient>
+    <filter id="glow_monogram" x="30" y="30" width="80" height="80" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#818CF8" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="clip0_monogram">
+      <rect width="138" height="138" fill="white" transform="translate(0.689941)"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#clip0_monogram)">
+    <!-- Base Squircle with Deep Royal Indigo Gradient -->
+    <path d="M115.69 0H23.6899C10.9874 0 0.689941 10.2975 0.689941 23V115C0.689941 127.703 10.9874 138 23.6899 138H115.69C128.392 138 138.69 127.703 138.69 115V23C138.69 10.2975 128.392 0 115.69 0Z" fill="url(#p0_monogram)"/>
+    
+    <!-- Inner Glassmorphic Glow Layer -->
+    <path d="M109.94 9.20001H29.44C19.278 9.20001 11.04 17.438 11.04 27.6V98.9C11.04 109.062 19.278 117.3 29.44 117.3H109.94C120.102 117.3 128.34 109.062 128.34 98.9V27.6C128.34 17.438 120.102 9.20001 109.94 9.20001Z" fill="white" fill-opacity="0.08"/>
+    
+    <!-- Outer Frosted Bezel Rim -->
+    <path d="M113.39 4.59998H25.99C20.5001 4.59998 15.2349 6.78086 11.3529 10.6629C7.47093 14.5449 5.29004 19.81 5.29004 25.3V101.2C5.29004 106.69 7.47093 111.955 11.3529 115.837C15.2349 119.719 20.5001 121.9 25.99 121.9H113.39C118.88 121.9 124.145 119.719 128.027 115.837C131.909 111.955 134.09 106.69 134.09 101.2V25.3C134.09 19.81 131.909 14.5449 128.027 10.6629C124.145 6.78086 118.88 4.59998 113.39 4.59998ZM128.34 98.9C128.34 103.78 126.401 108.46 122.951 111.911C119.5 115.361 114.82 117.3 109.94 117.3H29.44C24.5601 117.3 19.8799 115.361 16.4293 111.911C12.9786 108.46 11.04 103.78 11.04 98.9V27.6C11.04 22.72 12.9786 18.0399 16.4293 14.5892C19.8799 11.1385 24.5601 9.19998 29.44 9.19998H109.94C114.82 9.19998 119.5 11.1385 122.951 14.5892C126.401 18.0399 128.34 22.72 128.34 27.6V98.9Z" fill="white" fill-opacity="0.32"/>
+    
+    <!-- Golden Sparkles / Twin Stars -->
+    <path d="M96.5 28L98 34L104 35.5L98 37L96.5 43L95 37L89 35.5L95 34L96.5 28Z" fill="#FDE047"/>
+    <path d="M106 48L107 52L111 53L107 54L106 58L105 54L101 53L105 52L106 48Z" fill="#FDE047" fill-opacity="0.8"/>
+    
+    <!-- Stylized 3D Bengali 'ব' Letter Glyph with Neural Synapse Node -->
+    <g filter="url(#glow_monogram)">
+      <!-- Matra (Top Bar) -->
+      <path d="M36 40C36 38.3431 37.3431 37 39 37H100C101.657 37 103 38.3431 103 40C103 41.6569 101.657 43 100 43H39C37.3431 43 36 41.6569 36 40Z" fill="white"/>
+      <!-- Main Body of 'ব' -->
+      <path d="M94 43V98C94 101.314 91.3137 104 88 104C84.6863 104 82 101.314 82 98V53L48.5 73.5C46.8 74.5 44.5 74.2 43.2 72.8C41.8 71.3 41.8 68.9 43.2 67.5L68 43H94Z" fill="url(#p1_monogram)"/>
+      <!-- Diagonal Loop / Wing of 'ব' -->
+      <path d="M43 69.5L68 102C69.2 103.5 71.4 104.2 73.2 103.5C75 102.8 76.2 101 76.2 99.1L76 76L43 69.5Z" fill="url(#p2_monogram)"/>
+      <!-- Core Synapse Dot -->
+      <circle cx="69.5" cy="72.5" r="4.5" fill="#38BDF8"/>
+    </g>
+  </g>
+</svg>
