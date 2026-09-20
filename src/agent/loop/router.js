@@ -6,12 +6,15 @@ import { AGENT_TOOLS } from "../tools/definitions.js";
 
 export const INTENT_TYPES = {
   QUIZ_ANSWER: "QUIZ_ANSWER",
+  EXAM_AUDIT_REVIEW: "EXAM_AUDIT_REVIEW",
   SYLLABUS_ROADMAP: "SYLLABUS_ROADMAP",
   IMPORTANCE_RANKING: "IMPORTANCE_RANKING",
   MCQ_QUIZ: "MCQ_QUIZ",
   CQ_CREATIVE: "CQ_CREATIVE",
   SIMILAR_PATTERN: "SIMILAR_PATTERN",
   ANALYTICS_SQL: "ANALYTICS_SQL",
+  BOARD_QUESTIONS: "BOARD_QUESTIONS",
+  GREETING: "GREETING",
   GENERAL: "GENERAL"
 };
 
@@ -26,7 +29,14 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
   const raw = (userMessage || "").trim();
   const lower = raw.toLowerCase();
 
-  // Fast check: direct option answer
+  // Fast check 1: Exam Completion Report / Mistake Review / Performance Audit (0 tool overhead, pure tutoring!)
+  if (
+    /(?:পরীক্ষা\s*সমাপ্তি|ফলাফল\s*রিপোর্ট|ফলাফল\s*অডিট|মিস্টেক\s*ক্লিনিক|পারফরম্যান্স\s*অডিট|ভুল\s*হওয়া\s*প্রশ্নসমূহ|ভুল\s*প্রশ্নাবলি|আমার\s*ভুল\s*হয়েছিল|ক্লিয়ার\s*করতে\s*চাই\s*কিনা)/i.test(raw)
+  ) {
+    return INTENT_TYPES.EXAM_AUDIT_REVIEW;
+  }
+
+  // Fast check 2: direct option answer
   if (/^(?:উত্তর\s*)?[ক-ঘa-dA-D১-৪]$/i.test(raw) || /^(?:ans|opt|option)\s*[:=]?\s*[a-dক-ঘ১-৪]$/i.test(raw)) {
     return INTENT_TYPES.QUIZ_ANSWER;
   }
@@ -36,6 +46,14 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
     /(?:এই\s*টাইপের|অনুরূপ|similar|একই\s*সূত্রের|আরেকটি\s*প্রশ্ন|আরেকটা\s*প্রশ্ন|আরেকটা\s*mcq|আরেকটি\s*mcq|আরেকটা\s*cq|আরেকটি\s*cq|মাস্টার\s*টাইপ|ব্লুপ্রিন্ট|blueprint|pattern)/i.test(lower)
   ) {
     return INTENT_TYPES.SIMILAR_PATTERN;
+  }
+
+  // Board Exam Questions (e.g. "dhaka board er qs dew", "dhaka baord 2026সাধারণ গণিত qs gula sob dew to", "ঢাকা বোর্ডের প্রশ্ন")
+  const hasBoardMention = /(?:বোর্ড(?:ের)?|board(?:s|'s)?|baord(?:s)?|borde|ঢাকা(?:র)?|চট্টগ্রাম(?:ের)?|রাজশাহী(?:র)?|সিলেট(?:ের)?|যশোর(?:ের)?|বরিশাল(?:ের)?|দিনাজপুর(?:ের)?|ময়মনসিংহ(?:ের)?|কুমিল্লা(?:র)?|dhaka|ctg|rajshahi|sylhet|jashore|jessore|barishal|dinajpur|mymensingh|comilla)/i.test(lower);
+  const hasQuestionMention = /(?:প্রশ্ন|qs|question|নৈর্ব্যক্তিক|mcq|cq|পরীক্ষা|exam|প্রশ্নপত্র)/i.test(lower);
+
+  if (hasBoardMention && hasQuestionMention) {
+    return INTENT_TYPES.BOARD_QUESTIONS;
   }
 
   // MCQ / Quiz / Mock test (Highest Priority for question generation)
@@ -73,6 +91,14 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
     return INTENT_TYPES.ANALYTICS_SQL;
   }
 
+  // Greetings & Pleasantries (0 tool overhead, minimal token footprint)
+  if (
+    /^(?:hi|hello|hey|হাই|হ্যালো|হে|হেই|সালাম|আসসালামু\s*আলাইকুম|assalamu\s*alaikum|kemon\s*acho|কেমন\s*আছো|কেমন\s*আছেন|ki\s*khobor|কী\s*খবর|kire|yo|hola|নমস্কার|শুভ\s*(?:সকাল|সন্ধ্যা|রাত্রি|অপরাহ্ন))(?:\s+(?:বোধ|bodh|vai|ভাই|ai|বন্ধু|apu|আপু|কেমন\s*আছো|kemon\s*acho))?[\s!.,?]*$/i.test(raw) ||
+    /^(?:hi|hello|hey|হাই|হ্যালো)\s+(?:kemon\s*acho|কেমন\s*আছো|vai|ভাই)[\s!.,?]*$/i.test(raw)
+  ) {
+    return INTENT_TYPES.GREETING;
+  }
+
   return INTENT_TYPES.GENERAL;
 }
 
@@ -80,8 +106,8 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
  * Returns a focused, minimal subset of tool schemas based on the classified intent
  */
 export function getScopedTools(intent) {
-  if (intent === INTENT_TYPES.QUIZ_ANSWER) {
-    return undefined; // 0 tool overhead when grading a quiz!
+  if (intent === INTENT_TYPES.QUIZ_ANSWER || intent === INTENT_TYPES.GREETING || intent === INTENT_TYPES.EXAM_AUDIT_REVIEW) {
+    return undefined; // 0 tool overhead when grading a quiz, greeting, or reviewing exam results!
   }
 
   const toolMap = new Map(AGENT_TOOLS.map(t => [t.function.name, t]));
@@ -119,6 +145,14 @@ export function getScopedTools(intent) {
         toolMap.get("analyze_chapter_patterns"),
         toolMap.get("get_mcq_quiz"),
         toolMap.get("get_creative_question")
+      ].filter(Boolean);
+
+    case INTENT_TYPES.BOARD_QUESTIONS:
+      return [
+        toolMap.get("get_board_exam_questions"),
+        toolMap.get("get_mcq_quiz"),
+        toolMap.get("get_creative_question"),
+        toolMap.get("search_question_bank")
       ].filter(Boolean);
 
     case INTENT_TYPES.ANALYTICS_SQL:
@@ -173,6 +207,8 @@ export function pruneHistoryForContext(pastHistory = [], maxTurns = 4) {
  */
 export function getMaxTokensForIntent(intent) {
   switch (intent) {
+    case INTENT_TYPES.GREETING:
+      return 250; // Ultra-fast, minimal greeting response
     case INTENT_TYPES.QUIZ_ANSWER:
       return 600; // Crisp grading, gentle encouragement & scientific principle
     case INTENT_TYPES.MCQ_QUIZ:
@@ -183,6 +219,8 @@ export function getMaxTokensForIntent(intent) {
       return 1500; // Full authentic stem + complete Ka, Kha, Ga, Gha levels
     case INTENT_TYPES.IMPORTANCE_RANKING:
       return 1200; // Priority chapters, 80/20 breakdown & board tips
+    case INTENT_TYPES.BOARD_QUESTIONS:
+      return 3500; // Full token budget for complete 25-MCQ board question paper
     case INTENT_TYPES.SIMILAR_PATTERN:
       return 1100; // Deep pattern analysis & formula matching
     default:

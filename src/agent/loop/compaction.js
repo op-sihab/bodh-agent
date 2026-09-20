@@ -96,10 +96,42 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
     }
 
     case "get_board_exam_questions": {
+      const toBnAns = { 'A': 'ক', 'B': 'খ', 'C': 'গ', 'D': 'ঘ', 'a': 'ক', 'b': 'খ', 'c': 'গ', 'd': 'ঘ' };
+      const isFull = Boolean(rawResult.is_full_exam) || (rawResult.sample_mcq?.length >= 10);
       return {
         board: rawResult.board || toolArgs.board_name,
-        available_exam_sets: rawResult.available_exam_sets?.slice(0, 3),
-        total_sets: rawResult.available_exam_sets?.length || 0
+        year: rawResult.year,
+        subject: rawResult.subject,
+        is_full_exam: isFull,
+        total_mcqs: rawResult.sample_mcq?.length || 0,
+        status: isFull ? "all_authentic_questions_loaded_in_exam_card" : "retrieved",
+        sample_preview: rawResult.sample_mcq?.[0] ? {
+          question: rawResult.sample_mcq[0].question_text,
+          board: rawResult.sample_mcq[0].formatted_source || rawResult.sample_mcq[0].tags
+        } : null,
+        mcq: isFull ? undefined : rawResult.sample_mcq?.map(q => ({
+          id: q.id,
+          question: q.question_text,
+          options: {
+            "ক": q.option_a,
+            "খ": q.option_b,
+            "গ": q.option_c,
+            "ঘ": q.option_d
+          },
+          answer: toBnAns[q.answer] || q.answer,
+          board: q.formatted_source || q.tags
+        })),
+        cq: rawResult.sample_cq ? {
+          id: rawResult.sample_cq.id,
+          stem: rawResult.sample_cq.question_text,
+          parts: {
+            "ক": rawResult.sample_cq.option_a,
+            "খ": rawResult.sample_cq.option_b,
+            "গ": rawResult.sample_cq.option_c,
+            "ঘ": rawResult.sample_cq.option_d
+          },
+          board: rawResult.sample_cq.formatted_source || rawResult.sample_cq.tags
+        } : null
       };
     }
 

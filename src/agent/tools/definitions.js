@@ -54,6 +54,15 @@ export const AGENT_TOOLS = [
           subject: {
             type: "string",
             description: "Optional subject filter"
+          },
+          count: {
+            type: "integer",
+            description: "Number of MCQs to retrieve (e.g. 25 for full exam set, 3-5 for practice)"
+          },
+          mode: {
+            type: "string",
+            enum: ["sample", "full_exam"],
+            description: "Set to 'full_exam' when the student asks for all questions / full question paper / 25 questions"
           }
         },
         required: ["board_name"]

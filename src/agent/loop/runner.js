@@ -120,18 +120,25 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   const activeChapter = state.chapter_num;
 
   // Build input history with high-density system prompt, memory blocks, and pruned past turns
+  const baseSystemPrompt = (classifiedIntent === INTENT_TYPES.GREETING) ?
+    `You are "বোধ" (BODH), Bangladesh's premier autonomous academic intelligence and expert tutor for SSC students.
+Philosophy: "না বুঝে মুখস্থ নয়, পড়াশোনায় এবার গভীর বোধ।"
+Respond in natural, warm, inspiring Bengali. Keep greeting crisp (1-2 sentences).` : SYSTEM_PROMPT;
+
   const inputHistory = [
-    { type: "message", role: "system", content: SYSTEM_PROMPT }
+    { type: "message", role: "system", content: baseSystemPrompt }
   ];
 
-  // Inject Working Memory State Snapshot & Episodic Ledger
-  const episodicLedger = MemoryManager.generateEpisodicLedger(state);
-  if (episodicLedger) {
-    inputHistory.push({
-      type: "message",
-      role: "system",
-      content: episodicLedger
-    });
+  // Inject Working Memory State Snapshot & Episodic Ledger (skip for greetings to maximize token efficiency)
+  if (classifiedIntent !== INTENT_TYPES.GREETING) {
+    const episodicLedger = MemoryManager.generateEpisodicLedger(state);
+    if (episodicLedger) {
+      inputHistory.push({
+        type: "message",
+        role: "system",
+        content: episodicLedger
+      });
+    }
   }
 
   // Token & Structure Optimization: Prune history (strip historical thoughts, limit to recent 4 clean turns)
@@ -142,17 +149,37 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
 
   // Always inject Active Academic Subject Lock Directive when an active subject is established
   if (activeSubject) {
+    const activeSubjBn = state.subject_name || SUBJECT_DISPLAY_NAMES[activeSubject] || "চলমান বিষয়";
     const chDisplay = activeChapter ? `অধ্যায় ${activeChapter}` : "সম্পূর্ণ পাঠ্যক্রম/সিলেবাস";
     inputHistory.push({
       type: "message",
       role: "system",
-      content: `ACTIVE ACADEMIC CONTEXT: Subject is '${activeSubject}' (${chDisplay}).
-STRICT ACADEMIC PERSISTENCE DIRECTIVE:
-1. You are actively tutoring the student in '${activeSubject}'.
-2. DO NOT change or switch to any other subject based on ambiguous words, typos, short comments, or Banglish slang.
-3. You may ONLY change subjects if the student explicitly writes the name of a new subject.
-4. The active chapter context is ${chDisplay}. If the student asks about the whole syllabus or a different chapter in ${activeSubject}, answer freely for ${activeSubject}.
-5. Keep all focus strictly anchored on '${activeSubject}'.`
+      content: `ACTIVE ACADEMIC CONTEXT: Subject is ALREADY SELECTED as '${activeSubjBn}' (${activeSubject}) [${chDisplay}].
+STRICT ACADEMIC PERSISTENCE DIRECTIVES:
+1. You are actively tutoring the student in '${activeSubjBn}'. The subject is ALREADY CHOSEN by the student in the top UI.
+2. ABSOLUTE PROHIBITION: STRICTLY NEVER ask "তুমি কোন বিষয় নিয়ে পড়তে চাও?", "কোন বিষয়", or "কোন অধ্যায় বা বিষয়"! NEVER mention "বিষয়" when asking what to read!
+3. If asking what to study, ONLY refer to '${activeSubjBn}' (e.g. "${activeSubjBn}-এর কোন অধ্যায় বা টপিক নিয়ে পড়তে চাও?").
+4. DO NOT change or switch to any other subject based on ambiguous words, typos, short comments, or Banglish slang.
+5. You may ONLY change subjects if the student explicitly specifies a different subject.
+6. The active chapter context is ${chDisplay}. If the student asks about the whole syllabus or a different chapter in ${activeSubjBn}, answer freely for ${activeSubjBn}.
+7. Keep all focus strictly anchored on '${activeSubjBn}'.`
+    });
+  }
+
+  if (classifiedIntent === INTENT_TYPES.GREETING) {
+    const activeSubjBn = state.subject_name || SUBJECT_DISPLAY_NAMES[activeSubject] || "";
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: activeSubject ?
+        `GREETING DIRECTIVE:
+1. Respond warmly and concisely in Bengali (1-2 sentences maximum).
+2. You are their dedicated academic mentor in '${activeSubjBn}'.
+3. ABSOLUTE PROHIBITION: The subject is ALREADY SELECTED as '${activeSubjBn}'. STRICTLY NEVER ask which subject they want to read, and NEVER say "কোন বিষয়" or "কোন অধ্যায় বা বিষয়"!
+4. Naturally invite them to begin with '${activeSubjBn}' (e.g. "হ্যালো! তোমার ${activeSubjBn} প্রস্তুতিকে সহজ ও মজবুত করতে আমি প্রস্তুত। ${activeSubjBn}-এর কোন অধ্যায় বা টপিক দিয়ে আজ শুরু করতে চাও?").` :
+        `GREETING DIRECTIVE:
+1. Respond warmly and concisely in Bengali (1-2 sentences) as 'বোধ' (BODH).
+2. Invite the student to share what they want to study today.`
     });
   }
 
@@ -222,11 +249,33 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
   const MAX_STEPS = 4;
   let currentStep = 0;
 
-  const isSimilarReq = /এই\s*টাইপের|অনুরূপ|similar|একই\s*সূত্রের|আরেকটি\s*প্রশ্ন|আরেকটা\s*প্রশ্ন|আরেকটা\s*mcq|আরেকটি\s*mcq|আরেকটা\s*cq|আরেকটি\s*cq|এইরকম\s*আরেক/i.test(userMessage);
-  const isMcqReq = /mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|1\s*mcq|one\s*mcq|ekta\s*mcq|একটা\s*mcq|একটি\s*mcq|show\s*1\s*mcq/i.test(userMessage);
-  const isCqReq = /cq|সৃজনশীল|উদ্দীপক|1\s*cq|one\s*cq|ekta\s*cq|একটা\s*cq|একটি\s*cq/i.test(userMessage);
-  const isPatReq = /মাস্টার\s*টাইপ|পরীক্ষকের\s*ফাঁদ|অধ্যায়ের\s*টাইপ|ব্লুপ্রিন্ট|chapter\s*pattern/i.test(userMessage);
-  const requiresQuestionTool = isSimilarReq || isMcqReq || isCqReq || isPatReq;
+  const isAuditReview = classifiedIntent === INTENT_TYPES.EXAM_AUDIT_REVIEW || /(?:পরীক্ষা\s*সমাপ্তি|ফলাফল\s*রিপোর্ট|ফলাফল\s*অডিট|মিস্টেক\s*ক্লিনিক|পারফরম্যান্স\s*অডিট|ভুল\s*হওয়া\s*প্রশ্নসমূহ)/i.test(userMessage);
+
+  if (isAuditReview) {
+    const activeSubjBn = state.subject_name || SUBJECT_DISPLAY_NAMES[activeSubject] || "চলমান বিষয়";
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: `EXAM COMPLETION & 1-ON-1 CONCEPT CLEARING DIRECTIVE:
+The student has just completed an exam and returned to chat for feedback and 1-on-1 tutoring!
+1. STRICT ZERO TOOL CALLS: DO NOT call any tool. All question details and scores are already in the user's prompt.
+2. Present a beautifully structured, motivating performance report using clear formatting and rich emojis (📊, 🎯, ❌, ⏳, 📈, 💡, 📝):
+   - 📊 **ফলাফল বিশ্লেষণ** (বিষয়, বোর্ড/অধ্যায়, মোট প্রশ্ন, সঠিক, ভুল, বাদ দেওয়া, সাফল্যের হার)
+   - 💡 **সংক্ষিপ্ত মূল্যায়ন** (ভুলের ধরণ নিয়ে ১-২টি চমৎকার অ্যাকাডেমিক পর্যবেক্ষণ এবং আত্মবিশ্বাস বৃদ্ধির বার্তা)
+   - 🎯 **১-অন-১ কনসেপ্ট সমাধান অফার**:
+     সুনির্দিষ্টভাবে বলো: "ভুল হওয়া প্রতিটি প্রশ্নের সঠিক উত্তর, বৈজ্ঞানিক ব্যাখ্যা এবং অনুরূপ বোর্ড প্রশ্ন অনুশীলন করতে প্রস্তুত থাকলে **'হ্যাঁ, প্রথম প্রশ্ন থেকে শুরু করো'** বলো!"
+3. Keep the output clean, structured, and engaging.`
+    });
+  }
+
+  const isSimilarReq = !isAuditReview && /এই\s*টাইপের|অনুরূপ|similar|একই\s*সূত্রের|আরেকটি\s*প্রশ্ন|আরেকটা\s*প্রশ্ন|আরেকটা\s*mcq|আরেকটি\s*mcq|আরেকটা\s*cq|আরেকটি\s*cq|এইরকম\s*আরেক/i.test(userMessage);
+  const isMcqReq = !isAuditReview && /mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|1\s*mcq|one\s*mcq|ekta\s*mcq|একটা\s*mcq|একটি\s*mcq|show\s*1\s*mcq/i.test(userMessage);
+  const isCqReq = !isAuditReview && /cq|সৃজনশীল|উদ্দীপক|1\s*cq|one\s*cq|ekta\s*cq|একটা\s*cq|একটি\s*cq/i.test(userMessage);
+  const isPatReq = !isAuditReview && /মাস্টার\s*টাইপ|পরীক্ষকের\s*ফাঁদ|অধ্যায়ের\s*টাইপ|ব্লুপ্রিন্ট|chapter\s*pattern/i.test(userMessage);
+  const hasBoardMention = /(?:বোর্ড(?:ের)?|board(?:s|'s)?|baord(?:s)?|borde|ঢাকা(?:র)?|চট্টগ্রাম(?:ের)?|রাজশাহী(?:র)?|সিলেট(?:ের)?|যশোর(?:ের)?|বরিশাল(?:ের)?|দিনাজপুর(?:ের)?|ময়মনসিংহ(?:ের)?|কুমিল্লা(?:র)?|dhaka|ctg|rajshahi|sylhet|jashore|jessore|barishal|dinajpur|mymensingh|comilla)/i.test(userMessage);
+  const hasQuestionMention = /(?:প্রশ্ন|qs|question|নৈর্ব্যক্তিক|mcq|cq|পরীক্ষা|exam|প্রশ্নপত্র)/i.test(userMessage);
+  const isBoardReq = !isAuditReview && (hasBoardMention && hasQuestionMention);
+  const requiresQuestionTool = !isAuditReview && (isSimilarReq || isMcqReq || isCqReq || isPatReq || isBoardReq);
 
   reactLoop: while (currentStep < MAX_STEPS) {
     currentStep++;
@@ -242,13 +291,23 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
     // On Step 2+: Swap in lightweight synthesis prompt and recent tool results (cuts 75% input tokens from re-transmission).
     let stepInputMessages = inputHistory;
     if (currentStep > 1) {
+      const activeSubjBn = state.subject_name || SUBJECT_DISPLAY_NAMES[activeSubject] || "চলমান বিষয়";
+      const chDisplay = activeChapter ? `অধ্যায় ${activeChapter}` : "সম্পূর্ণ বিষয়";
       stepInputMessages = [
         {
           type: "message",
           role: "system",
           content: `You are "বোধ" (BODH), Bangladesh's premier autonomous academic intelligence and expert tutor for SSC students.
-Write a complete, high-pedagogy, and encouraging answer in natural Bengali based on the tool results and academic context.
-Quality Standards:
+ACTIVE ACADEMIC SUBJECT: '${activeSubjBn}' (${activeSubject || "এসএসসি"}) - ${chDisplay}.
+CRITICAL DIRECTIVES:
+- The active subject is ALREADY selected as '${activeSubjBn}'. STRICTLY NEVER ask the student "তুমি কোন বিষয়ের প্রশ্ন চাও?" or list available subjects!
+- The authentic questions are ALREADY RETRIEVED in the tool results! STRICTLY NEVER claim "প্রশ্নপত্র পাওয়া যাচ্ছে না" or "আসল প্রশ্নপত্র এখনো নির্ভরযোগ্যভাবে পাওয়া যাচ্ছে না" or apologize! Present the retrieved authentic questions immediately and directly!
+- If the student asked for all questions / full paper / full exam ('সব দাও', '২৫টা', 'full exam', 'বোর্ড প্রশ্নপত্র', or after get_board_exam_questions with full_exam):
+  * The full authentic question set is ALREADY loaded into the student's interactive exam environment.
+  * STRICTLY NEVER output or dump individual questions or options (যেমন: প্রশ্ন ১, প্রশ্ন ২, ক, খ, গ, ঘ) in your chat text!
+  * Write ONLY a warm, concise academic introduction (1-2 sentences in authentic Bengali) stating the board and year, total questions, and time limit (e.g. "ঢাকা বোর্ড ২০২৬ এর পূর্ণাঙ্গ ২৫টি সাধারণ গণিত বহুনির্বাচনি প্রশ্ন (MCQ) প্রস্তুত করা হয়েছে। নির্ধারিত সময় ২৫ মিনিট।").
+  * Invite the student to click the 'পরীক্ষা শুরু করো' card below to start their timed board exam.
+- Directly teach and present the authentic questions and academic content from the tool results for '${activeSubjBn}'.
 - Teach with deep intuition, step-by-step clarity, and real-life analogies like an authoritative yet empathetic master tutor.
 - Present data cleanly (tables, bullet points, bold highlights) for effortless readability.
 - When presenting an authentic MCQ, quiz, or similar question from tool results:
@@ -256,6 +315,9 @@ Quality Standards:
   2. Present the authentic question stem and 4 options (ক, খ, গ, ঘ).
   3. STRICTLY NEVER reveal or explain the correct answer in this turn! Encourage the student to think and select their answer first.
   4. ALWAYS append [ans: <ক/খ/গ/ঘ>] and [qid: <question_id>] at the very end.
+- When presenting an authentic CQ:
+  1. ALWAYS include [বোর্ড: <বোর্ডের নাম>] at the top.
+  2. Present the authentic stem and 4 clear parts (ক, খ, গ, ঘ).
 - Never emit <thought> tags in this final response.
 - Do not mention internal tools, database, or RAG.
 - Maintain 100% NCTB syllabus accuracy, KaTeX for math ($v = u + at$, $pH < 7$), and clean markdown formatting.`
@@ -284,18 +346,36 @@ Quality Standards:
       }
     }
 
-    const res = await fetch(mergeUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${mergeKey}`
-      },
-      body: JSON.stringify(requestPayload)
-    });
+    let res;
+    let attempts = 0;
+    const maxAttempts = 3;
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        res = await fetch(mergeUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${mergeKey}`
+          },
+          body: JSON.stringify(requestPayload)
+        });
 
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Merge Gateway Error ${res.status}: ${err}`);
+        if (res.ok) break;
+
+        const status = res.status;
+        const errText = await res.text();
+        if ((status === 502 || status === 503 || status === 504 || status === 429 || status === 520) && attempts < maxAttempts) {
+          console.warn(`[Merge Gateway] Transient ${status} error, retrying attempt ${attempts + 1}/${maxAttempts}...`);
+          await new Promise(r => setTimeout(r, attempts * 1500));
+          continue;
+        }
+        throw new Error(`Merge Gateway Error ${status}: ${errText}`);
+      } catch (err) {
+        if (attempts >= maxAttempts) throw err;
+        console.warn(`[Merge Gateway] Network/gateway error (${err.message}), retrying attempt ${attempts + 1}/${maxAttempts}...`);
+        await new Promise(r => setTimeout(r, attempts * 1500));
+      }
     }
 
     const reader = res.body.getReader();
@@ -479,6 +559,23 @@ Quality Standards:
               academic_intent: stepContent ? stepContent.replace(/<\/?thought>/gi, '').trim() : "শিক্ষার্থীর অনুরোধ অনুযায়ী বোর্ড সৃজনশীল প্রশ্ন অনুসন্ধান করছি..."
             }
           };
+        } else if (isBoardReq) {
+          const boardMatch = userMessage.match(/(ঢাকা|চট্টগ্রাম|রাজশাহী|সিলেট|যশোর|বরিশাল|দিনাজপুর|ময়মনসিংহ|কুমিল্লা|dhaka|ctg|rajshahi|sylhet|jashore|jessore|barishal|dinajpur|mymensingh|comilla)/i);
+          const boardName = boardMatch ? boardMatch[1] : "ঢাকা";
+          const yearMatch = userMessage.match(/(?:20\d{2}|১৯\d{2}|২০\d{2})/);
+          const isFull = /সব|সকল|full|সবগুলো|পূর্ণাঙ্গ|পুরো|25|২৫|sob/i.test(userMessage);
+          toolCall = {
+            id: `call_${Date.now()}`,
+            name: "get_board_exam_questions",
+            input: {
+              board_name: boardName,
+              subject: activeSubject || undefined,
+              year: yearMatch ? yearMatch[0] : undefined,
+              mode: isFull ? "full_exam" : "sample",
+              count: isFull ? 25 : 3,
+              academic_intent: stepContent ? stepContent.replace(/<\/?thought>/gi, '').trim() : `শিক্ষার্থীর অনুরোধ অনুযায়ী ${boardName} বোর্ডের ${isFull ? "সবকটি" : ""} প্রশ্ন সংগ্রহ করছি...`
+            }
+          };
         } else {
           console.warn(`[AgentLoop] Step ${currentStep} emitted thought without answer or tool. Continuing to generate complete answer...`);
           inputHistory.push({
@@ -524,6 +621,20 @@ Quality Standards:
     const toolName = toolCall.name;
     const toolArgs = toolCall.input || {};
     const callId = toolCall.id || `call_${Date.now()}`;
+
+    // Auto-inject activeSubject if tool was called without subject
+    if (!toolArgs.subject && activeSubject) {
+      toolArgs.subject = activeSubject;
+    }
+
+    // Auto-inject full_exam mode and count if student asked for all questions
+    if (toolName === "get_board_exam_questions") {
+      const isFull = /সব|সকল|full|সবগুলো|পূর্ণাঙ্গ|পুরো|25|২৫|sob/i.test(userMessage);
+      if (isFull) {
+        if (!toolArgs.mode) toolArgs.mode = "full_exam";
+        if (!toolArgs.count || toolArgs.count < 25) toolArgs.count = 25;
+      }
+    }
 
     if (!stepContent) {
       const intentText = toolArgs.academic_intent || getToolHumanLabel(toolName, toolArgs) || "প্রাসঙ্গিক তথ্য ও প্রশ্ন অনুসন্ধান করছি...";
@@ -602,11 +713,15 @@ Quality Standards:
       ]
     });
 
-    // Explicit directive for answer synthesis step to prevent secondary unclosed thought tags
+    // Explicit directive for answer synthesis step
+    let synthesisDirective = "টুল থেকে অফিশিয়াল তথ্য সংগৃহীত হয়েছে। কোনো <thought> ট্যাগ ব্যবহার করবে না। সরাসরি প্রথম শব্দ থেকেই শিক্ষার্থীর প্রশ্নের পূর্ণাঙ্গ উত্তর বাংলায় আকর্ষণীয় ও গোছানোভাবে লেখা শুরু করো।";
+    if (compacted && compacted.mode === "exam_launcher") {
+      synthesisDirective = `শিক্ষার্থী বহুনির্বাচনী পরীক্ষা/মক টেস্ট চেয়েছে। চ্যাটে ভুলেও কোনো প্রশ্ন, অপশন (ক, খ, গ, ঘ) বা প্রশ্নের তালিকা লিখবে না! মাত্র ১-২ বাক্যে সংক্ষিপ্ত উৎসাহব্যঞ্জক ভূমিকা দাও (যেমন: "তোমার জন্য ${compacted.subject}-এর ${compacted.total_questions}টি প্রশ্নের একটি মূল্যায়ন পরীক্ষা প্রস্তুত করা হয়েছে। নিচের বাটনে ক্লিক করে পরীক্ষা শুরু করতে পারো:") এবং নিচে অবিকল [exam_launcher: {"total": ${compacted.total_questions}, "subject": "${compacted.subject}", "chapter": "${compacted.chapter}"}] ট্যাগটি দাও। ফ্রন্টএন্ড নিজে থেকেই সমস্ত প্রশ্ন ইন্টারেক্টিভ এক্সাম মোডালে লোড করবে।`;
+    }
     inputHistory.push({
       type: "message",
       role: "system",
-      content: "টুল থেকে অফিশিয়াল তথ্য সংগৃহীত হয়েছে। কোনো <thought> ট্যাগ ব্যবহার করবে না। সরাসরি প্রথম শব্দ থেকেই শিক্ষার্থীর প্রশ্নের পূর্ণাঙ্গ উত্তর বাংলায় আকর্ষণীয় ও গোছানোভাবে লেখা শুরু করো।"
+      content: synthesisDirective
     });
   }
 

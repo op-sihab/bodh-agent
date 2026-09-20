@@ -74,6 +74,7 @@ export async function handleSearchQuestionBank(args) {
 export async function handleGetBoardExamQuestions(args) {
   const bName = args.board_name || "ঢাকা";
   const bCode = normalizeBoard(bName) || "DB";
+  const subjId = normalizeSubject(args.subject);
 
   let yrCode = null;
   if (args.year) {
@@ -81,25 +82,125 @@ export async function handleGetBoardExamQuestions(args) {
     yrCode = yStr.length === 4 ? yStr.slice(2) : yStr;
   }
 
+  const isFullExam = args.mode === "full_exam" ||
+                     parseInt(args.count) >= 15 ||
+                     /সব|সকল|full|সবগুলো|পূর্ণাঙ্গ|পুরো|25|২৫|sob/i.test(args.query || args.academic_intent || "");
+  const mcqLimit = isFullExam ? Math.min(parseInt(args.count) || 30, 30) : Math.min(parseInt(args.count) || 3, 10);
+
   let qWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
+  if (subjId) {
+    qWhere.push(`subject_id = '${subjId}'`);
+  }
   if (yrCode) {
     qWhere.push(`(tags LIKE '%${bCode} ${yrCode}%' OR tags LIKE '%${yrCode}%')`);
   }
 
-  const mcqRes = await executeRawSql(`SELECT question_text, option_a, option_b, option_c, option_d, answer, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type = 'MCQ' AND answer != '' LIMIT 25;`);
-  if (mcqRes.rows.length > 2) {
-    mcqRes.rows = mcqRes.rows.sort(() => Math.random() - 0.5).slice(0, 2);
+  // 1. Retrieve authentic board MCQs (both standard MCQ and MCQ_N)
+  let mcqSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`;
+  let mcqRes = await executeRawSql(mcqSql);
+
+  // Fallback: without year constraint if strict board+year had no rows
+  if (mcqRes.rows.length === 0 && yrCode) {
+    const fbWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
+    if (subjId) fbWhere.push(`subject_id = '${subjId}'`);
+    mcqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${fbWhere.join(" AND ")} AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`);
   }
-  const cqRes = await executeRawSql(`SELECT question_text, option_a, option_b, option_c, option_d, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type IN ('CQ_4', 'CQ_3', 'CQ_N') LIMIT 25;`);
-  if (cqRes.rows.length > 1) {
-    cqRes.rows = [cqRes.rows[Math.floor(Math.random() * cqRes.rows.length)]];
+
+  // Fallback: any recent board questions for this subject if specific board had no rows
+  if (mcqRes.rows.length === 0 && subjId) {
+    mcqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE subject_id = '${subjId}' AND tags != '' AND question_text != '' AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`);
   }
+
+  // Determine returned slice of MCQs
+  let topMcqs = mcqRes.rows;
+
+  // Smart Backfill: If a full exam is requested (e.g. 25-30 MCQs) and specific year had slightly fewer (e.g. 27 in 2026),
+  // seamlessly complete the set using recent authentic Dhaka Board questions from preceding years (e.g. 2025/2024)!
+  if (isFullExam && topMcqs.length < mcqLimit && subjId) {
+    const existingIds = new Set(topMcqs.map(r => r.id));
+    const backfillSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE tags LIKE '%${bCode}%' AND subject_id = '${subjId}' AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT 50;`;
+    const bfRes = await executeRawSql(backfillSql);
+    for (const row of bfRes.rows) {
+      if (!existingIds.has(row.id)) {
+        topMcqs.push(row);
+        existingIds.add(row.id);
+        if (topMcqs.length >= mcqLimit) break;
+      }
+    }
+  }
+
+  if (!isFullExam && topMcqs.length > mcqLimit) {
+    topMcqs = topMcqs.slice(0, 10).sort(() => Math.random() - 0.5).slice(0, mcqLimit);
+  } else if (topMcqs.length > mcqLimit) {
+    topMcqs = topMcqs.slice(0, mcqLimit);
+  }
+
+  // 2. Retrieve authentic board CQ
+  let cqSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`;
+  let cqRes = await executeRawSql(cqSql);
+
+  if (cqRes.rows.length === 0 && yrCode) {
+    const fbWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
+    if (subjId) fbWhere.push(`subject_id = '${subjId}'`);
+    cqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE ${fbWhere.join(" AND ")} AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`);
+  }
+
+  if (cqRes.rows.length === 0 && subjId) {
+    cqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE subject_id = '${subjId}' AND tags != '' AND question_text != '' AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`);
+  }
+
+  const sampleCqs = isFullExam
+    ? cqRes.rows.slice(0, 4)
+    : (cqRes.rows.length > 0 ? [cqRes.rows[Math.floor(Math.random() * Math.min(cqRes.rows.length, 5))]] : []);
+  const sampleCq = sampleCqs[0] || null;
 
   return {
     board: bName,
     year: args.year || "সকল বছর",
-    sample_mcq: mcqRes.rows.map(r => ({ ...r, formatted_source: formatTag(r.tags), all_board_tags: r.tags })),
-    sample_cq: cqRes.rows[0] ? { ...cqRes.rows[0], formatted_source: formatTag(cqRes.rows[0].tags), all_board_tags: cqRes.rows[0].tags } : null,
-    instructions_for_mentor: "শিক্ষার্থীকে এই বোর্ডের ও নির্দিষ্ট সালের প্রশ্ন ও অপশন উপস্থাপন করো। যদি প্রশ্নটি একাধিক বোর্ডে বা কলেজে এসে থাকে তবে [বোর্ড: " + (mcqRes.rows[0]?.tags || bCode) + "] উল্লেখ করবে।"
+    subject: subjId || "সকল বিষয়",
+    is_full_exam: isFullExam,
+    total_found: topMcqs.length + sampleCqs.length,
+    sample_mcq: topMcqs.map(r => ({
+      id: r.id,
+      question_text: r.question_text,
+      option_a: r.option_a,
+      option_b: r.option_b,
+      option_c: r.option_c,
+      option_d: r.option_d,
+      answer: r.answer,
+      solution: r.solution,
+      tags: r.tags,
+      subject_id: r.subject_id,
+      formatted_source: formatTag(r.tags),
+      all_board_tags: r.tags
+    })),
+    sample_cq: sampleCq ? {
+      id: sampleCq.id,
+      question_text: sampleCq.question_text,
+      option_a: sampleCq.option_a,
+      option_b: sampleCq.option_b,
+      option_c: sampleCq.option_c,
+      option_d: sampleCq.option_d,
+      solution: sampleCq.solution,
+      tags: sampleCq.tags,
+      subject_id: sampleCq.subject_id,
+      formatted_source: formatTag(sampleCq.tags),
+      all_board_tags: sampleCq.tags
+    } : null,
+    sample_cqs: sampleCqs.map(c => ({
+      id: c.id,
+      question_text: c.question_text,
+      option_a: c.option_a,
+      option_b: c.option_b,
+      option_c: c.option_c,
+      option_d: c.option_d,
+      solution: c.solution,
+      tags: c.tags,
+      subject_id: c.subject_id,
+      formatted_source: formatTag(c.tags)
+    })),
+    instructions_for_mentor: isFullExam
+      ? `শিক্ষার্থীকে এই বোর্ডের ও নির্দিষ্ট সালের পূর্ণাঙ্গ প্রশ্নপত্রের সবকটি MCQ (${topMcqs.length}টি) পরপর উপস্থাপন করো। প্রতিটি প্রশ্নের [বোর্ড: ...] ট্যাগ, ৪টি অপশন ও শেষে [ans: ...] [qid: ...] দেবে।`
+      : "শিক্ষার্থীকে এই বোর্ডের আসল প্রশ্ন ও অপশন উপস্থাপন করো। MCQ উপস্থাপনের ক্ষেত্রে শুরুতে সঠিক উত্তর বা ব্যাখ্যা গোপন রাখবে, কেবল [বোর্ড: ...] ট্যাগ, প্রশ্ন ও ৪টি অপশন দেবে এবং শেষে [ans: ...] [qid: ...] রাখবে।"
   };
 }
