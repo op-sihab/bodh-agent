@@ -92,9 +92,24 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
   }
 
   // Greetings & Pleasantries (0 tool overhead, minimal token footprint)
+  const greetingTokens = new Set([
+    'hi', 'hello', 'hlw', 'helo', 'hey', 'yo', 'hola',
+    'salam', 'slm', 'assalam', 'assalamu', 'alaikum', 'assalamualaykum', 'assalamulakum', 'asalamualaikum', 'asalamualaykum', 'walaykum',
+    'সালাম', 'আসসালামু', 'আলাইকুম', 'ওয়ালাইকুম', 'আদাব', 'নমস্কার',
+    'kemon', 'acho', 'kemonacho', 'achen', 'valo', 'bhalo',
+    'কেমন', 'আছো', 'আছেন', 'ভালো', 'আছি',
+    'ki', 'khobor', 'kire', 'কী', 'খবর',
+    'vai', 'vaia', 'bhai', 'bro', 'sir', 'apu', 'ai', 'bodh', 'bondhu', 'dosto',
+    'ভাই', 'ভাইয়া', 'স্যার', 'আপু', 'বোধ', 'বন্ধু', 'দোস্ত',
+    'shuvo', 'shokhal', 'shokal', 'rat', 'ratri', 'শুভ', 'সকাল', 'সন্ধ্যা', 'রাত্রি'
+  ]);
+  const words = raw.toLowerCase().replace(/[0-9.,!?~@#$%\^&*()_+=\-\[\]{};:'\"\/\\|<>]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  const isAllGreetingTokens = words.length > 0 && words.every(w => greetingTokens.has(w));
+
   if (
-    /^(?:hi|hello|hey|হাই|হ্যালো|হে|হেই|সালাম|আসসালামু\s*আলাইকুম|assalamu\s*alaikum|kemon\s*acho|কেমন\s*আছো|কেমন\s*আছেন|ki\s*khobor|কী\s*খবর|kire|yo|hola|নমস্কার|শুভ\s*(?:সকাল|সন্ধ্যা|রাত্রি|অপরাহ্ন))(?:\s+(?:বোধ|bodh|vai|ভাই|ai|বন্ধু|apu|আপু|কেমন\s*আছো|kemon\s*acho))?[\s!.,?]*$/i.test(raw) ||
-    /^(?:hi|hello|hey|হাই|হ্যালো)\s+(?:kemon\s*acho|কেমন\s*আছো|vai|ভাই)[\s!.,?]*$/i.test(raw)
+    isAllGreetingTokens ||
+    /^(?:hi|hello|hlw|helo|hey|হাই|হ্যালো|হে|হেই|সালাম|আসসালামু\s*আলাইকুম|assalamu\s*alaikum|kemon\s*acho|কেমন\s*আছো|কেমন\s*আছেন|ki\s*khobor|কী\s*খবর|kire|yo|hola|নমস্কার|শুভ\s*(?:সকাল|সন্ধ্যা|রাত্রি|অপরাহ্ন))(?:\s+(?:বোধ|bodh|vai|ভাই|ai|বন্ধু|apu|আপু|কেমন\s*আছো|kemon\s*acho|\d+))?[\s!.,?]*$/i.test(raw) ||
+    /^(?:hi|hello|hlw|helo|hey|হাই|হ্যালো)\s+(?:kemon\s*acho|কেমন\s*আছো|vai|ভাই|\d+)[\s!.,?]*$/i.test(raw)
   ) {
     return INTENT_TYPES.GREETING;
   }
@@ -171,9 +186,9 @@ export function getScopedTools(intent) {
 /**
  * Prune history messages to minimize token payload:
  * - Strips internal <thought> blocks from older assistant messages
- * - Limits historical turns to the last 4 clean turns
+ * - Preserves conversational context across the last 12 clean turns
  */
-export function pruneHistoryForContext(pastHistory = [], maxTurns = 4) {
+export function pruneHistoryForContext(pastHistory = [], maxTurns = 12) {
   const result = [];
   const sliced = pastHistory.slice(-maxTurns);
 

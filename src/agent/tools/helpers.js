@@ -133,6 +133,11 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     ...rawTokens.map(stemBnToken).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t))
   ])];
 
+  // If query contains no meaningful academic tokens and no explicit number, abort immediately
+  if (queryTokens.length === 0 && !extractedNum) {
+    return null;
+  }
+
   let bestMatch = null;
   let highestScore = -99999;
   const totalChapters = all.length;

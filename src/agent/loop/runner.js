@@ -110,7 +110,7 @@ export function stripInternalThoughts(text) {
     .replace(/<[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>[\s\S]*?<[\s]*\/[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>/gi, '')
     .replace(/^<[\s]*(?:thought|thinking|চিন্তা|ভাবনা)[\s]*>[\s\S]*?(?:\n\n|$)/gi, '')
     .replace(/(?:<[\s]*\/?)?(?:thought|thinking|থought|থট)[\s>]*\[[\s\S]*?\]/gi, '')
-    .replace(/\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|subject)[^\]]*\]/gi, '')
+    .replace(/\[\s*(?:বিষয়\s*পরিবর্তন|বিষয়|বিষয়\s*পরিবর্তন|বিষয়|অধ্যায়|অধ্যায়|subject|chapter)[^\]]*\]/gi, '')
     .replace(/<\/?[\s]*(?:thought|thinking)[\s]*>/gi, '');
 }
 
@@ -165,6 +165,19 @@ function extractAiAcademicIntent(thoughtText) {
     { name: "ইসলাম ও নৈতিক শিক্ষা", id: "ssc_islam" },
     { name: "ইসলাম শিক্ষা", id: "ssc_islam" }
   ];
+
+  // If the thought mentions multiple subjects (e.g. AI is asking "পদার্থবিজ্ঞান নাকি রসায়ন?"), DO NOT lock to any subject!
+  const uniqueCanonicalMatches = new Set(
+    canonicalSubjects.filter(cs => thoughtText.includes(cs.name)).map(cs => cs.id)
+  );
+  if (uniqueCanonicalMatches.size > 1) {
+    return null; // Multi-subject listing or question: not a decision!
+  }
+
+  // If the thought is questioning which subject to choose, do not extract
+  if (/(?:কোন|কোনটি|পড়তে\s*চাও|জানতে\s*চাইব|পছন্দ|নির্বাচন|বিকল্প|অপশন|নির্ধারিত\s*নয়)/i.test(thoughtText)) {
+    return null;
+  }
 
   for (const cs of canonicalSubjects) {
     if (thoughtText.includes(cs.name)) {
@@ -278,7 +291,10 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   const isBroadSyllabus = /(?:সবগুলো|সব|shob|sob|all)\s*(?:অধ্যায়|অধ্যায়|চ্যাপ্টার|chapter|পাঠ)|(?:অধ্যায়গুলো|অধ্যায়গুলো|অধ্যায়ের\s*তালিকা|অধ্যায়\s*তালিকা|অধ্যায়গুলোর\s*নাম|তালিকা|সিলেবাস|syllabus)/i.test(userMessage);
   const mentionsCurrentSubj = state.subject_name && (userMessage.includes(state.subject_name) || (state.subject_id && userMessage.toLowerCase().includes(state.subject_id.replace(/^ssc_/, ''))));
 
-  if (!isMetaDebate && !isAnswering && !isBroadSyllabus) {
+  // 2. Classify Intent via Orchestrator Decision Router (Big Boss Router) early to protect conversational flow
+  const classifiedIntent = classifyIntent(userMessage, state, isAnswering);
+
+  if (!isMetaDebate && !isAnswering && !isBroadSyllabus && classifiedIntent !== INTENT_TYPES.GREETING) {
     try {
       // 1. Autonomous concept detection from query (covers both cross-subject and intra-subject chapter shifts)
       const queryConcept = detectSubjectAndChapterFromQuery(userMessage, state.subject_id);
@@ -330,8 +346,6 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
     await onEvent({ type: "state_sync", state });
   }
 
-  // 2. Classify Intent via Orchestrator Decision Router (Big Boss Router)
-  const classifiedIntent = classifyIntent(userMessage, state, isAnswering);
   const activeSubject = state.subject_id;
   const activeChapter = state.chapter_num;
 
@@ -357,8 +371,8 @@ Respond in natural, warm, inspiring Bengali. Keep greeting crisp (1-2 sentences)
     }
   }
 
-  // Token & Structure Optimization: Prune history (strip historical thoughts, limit to recent 4 clean turns)
-  const prunedHistory = pruneHistoryForContext(pastHistory, 4);
+  // Token & Structure Optimization: Prune history (strip historical thoughts, preserve last 12 clean turns)
+  const prunedHistory = pruneHistoryForContext(pastHistory, 12);
   for (const item of prunedHistory) {
     inputHistory.push(item);
   }
@@ -383,6 +397,15 @@ DYNAMIC MULTI-DISCIPLINARY SSC ACADEMIC ROUTING:
    - Seamlessly adopt that subject for the ongoing session without artificial barriers or stubborn refusals.
 5. ABSOLUTE PROHIBITION: Never ask "তুমি কোন বিষয় পড়তে চাও?" or refuse to answer. If a student asks any academic question or confirms a switch, answer the concept directly and fully!`
     });
+  } else {
+    inputHistory.push({
+      type: "message",
+      role: "system",
+      content: `ACTIVE ACADEMIC CONTEXT: No specific subject has been chosen yet.
+1. You are "বোধ" (BODH), Bangladesh's premier autonomous academic AI tutor for ALL SSC subjects (পদার্থবিজ্ঞান, রসায়ন, জীববিজ্ঞান, সাধারণ গণিত, উচ্চতর গণিত, বাংলা ১ম পত্র, বাংলা ২য় পত্র, আইসিটি, বাংলাদেশ ও বিশ্বপরিচয়, ইসলাম ও নৈতিক শিক্ষা).
+2. If the student asks about any academic topic or question: immediately identify the subject and chapter in your thought as [বিষয়: <বিষয়_নাম>, অধ্যায়: <অধ্যায়_নম্বর>] and deliver a comprehensive, master-level explanation!
+3. If the student sends a greeting or casual remark without mentioning any subject or academic question: warmly introduce yourself as 'বোধ' and politely ask which SSC subject they would like to focus on or discuss today (e.g. পদার্থবিজ্ঞান, রসায়ন, জীববিজ্ঞান, গণিত ইত্যাদি).`
+    });
   }
 
   if (classifiedIntent === INTENT_TYPES.GREETING) {
@@ -395,10 +418,10 @@ DYNAMIC MULTI-DISCIPLINARY SSC ACADEMIC ROUTING:
 1. Respond warmly and concisely in Bengali (1-2 sentences maximum).
 2. You are their dedicated academic mentor in '${activeSubjBn}'.
 3. ABSOLUTE PROHIBITION: The subject is ALREADY SELECTED as '${activeSubjBn}'. STRICTLY NEVER ask which subject they want to read, and NEVER say "কোন বিষয়" or "কোন অধ্যায় বা বিষয়"!
-4. Naturally invite them to begin with '${activeSubjBn}' (e.g. "হ্যালো! তোমার ${activeSubjBn} প্রস্তুতিকে সহজ ও মজবুত করতে আমি প্রস্তুত। ${activeSubjBn}-এর কোন অধ্যায় বা টপিক দিয়ে আজ শুরু করতে চাও?").` :
+4. Naturally invite them to begin with '${activeSubjBn}' (e.g. "হ্যালো! তোমার ${activeSubjBn} প্রস্তুতিকে সহজ ও মজবুত করতে আমি প্রস্তুত। আজ ${activeSubjBn}-এর কোন অধ্যায় বা টপিক বুঝতে চাও?").` :
         `GREETING DIRECTIVE:
-1. Respond warmly and concisely in Bengali (1-2 sentences) as 'বোধ' (BODH).
-2. Invite the student to share what they want to study today.`
+1. Respond warmly, professionally, and concisely in Bengali (1-2 sentences) as 'বোধ' (BODH), Bangladesh's premier autonomous academic AI tutor.
+2. Introduce yourself and invite the student to start by mentioning which SSC subject or topic they want to study today (যেমন: "হ্যালো! 👋 আমি বোধ—তোমার সার্বিক এসএসসি একাডেমিক সহায়ক। আজ কোন বিষয় নিয়ে পড়তে বা আলোচনা করতে চাও? পদার্থবিজ্ঞান, রসায়ন, জীববিজ্ঞান, গণিত নাকি অন্য কোনো বিষয়?").`
     });
   }
 
@@ -667,7 +690,7 @@ CRITICAL DIRECTIVES:
               } else if (item.type === "text" && item.text) {
                 stepContent = item.text;
                 // Continuously inspect full text for thought intent to update subject in real time
-                if (!syncedSubjectFromStream) {
+                if (!syncedSubjectFromStream && classifiedIntent !== INTENT_TYPES.GREETING) {
                   const aiDecisions = extractAiAcademicIntent(stepContent);
                   if (aiDecisions?.subject) {
                     if (aiDecisions.subject !== state.subject_id) {
@@ -915,7 +938,7 @@ CRITICAL DIRECTIVES:
           stepContent += "</thought>\n\n";
         }
         const thoughtMatch = stepContent.match(/<[\s]*thought[\s]*>([\s\S]*?)(?:<[\s]*\/[\s]*thought[\s]*>|$)/i);
-        if (thoughtMatch) {
+        if (thoughtMatch && classifiedIntent !== INTENT_TYPES.GREETING) {
           const aiDecisions = extractAiAcademicIntent(thoughtMatch[1]);
           if (aiDecisions?.subject && aiDecisions.subject !== state.subject_id) {
             state.subject_id = aiDecisions.subject;
