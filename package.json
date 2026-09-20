@@ -14,10 +14,24 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
-    "hono": "^4.7.2"
+    "hono": "^4.7.2",
+    "katex": "^0.18.7",
+    "lucide-react": "^1.47.0",
+    "marked": "^18.0.13",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.6.1",
     "nodemon": "^3.1.14",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
     "wrangler": "^4.131.1"
   }
 }

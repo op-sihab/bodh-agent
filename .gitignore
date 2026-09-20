@@ -11,3 +11,5 @@ scratch_*.mjs
 test_*.mjs
 .freebuff/
 scratch/
+.next/
+next-env.d.ts
