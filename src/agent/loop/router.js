@@ -48,26 +48,34 @@ export function classifyIntent(userMessage, state = {}, isAnswering = false) {
     return INTENT_TYPES.SIMILAR_PATTERN;
   }
 
-  // Board Exam Questions (e.g. "dhaka board er qs dew", "dhaka baord 2026সাধারণ গণিত qs gula sob dew to", "ঢাকা বোর্ডের প্রশ্ন")
+  // Single question or topic-specific MCQ request (e.g. "gotir ekta dhaka baord 2026 er mcq dew", "বল অধ্যায়ের ১টি mcq")
+  const isSingleOrTopicMcq = /(?:১টি|একটি|১টা|একটা|1\s*ta|1\s*ti|ekta|one|akta)\s*(?:mcq|কুইজ|quiz|প্রশ্ন|qs)?/i.test(lower) ||
+    (/(?:mcq|কুইজ|quiz|বহুনির্বাচন)/i.test(lower) && /(?:goti|গতি|bol|বল|kaj|কাজ|chap|চাপ|tap|তাপ|torongo|তরঙ্গ|alo|আলো|bidyut|বিদ্যুৎ|kosh|কোষ|mol|মোল|acid|অ্যাসিড|set|সেট|dhara|ধারা)/i.test(lower));
+
+  if (isSingleOrTopicMcq) {
+    return INTENT_TYPES.MCQ_QUIZ;
+  }
+
+  // CQ / Creative question (Highest Priority when student asks for CQ)
+  if (
+    /(?:সৃজনশীল|\bcq\b|উদ্দীপক|ক\s*খ\s*গ\s*ঘ|গ\s*ও\s*ঘ|creative)/i.test(lower)
+  ) {
+    return INTENT_TYPES.CQ_CREATIVE;
+  }
+
+  // Board Exam Questions / Full Papers (e.g. "dhaka board er qs dew", "চট্টগ্রাম বোর্ডের mcq", "ঢাকা বোর্ডের প্রশ্ন দাও")
   const hasBoardMention = /(?:বোর্ড(?:ের)?|board(?:s|'s)?|baord(?:s)?|borde|ঢাকা(?:র)?|চট্টগ্রাম(?:ের)?|রাজশাহী(?:র)?|সিলেট(?:ের)?|যশোর(?:ের)?|বরিশাল(?:ের)?|দিনাজপুর(?:ের)?|ময়মনসিংহ(?:ের)?|কুমিল্লা(?:র)?|dhaka|ctg|rajshahi|sylhet|jashore|jessore|barishal|dinajpur|mymensingh|comilla)/i.test(lower);
-  const hasQuestionMention = /(?:প্রশ্ন|qs|question|নৈর্ব্যক্তিক|mcq|cq|পরীক্ষা|exam|প্রশ্নপত্র)/i.test(lower);
+  const hasQuestionMention = /(?:প্রশ্ন|qs|question|নৈর্ব্যক্তিক|mcq|পরীক্ষা|exam|প্রশ্নপত্র)/i.test(lower);
 
   if (hasBoardMention && hasQuestionMention) {
     return INTENT_TYPES.BOARD_QUESTIONS;
   }
 
-  // MCQ / Quiz / Mock test (Highest Priority for question generation)
+  // MCQ / Quiz / Mock test (General MCQ generation)
   if (
     /(?:mcq|কুইজ|quiz|বহুনির্বাচন|নৈর্ব্যক্তিক|মক\s*টেস্ট|mock\s*test|পরীক্ষা\s*নাও|টেস্ট\s*দাও)/i.test(lower)
   ) {
     return INTENT_TYPES.MCQ_QUIZ;
-  }
-
-  // CQ / Creative question
-  if (
-    /(?:সৃজনশীল|cq|উদ্দীপক|ক\s*খ\s*গ\s*ঘ|গ\s*ও\s*ঘ|creative)/i.test(lower)
-  ) {
-    return INTENT_TYPES.CQ_CREATIVE;
   }
 
   // Syllabus / Chapter list

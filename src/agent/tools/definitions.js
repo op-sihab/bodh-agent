@@ -39,7 +39,7 @@ export const AGENT_TOOLS = [
     type: "function",
     function: {
       name: "get_board_exam_questions",
-      description: "Fetch questions from specific board exams (e.g. Dhaka Board, Chittagong Board).",
+      description: "Fetch authentic board exam question sets or full papers across an entire subject (e.g. Dhaka Board full exam). CRITICAL: If the student asks for questions on a specific chapter/topic (e.g. গতি, বল, কাজ) or single MCQ practice, you MUST invoke 'get_mcq_quiz' instead.",
       parameters: {
         type: "object",
         properties: {
@@ -54,6 +54,14 @@ export const AGENT_TOOLS = [
           subject: {
             type: "string",
             description: "Optional subject filter"
+          },
+          chapter: {
+            type: "string",
+            description: "Optional chapter name or number, e.g. 'গতি'"
+          },
+          topic: {
+            type: "string",
+            description: "Optional topic keyword"
           },
           count: {
             type: "integer",
@@ -110,7 +118,7 @@ export const AGENT_TOOLS = [
     type: "function",
     function: {
       name: "get_mcq_quiz",
-      description: "Fetch authentic board MCQ questions with 4 options from real past exams and test papers.",
+      description: "Fetch authentic board MCQ questions with 4 options from real past exams and test papers. Primary tool for chapter, topic, and board-specific MCQ practice. Always use this when the student asks for MCQs of a specific chapter or topic.",
       parameters: {
         type: "object",
         properties: {

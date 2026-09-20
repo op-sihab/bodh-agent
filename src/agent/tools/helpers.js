@@ -4,6 +4,8 @@ import { appCache } from "../../core/cache.js";
 import { normalizeSubject } from "../../config/subject-map.js";
 import {
   extractChapterNum,
+  findChapterNumByKeywords,
+  normalizeTopic,
   CHAPTER_CONCEPTS_MAP,
   STOP_WORDS_IR,
   normalizeAcademicString
@@ -119,6 +121,16 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     if (directCh) return directCh;
   }
 
+  // TIER 0.5: Direct Keyword / Topic / Concept Mapping via findChapterNumByKeywords
+  if (targetSubj) {
+    const kwNum = findChapterNumByKeywords(fullContext, targetSubj);
+    if (kwNum) {
+      const numInt = parseInt(kwNum, 10);
+      const kwCh = all.find(c => c.subject_id === targetSubj && parseInt(c.order_num, 10) === numInt);
+      if (kwCh) return kwCh;
+    }
+  }
+
   // Broad Syllabus / Entire Book check: do not map to a single chapter
   const isBroadSyllabus = /সম্পূর্ণ|পুরো\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|সব\s*অধ্যায়|সকল\s*অধ্যায়|ফুল\s*বই|ফুল\s*সিলেবাস|full\s*(?:syllabus|book)|all\s*chapters/i.test(fullContext);
   if (isBroadSyllabus && !targetChapterNum) {
@@ -230,9 +242,9 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
   }
 
   // Phase 2 Fallback: If title and concept matching confidence is low (< 350),
-  // dynamically query the 50,855 questions database!
+  // dynamically query the questions database for specific academic terms only!
   if (highestScore < 350 && queryTokens.length > 0) {
-    const searchTerms = queryTokens.filter(t => t.length >= 2);
+    const searchTerms = queryTokens.filter(t => t.length >= 3 && !STOP_WORDS_IR.has(t) && !/^\d+$/.test(t));
     if (searchTerms.length > 0) {
       const cacheKey = `${targetSubj || 'all'}_${searchTerms.join("_")}`;
       if (dynamicDbLookupCache.has(cacheKey)) {
@@ -252,6 +264,7 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
           JOIN chapters c ON q.chapter_id = c.id 
           WHERE (${clauses.join(' OR ')}) ${subjCondition}
           GROUP BY q.chapter_id, c.id, c.name, c.subject_id 
+          HAVING COUNT(*) >= 3
           ORDER BY 
             CASE WHEN q.question_text LIKE '%${fullPhrase.replace(/'/g, "''")}%' THEN 1 ELSE 2 END ASC,
             cnt DESC 
@@ -264,8 +277,8 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
             const foundCh = all.find(c => c.id === foundChId);
             if (foundCh) {
               bestMatch = foundCh;
-              highestScore = 900;
-              dynamicDbLookupCache.set(cacheKey, { ch: foundCh, score: 900 });
+              highestScore = 400;
+              dynamicDbLookupCache.set(cacheKey, { ch: foundCh, score: 400 });
             }
           }
         } catch (e) {

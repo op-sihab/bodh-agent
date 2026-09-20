@@ -574,7 +574,8 @@ CRITICAL DIRECTIVES:
   * The full authentic question set is ALREADY loaded into the student's interactive exam environment.
   * STRICTLY NEVER output or dump individual questions or options (যেমন: প্রশ্ন ১, প্রশ্ন ২, ক, খ, গ, ঘ) in your chat text!
   * Write ONLY a warm, concise academic introduction (1-2 sentences in authentic Bengali) stating the board and year, total questions, and time limit (e.g. "ঢাকা বোর্ড ২০২৬ এর পূর্ণাঙ্গ ২৫টি সাধারণ গণিত বহুনির্বাচনি প্রশ্ন (MCQ) প্রস্তুত করা হয়েছে। নির্ধারিত সময় ২৫ মিনিট।").
-  * Invite the student to click the 'পরীক্ষা শুরু করো' card below to start their timed board exam.
+- For single question requests (e.g. '১টি', 'ekta', '1টা', 'একটি প্রশ্ন', 'just 1'):
+  * STRICTLY NEVER invite the student to start a full exam, and NEVER mention 'মক টেস্ট' or 'পূর্ণাঙ্গ প্রশ্নপত্র'! Present ONLY the single authentic question for immediate practice!
 - Directly teach and present the authentic questions and academic content from the tool results for '${activeSubjBn}'.
 - Teach with deep intuition, step-by-step clarity, and real-life analogies like an authoritative yet empathetic master tutor.
 - Present data cleanly (tables, bullet points, bold highlights) for effortless readability.
@@ -880,12 +881,16 @@ CRITICAL DIRECTIVES:
             const numStr = countMatch[1].replace(/[০-৯]/g, d => toEn[d] || d);
             countVal = parseInt(numStr, 10) || 1;
           }
+          const boardMatch = userMessage.match(/(ঢাকা|চট্টগ্রাম|রাজশাহী|সিলেট|যশোর|বরিশাল|দিনাজপুর|ময়মনসিংহ|কুমিল্লা|dhaka|ctg|rajshahi|sylhet|jashore|jessore|barishal|dinajpur|mymensingh|comilla)/i);
+          const yearMatch = userMessage.match(/(?:20\d{2}|১৯\d{2}|২০\d{2})/);
           toolCall = {
             id: `call_${Date.now()}`,
             name: "get_mcq_quiz",
             input: {
               subject: activeSubject || undefined,
               chapter: activeChapter || undefined,
+              board: boardMatch ? boardMatch[1] : undefined,
+              year: yearMatch ? yearMatch[0] : undefined,
               count: countVal,
               query: userMessage,
               academic_intent: stepContent ? stepContent.replace(/<\/?thought>/gi, '').trim() : "শিক্ষার্থীর অনুরোধ অনুযায়ী বোর্ড বহুনির্বাচনী প্রশ্ন অনুসন্ধান করছি..."
@@ -985,6 +990,18 @@ CRITICAL DIRECTIVES:
       if (isFull) {
         if (!toolArgs.mode) toolArgs.mode = "full_exam";
         if (!toolArgs.count || toolArgs.count < 25) toolArgs.count = 25;
+      }
+    }
+
+    // Auto-inject board and year if model omitted them for get_mcq_quiz
+    if (toolName === "get_mcq_quiz") {
+      if (!toolArgs.board) {
+        const boardMatch = userMessage.match(/(ঢাকা|চট্টগ্রাম|রাজশাহী|সিলেট|যশোর|বরিশাল|দিনাজপুর|ময়মনসিংহ|কুমিল্লা|dhaka|ctg|rajshahi|sylhet|jashore|jessore|barishal|dinajpur|mymensingh|comilla)/i);
+        if (boardMatch) toolArgs.board = boardMatch[1];
+      }
+      if (!toolArgs.year) {
+        const yearMatch = userMessage.match(/(?:20\d{2}|১৯\d{2}|২০\d{2})/);
+        if (yearMatch) toolArgs.year = yearMatch[0];
       }
     }
 

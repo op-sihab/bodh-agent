@@ -4,6 +4,7 @@ import { normalizeSubject } from "../../../config/subject-map.js";
 import { normalizeBoard } from "../../../config/board-map.js";
 import { formatTag } from "../../../config/tag-map.js";
 import { parseYearFilter, buildYearSqlConditions, RECENT_YEAR_ORDER_BY } from "../../../config/chapter-map.js";
+import { findChapterCached } from "../helpers.js";
 
 export async function handleSearchQuestionBank(args) {
   const query = (args.query || "").replace(/'/g, "''").trim();
@@ -87,9 +88,14 @@ export async function handleGetBoardExamQuestions(args) {
                      /সব|সকল|full|সবগুলো|পূর্ণাঙ্গ|পুরো|25|২৫|sob/i.test(args.query || args.academic_intent || "");
   const mcqLimit = isFullExam ? Math.min(parseInt(args.count) || 30, 30) : Math.min(parseInt(args.count) || 3, 10);
 
+  const matchedCh = await findChapterCached(args, subjId);
+
   let qWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
   if (subjId) {
     qWhere.push(`subject_id = '${subjId}'`);
+  }
+  if (matchedCh) {
+    qWhere.push(`chapter_id = '${matchedCh.id}'`);
   }
   if (yrCode) {
     qWhere.push(`(tags LIKE '%${bCode} ${yrCode}%' OR tags LIKE '%${yrCode}%')`);
@@ -99,15 +105,16 @@ export async function handleGetBoardExamQuestions(args) {
   let mcqSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${qWhere.join(" AND ")} AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`;
   let mcqRes = await executeRawSql(mcqSql);
 
-  // Fallback: without year constraint if strict board+year had no rows
+  // Fallback: without year constraint if strict board+year had no rows (preserves board and chapter!)
   if (mcqRes.rows.length === 0 && yrCode) {
     const fbWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
     if (subjId) fbWhere.push(`subject_id = '${subjId}'`);
+    if (matchedCh) fbWhere.push(`chapter_id = '${matchedCh.id}'`);
     mcqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${fbWhere.join(" AND ")} AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`);
   }
 
-  // Fallback: any recent board questions for this subject if specific board had no rows
-  if (mcqRes.rows.length === 0 && subjId) {
+  // Fallback: ONLY if neither chapter nor specific board was requested, allow general recent questions
+  if (mcqRes.rows.length === 0 && subjId && !matchedCh && !args.board_name) {
     mcqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE subject_id = '${subjId}' AND tags != '' AND question_text != '' AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`);
   }
 
@@ -118,7 +125,9 @@ export async function handleGetBoardExamQuestions(args) {
   // seamlessly complete the set using recent authentic Dhaka Board questions from preceding years (e.g. 2025/2024)!
   if (isFullExam && topMcqs.length < mcqLimit && subjId) {
     const existingIds = new Set(topMcqs.map(r => r.id));
-    const backfillSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE tags LIKE '%${bCode}%' AND subject_id = '${subjId}' AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT 50;`;
+    const bfWhere = [`tags LIKE '%${bCode}%'`, `subject_id = '${subjId}'`, `type IN ('MCQ', 'MCQ_N')`, `answer != ''`];
+    if (matchedCh) bfWhere.push(`chapter_id = '${matchedCh.id}'`);
+    const backfillSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${bfWhere.join(" AND ")} ${RECENT_YEAR_ORDER_BY} LIMIT 50;`;
     const bfRes = await executeRawSql(backfillSql);
     for (const row of bfRes.rows) {
       if (!existingIds.has(row.id)) {
@@ -142,10 +151,11 @@ export async function handleGetBoardExamQuestions(args) {
   if (cqRes.rows.length === 0 && yrCode) {
     const fbWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
     if (subjId) fbWhere.push(`subject_id = '${subjId}'`);
+    if (matchedCh) fbWhere.push(`chapter_id = '${matchedCh.id}'`);
     cqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE ${fbWhere.join(" AND ")} AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`);
   }
 
-  if (cqRes.rows.length === 0 && subjId) {
+  if (cqRes.rows.length === 0 && subjId && !matchedCh && !args.board_name) {
     cqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE subject_id = '${subjId}' AND tags != '' AND question_text != '' AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`);
   }
 
@@ -158,7 +168,10 @@ export async function handleGetBoardExamQuestions(args) {
     board: bName,
     year: args.year || "সকল বছর",
     subject: subjId || "সকল বিষয়",
+    chapter: matchedCh?.name || null,
+    mode: isFullExam ? "full_exam" : "sample",
     is_full_exam: isFullExam,
+    exam_title: isFullExam ? `${bName} বোর্ড ${args.year || ''} পূর্ণাঙ্গ প্রশ্নপত্র` : null,
     total_found: topMcqs.length + sampleCqs.length,
     sample_mcq: topMcqs.map(r => ({
       id: r.id,

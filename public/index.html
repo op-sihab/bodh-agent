@@ -3574,12 +3574,13 @@
           const q = res.sample_mcq?.[0];
           const bName = res.board || args?.board_name || 'ঢাকা';
           const bYr = res.year || args?.year || '২০২৬';
+          const isFull = args?.mode === 'full_exam' || res?.is_full_exam || res?.mode === 'full_exam' || (res?.sample_mcq && res.sample_mcq.length >= 15);
           return {
             boardTag: res.board ? res.board + ' বোর্ড' : (args?.board_name ? args.board_name + ' বোর্ড' : null),
             ans: q?.answer || null,
             quizData: res.sample_mcq || null,
             qid: q?.id || null,
-            examTitle: `${bName} বোর্ড ${bYr} পূর্ণাঙ্গ প্রশ্নপত্র`
+            examTitle: isFull ? `${bName} বোর্ড ${bYr} পূর্ণাঙ্গ প্রশ্নপত্র` : null
           };
         } else if (tool === 'find_similar_type_questions') {
           const q = res.similar_type_questions?.[0] || res.seed_question;
@@ -3872,13 +3873,16 @@
           const rawFullText = final || cleanFinal || '';
           const hasLauncherTag = /\[exam_launcher:/i.test(rawFullText) || /%%%EXAM_LAUNCHER_PLACEHOLDER%%%/i.test(rawFullText);
           const hasTurnQuestions = currentTurnExamQuestions && Array.isArray(currentTurnExamQuestions) && currentTurnExamQuestions.length >= 2;
-          const isExamTool = targetEvt && (targetEvt.tool === 'get_board_exam_questions' || (targetEvt.tool === 'get_mcq_quiz' && hasTurnQuestions));
+          const isFullExamMode = targetEvt && (targetEvt.args?.mode === 'full_exam' || targetEvt.result?.mode === 'full_exam' || targetEvt.result?.is_full_exam || parseInt(targetEvt.args?.count) >= 15);
+          const isSingleQuestionReq = /\b(?:১টি|একটি|১টা|একটা|1\s*ta|1\s*ti|ekta|one|akta|1\s*mcq|1\s*cq)\b/i.test(text) || /(?:ekta|akta|1ta|1ti|১টি|একটি|১টা|একটা|একটিমাত্র|just\s*1)/i.test(text);
+          const hasInteractiveCard = Boolean(document.getElementById(msgId)?.querySelector('.mcq-wrapper') || document.querySelector(`#${msgId} .mcq-wrapper`));
 
-          // STRICT CONDITION: Only mount the exam card if THIS specific turn either:
-          // 1. Has [exam_launcher: ...] in the response, OR
-          // 2. Executed a board exam or multi-MCQ quiz tool in this turn, OR
-          // 3. The student's prompt specifically asked for an exam/test AND questions were returned in this turn.
-          const shouldMountExamCard = !isAuditText && (hasLauncherTag || isExamTool || (isExamRequisition && hasTurnQuestions));
+          // STRICT CONDITION: Only mount the exam card if:
+          // 1. Not an audit text
+          // 2. Not a single question request (e.g. ekta mcq)
+          // 3. Not already showing an interactive single MCQ card
+          // 4. Has either explicit [exam_launcher: ...] OR (has multiple questions AND full exam mode / exam requisition)
+          const shouldMountExamCard = !isAuditText && !isSingleQuestionReq && !hasInteractiveCard && (hasLauncherTag || (hasTurnQuestions && (isFullExamMode || isExamRequisition)));
 
           if (shouldMountExamCard) {
             const qListToEmbed = hasTurnQuestions
@@ -4196,7 +4200,10 @@
                 streamContent = "";
                 const contentEl = document.getElementById(contentId);
                 const isAuditText = /পরীক্ষা\s*সমাপ্তি|ফলাফল|মিস্টেক\s*ক্লিনিক|পারফরম্যান্স\s*অডিট|ভুল\s*হওয়া\s*প্রশ্নসমূহ/i.test(text);
-                if (!isAuditText && (data.tool === "get_board_exam_questions" || (data.tool === "get_mcq_quiz" && (data.args?.count >= 3 || /মক|পরীক্ষা|exam|test|সব|full/i.test(text))))) {
+                const isSingleReq = /\b(?:১টি|একটি|১টা|একটা|1\s*ta|1\s*ti|ekta|one|akta|1\s*mcq|1\s*cq)\b/i.test(text);
+                const isFullTool = (data.tool === "get_board_exam_questions" && (data.args?.mode === "full_exam" || parseInt(data.args?.count) >= 15 || /মক|পরীক্ষা|exam|test|সব|full|পূর্ণাঙ্গ/i.test(text))) ||
+                                   (data.tool === "get_mcq_quiz" && (parseInt(data.args?.count) >= 10 || /মক|পরীক্ষা|exam|test|সব|full/i.test(text)));
+                if (!isAuditText && !isSingleReq && isFullTool) {
                   isExamRequisition = true;
                 }
                 if (contentEl) {
@@ -4291,13 +4298,15 @@
           if (metaEl) metaEl.classList.remove('hidden');
 
           const isAuditText = /পরীক্ষা\s*সমাপ্তি|ফলাফল|মিস্টেক\s*ক্লিনিক|পারফরম্যান্স\s*অডিট|ভুল\s*হওয়া\s*প্রশ্নসমূহ/i.test(text);
+          const isSingleReq = /\b(?:১টি|একটি|১টা|একটা|1\s*ta|1\s*ti|ekta|one|akta|1\s*mcq|1\s*cq)\b/i.test(text) || /(?:ekta|akta|1ta|1ti|১টি|একটি|১টা|একটা|একটিমাত্র|just\s*1)/i.test(text);
           const examSlotEl = document.getElementById(`examSlot_${msgId}`);
           const hasTurnQuestions = currentTurnExamQuestions && Array.isArray(currentTurnExamQuestions) && currentTurnExamQuestions.length >= 2;
-          const isExamTool = (toolDoneEvt || toolStartEvt) && ((toolDoneEvt || toolStartEvt).tool === 'get_board_exam_questions' || ((toolDoneEvt || toolStartEvt).tool === 'get_mcq_quiz' && hasTurnQuestions));
-          const shouldMountExamCard = !isAuditText && (isExamTool || (isExamRequisition && hasTurnQuestions));
+          const targetEvt = toolDoneEvt || toolStartEvt;
+          const isFullMode = targetEvt && (targetEvt.args?.mode === 'full_exam' || targetEvt.result?.mode === 'full_exam' || parseInt(targetEvt.args?.count) >= 15);
+          const hasCard = Boolean(document.getElementById(msgId)?.querySelector('.mcq-wrapper') || document.querySelector(`#${msgId} .mcq-wrapper`));
+          const shouldMountExamCard = !isAuditText && !isSingleReq && !hasCard && hasTurnQuestions && (isFullMode || isExamRequisition);
 
           if (shouldMountExamCard && examSlotEl) {
-            const targetEvt = toolDoneEvt || toolStartEvt;
             const extras = extractToolExtras(targetEvt);
             const rawSubj = targetEvt?.result?.subject || targetEvt?.args?.subject || currentSelectedSubject?.name || 'এসএসসি বিষয়';
             const chStr = extras.examTitle || (targetEvt?.args?.board ? `${targetEvt.args.board} বোর্ড পূর্ণাঙ্গ প্রশ্নপত্র` : null);

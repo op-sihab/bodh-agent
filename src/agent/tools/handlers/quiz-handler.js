@@ -111,11 +111,10 @@ export async function handleGetMcqQuiz(args) {
     `;
     let res = await executeRawSql(sql);
 
-    // Fallback 1: If board + year was too restrictive, try requested years across ANY authentic board first!
+    // Fallback 1: If board was requested with a specific year, try the SAME board across other recent years in this chapter!
     if (res.rows.length < count && boardTag && boardTag !== "RANDOM" && years.length > 0) {
-      const yrAllBoards = buildYearSqlConditions(null, years);
       const existingIds = res.rows.map(r => `'${r.id}'`);
-      const fbWhere1 = [...baseConditions, yrAllBoards];
+      const fbWhere1 = [...baseConditions, `tags LIKE '%${boardTag}%'`];
       if (existingIds.length > 0) fbWhere1.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
@@ -130,10 +129,11 @@ export async function handleGetMcqQuiz(args) {
       }
     }
 
-    // Fallback 2: Try board without year restriction
-    if (res.rows.length < count && boardTag && boardTag !== "RANDOM") {
+    // Fallback 2: ONLY if the user did NOT request a specific board, try across any authentic board in this chapter
+    const isSpecificBoardRequested = Boolean(boardTag && boardTag !== "RANDOM");
+    if (!isSpecificBoardRequested && res.rows.length < count) {
       const existingIds = res.rows.map(r => `'${r.id}'`);
-      const fbWhere2 = [...baseConditions, `tags LIKE '%${boardTag}%'`];
+      const fbWhere2 = [...baseConditions, `tags != '' AND tags IS NOT NULL`];
       if (existingIds.length > 0) fbWhere2.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
@@ -148,26 +148,8 @@ export async function handleGetMcqQuiz(args) {
       }
     }
 
-    // Fallback 3: If this specific board has fewer questions in this chapter, try without board filter
-    if (res.rows.length < count) {
-      const existingIds = res.rows.map(r => `'${r.id}'`);
-      const fbWhere3 = [...baseConditions, `tags != '' AND tags IS NOT NULL`];
-      if (existingIds.length > 0) fbWhere3.push(`id NOT IN (${existingIds.join(',')})`);
-      sql = `
-        SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
-        FROM questions
-        WHERE ${fbWhere3.join(" AND ")}
-        ${RECENT_YEAR_ORDER_BY}
-        LIMIT 80;
-      `;
-      const fbRes3 = await executeRawSql(sql);
-      if (fbRes3.rows && fbRes3.rows.length > 0) {
-        res.rows = [...res.rows, ...fbRes3.rows];
-      }
-    }
-
-    // Fallback 3.5: If verified chapter still has fewer questions than count, check unmapped questions using concepts
-    if (res.rows.length < count && kwSql) {
+    // Fallback 2.5: If verified chapter still has fewer questions than count, check unmapped questions using concepts (STILL within chapter concepts, and if specific board, only that board)
+    if (res.rows.length < count && kwSql && !isSpecificBoardRequested) {
       const existingIds = res.rows.map(r => `'${r.id}'`);
       const fbUnmapped = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `(chapter_id NOT LIKE 'ch_%' AND (${kwSql}))`];
       if (subjId) fbUnmapped.push(`subject_id = '${subjId}'`);
@@ -180,14 +162,16 @@ export async function handleGetMcqQuiz(args) {
         ${RECENT_YEAR_ORDER_BY}
         LIMIT 80;
       `;
-      const fbRes35 = await executeRawSql(sql);
-      if (fbRes35.rows && fbRes35.rows.length > 0) {
-        res.rows = [...res.rows, ...fbRes35.rows];
+      const fbRes25 = await executeRawSql(sql);
+      if (fbRes25.rows && fbRes25.rows.length > 0) {
+        res.rows = [...res.rows, ...fbRes25.rows];
       }
     }
 
-    // Fallback 4: General subject fallback if fewer than count and not full syllabus or broad request
-    if (res.rows.length < count && subjId) {
+    // CRITICAL: NEVER drop chapter condition if a chapter or topic was requested!
+    // Fallback across entire subject is ONLY allowed for broad/full-syllabus requests where no specific chapter was requested.
+    const hasSpecificChapter = Boolean(matchedMcqChapterId || kwSql);
+    if (!hasSpecificChapter && !isSpecificBoardRequested && res.rows.length < count && subjId) {
       const existingIds = res.rows.map(r => `'${r.id}'`);
       const fbWhere4 = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `subject_id = '${subjId}'`, `tags != '' AND tags IS NOT NULL`];
       if (existingIds.length > 0) fbWhere4.push(`id NOT IN (${existingIds.join(',')})`);
@@ -259,7 +243,7 @@ export async function handleGetMcqQuiz(args) {
     }
   }
 
-  if (sampled.length < count && subjId) {
+  if (sampled.length < count && subjId && !matchedMcqChapterId && !kwSql && !isSpecificBoardRequested) {
     const sampledIds = new Set(sampled.map(r => r.id));
     const needed = count - sampled.length;
     const finalFbSql = `

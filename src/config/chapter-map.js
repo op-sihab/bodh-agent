@@ -360,7 +360,7 @@ export function extractDirectTopicTokens(rawT, matchedChapterInfo) {
   const stopWords = new Set([
     'অধ্যায়', 'অধ্যায়', 'chapter', 'ch', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'ekta', 'akta', 'কুইজ', 'quiz',
     'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে',
-    'প্রশ্ন', 'prosno', 'বোর্ড', 'সাল', 'দেও', 'mcq', 'cq', '১টি', 'একটি', 'দুটো', '১', '২', '৩', '৪', '৫',
+    'প্রশ্ন', 'prosno', 'বোর্ড', 'board', 'baord', 'সাল', 'দেও', 'dew', 'mcq', 'cq', 'qs', 'question', '১টি', 'একটি', 'দুটো', '১', '২', '৩', '৪', '৫',
     'dio', 'deba', 'debe', 'chai', 'চাই', 'দিতে', 'করো', 'koro', 'practice', 'অনুশীলন',
     'গল্প', 'উপন্যাস', 'নাটক', 'কবিতা', 'প্রবন্ধ', 'পদ্য', 'গদ্য', 'সাহিত্য', 'অংশ', 'নিয়ে', 'সম্পর্কে', 'বিষয়', 'বিষয়ক',
     'সম্পূর্ণ', 'পুরো', 'সব', 'সকল', 'পাঠ্যক্রম', 'সিলেবাস', 'বই', 'বইয়ের', 'ফুল', 'all', 'full', 'syllabus', 'book', 'whole', 'সবগুলো'
@@ -369,8 +369,15 @@ export function extractDirectTopicTokens(rawT, matchedChapterInfo) {
 
   // 1. Check for known multi-word or exact topic phrases
   const matchedPhrases = [];
+  const chName = matchedChapterInfo?.name ? normalizeAcademicString(matchedChapterInfo.name) : "";
   for (const phrase of KNOWN_TOPIC_PHRASES) {
     if (normT.includes(phrase)) {
+      // CRITICAL: Do NOT treat the chapter name itself as a sub-topic filter!
+      // The chapter is already strictly constrained via chapter_id in SQL.
+      const normPhrase = normalizeAcademicString(phrase);
+      if (chName && (chName === normPhrase || chName.includes(normPhrase) || normPhrase.includes(chName))) {
+        continue;
+      }
       matchedPhrases.push(phrase);
     }
   }
@@ -385,8 +392,7 @@ export function extractDirectTopicTokens(rawT, matchedChapterInfo) {
     !/^[০-৯]+$/.test(w) && 
     !stopWords.has(w.toLowerCase())
   );
-  const chName = matchedChapterInfo?.name;
-  return words.filter(w => !chName || !chName.includes(w));
+  return words.filter(w => !chName || !chName.includes(normalizeAcademicString(w)));
 }
 
 export function extractChapterKeywords(rawT, matchedChapterInfo, subjId) {
@@ -396,7 +402,7 @@ export function extractChapterKeywords(rawT, matchedChapterInfo, subjId) {
   const normT = normalizeTopic(rawT);
   const candidateNames = [normT, matchedChapterInfo?.name].filter(Boolean);
   const stopWords = new Set([
-    'অধ্যায়', 'অধ্যায়', 'chapter', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'ekta', 'akta', 'কুইজ', 'quiz',
+    'অধ্যায়', 'অধ্যায়', 'chapter', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'dew', 'ekta', 'akta', 'কুইজ', 'quiz',
     'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে',
     'dio', 'deba', 'debe', 'chai', 'চাই', 'দিতে', 'করো', 'koro', 'practice', 'অনুশীলন', 'সাহিত্য',
     'সম্পূর্ণ', 'পুরো', 'সব', 'সকল', 'পাঠ্যক্রম', 'সিলেবাস', 'বই', 'বইয়ের', 'ফুল', 'all', 'full', 'syllabus', 'book', 'whole', 'সবগুলো'
@@ -438,10 +444,10 @@ export const RECENT_YEAR_ORDER_BY = `
 `;
 
 export const STOP_WORDS_IR = new Set([
-  'অধ্যায়', 'অধ্যায়', 'chapter', 'ch', 'এর', 'থেকে', 'theke', 'এবং', 'ও', 'সম্পর্কিত', 'dio', 'dao', 'ekta', 'akta', 'mcq', 'cq', 'prosno', 'প্রশ্ন',
-  'দাও', 'দেও', 'কুইজ', 'quiz', 'কোনটি', 'কোন', 'কি', 'কী', 'নিচের', 'নিচে', 'বোর্ড', 'সাল',
+  'অধ্যায়', 'অধ্যায়', 'chapter', 'ch', 'এর', 'er', 'থেকে', 'theke', 'এবং', 'ও', 'সম্পর্কিত', 'dio', 'dao', 'dew', 'ekta', 'akta', 'ta', 'ti', 'mcq', 'cq', 'qs', 'question', 'prosno', 'প্রশ্ন',
+  'দাও', 'দেও', 'কুইজ', 'quiz', 'কোনটি', 'কোন', 'কি', 'কী', 'নিচের', 'নিচে', 'বোর্ড', 'board', 'baord', 'borde', 'সাল', 'year', '2020', '2021', '2022', '2023', '2024', '2025', '2026',
   'কে', 'কাকে', 'কার', 'কারা', 'কাদের', 'বলে', 'বলতে', 'বোঝায়', 'বোঝায়', 'বলুন', 'বলো', 'জানাও', 'উত্তরে', 'উত্তর', 'হলো', 'হলে', 'হয়', 'হয়', 'হয়েছিল', 'হয়েছিল', 'করে', 'করা', 'কখন', 'কোথায়', 'কোথায়', 'কেন', 'কিভাবে', 'কীভাবে', 'সম্পর্কে', 'কিছু', 'উদাহরণ', 'ব্যাখ্যা', 'বর্ণনা',
-  'সম্পূর্ণ', 'পুরো', 'সব', 'সকল', 'পাঠ্যক্রম', 'সিলেবাস', 'বই', 'বইয়ের', 'ফুল', 'all', 'full', 'syllabus', 'book', 'whole', 'সবগুলো',
+  'সম্পূর্ণ', 'পুরো', 'সব', 'সকল', 'পাঠ্যক্রম', 'সিলেবাস', 'বই', 'বইয়ের', 'ফুল', 'all', 'full', 'syllabus', 'book', 'whole', 'সবগুলো', 'sob', 'gula', 'ar', 'aar',
   'ভাই', 'vai', 'bhai', 'bro', 'sir', 'স্যার', 'ম্যাম', 'আপু', 'apu', 'হ্যালো', 'হাই', 'হে', 'হেই', 'সালাম', 'আসসালামু', 'আলাইকুম', 'নমস্কার', 'আদাব', 'kemon', 'acho', 'কেমন', 'আছো', 'আছেন', 'ভালো', 'valo', 'hi', 'hello', 'hlw', 'hey'
 ]);
 
