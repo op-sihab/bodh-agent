@@ -63,8 +63,14 @@ export function normalizeSubject(raw) {
   // ICT
   if (/আইসিটি|\bict\b|তথ্য\s*ও\s*যোগাযোগ|মডেম|রাউটার|ডেটাবেজ|ডাটাবেজ/i.test(s)) return 'ssc_ict';
   
-  // Religion
-  if (/ইসলাম|ধর্ম|\bislam\b|আকিকা|আকীকাহ|কুরবানি|নামাজ|রোজা|হজ|যাকাত|তাওহিদ/i.test(s)) return 'ssc_islam';
+  // Religion (strictly exclude scientific/general property terms and false positives like সহজ, হজম, সমন্বয়ধর্মী)
+  if (/(?:ধর্মী|সমন্বয়ধর্মী|সমন্বয়ধর্মী|ভৌত\s*ধর্ম|রাসায়নিক\s*ধর্ম|পদার্থের\s*ধর্ম|মৌলের\s*ধর্ম|অম্লধর্মী|ক্ষারধর্মী|চৌম্বক\s*ধর্ম|তরঙ্গ\s*ধর্ম)/i.test(s)) {
+    // Scientific or general property term, not a subject name
+  } else if (/(?:সহজ|সহজে|সহজেই|হজম)/i.test(s) && !/(?:ইসলাম|নামাজ|রোজা|হজ্জ|যাকাত)/i.test(s)) {
+    // Non-religious common words, not a subject name
+  } else if (/(?:ইসলাম\s*ও\s*নৈতিক\s*শিক্ষা|ইসলাম\s*শিক্ষা|ইসলামিক|\bislam\b|\bislamic\b|(?:^|\s)ইসলাম(?:\s|$)|ধর্ম\s*শিক্ষা|ধর্ম\s*ও\s*নৈতিক|(?:^|\s)ধর্ম(?:\s|$)|আকিকা|আকীকাহ|কুরবানি|নামাজ|রোজা|(?:^|\s)হজ(?:ব্রত)?(?:\s|$)|হজ্জ|যাকাত|তাওহিদ|তাওহীদ|রিসালাত|আখিরাত|ঈমান)/i.test(s)) {
+    return 'ssc_islam';
+  }
   if (/হিন্দু|\bhindu\b/i.test(s)) return 'ssc_hindu';
   
   // Agriculture

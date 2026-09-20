@@ -1732,8 +1732,7 @@
         else if (up.includes('বাংলা') || up.includes('bangla')) subj = 'বাংলা';
         else if (up.includes('ইংরেজি') || up.includes('english')) subj = 'ইংরেজি';
         else if (up.includes('ict') || up.includes('তথ্য')) subj = 'তথ্য ও যোগাযোগ প্রযুক্তি';
-        else if (up.includes('bgs') || up.includes('সমাজ')) subj = 'বাংলাদেশ ও বিশ্বপরিচয়';
-        else if (up.includes('ধর্ম') || up.includes('ইসলাম')) subj = 'ইসলাম শিক্ষা';
+        else if ((up.includes('ইসলাম') || /(?:ধর্ম\s*শিক্ষা|ধর্ম\s*ও\s*নৈতিক|(?:^|\s)ধর্ম(?:\s|$))/i.test(up)) && !/(?:ধর্মী|সমন্বয়ধর্মী|সমন্বয়ধর্মী|ভৌত\s*ধর্ম|রাসায়নিক\s*ধর্ম|পদার্থের\s*ধর্ম|মৌলের\s*ধর্ম|অম্লধর্মী|ক্ষারধর্মী)/i.test(up)) subj = 'ইসলাম শিক্ষা';
       }
 
       if (!rawTopic && userPrompt) {

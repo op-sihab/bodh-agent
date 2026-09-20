@@ -571,7 +571,7 @@ export const TOPIC_TAXONOMY = [
     chapter_num: '2',
     chapter_name: 'শরীয়তের উৎস',
     patterns: [
-      /(?:^|\s|[^\u0980-\u09ff\w])(?:শরীয়ত|শরিয়ত|শরিয়তের\s*উৎস|কুরআন\s*মাজিদ|আল-কুরআন|কুরআন|ওহি|তাজবিদ|ওয়াকফ|মাক্কি\s*সুরা|মাদানি\s*সুরা|সুরা\s*ইনফিতার|সুরা\s*শামস|হাদিস|হাদিসে\s*কুদসি|সনদ|মতন|সিহাহ\s*সিত্তাহ|বুখারি|মুসলিম|তিরমিজি|ইজমা|কিয়াস|কিয়াস)(?:$|\s|[^\u0980-\u09ff\w])/i
+      /(?:^|\s|[^\u0980-\u09ff\w])(?:শরীয়ত|শরিয়ত|শরিয়তের\s*উৎস|কুরআন\s*মাজিদ|আল-কুরআন|কুরআন|ওহি|তাজবিদ|ওয়াকফ|মাক্কি\s*সুরা|মাদানি\s*সুরা|সুরা\s*ইনফিতার|সুরা\s*শামস|হাদিস|হাদিসে\s*কুদসি|(?:হাদিসের\s*সনদ|সনদ\s*ও\s*মতন|মদিনা\s*সনদ)|(?:হাদিসের\s*মতন|মতন\s*ও\s*সনদ)|সিহাহ\s*সিত্তাহ|বুখারি\s*শরিফ|ইমাম\s*বুখারি|সহীহ\s*মুসলিম|তিরমিজি|ইজমা|কিয়াস|কিয়াস)(?:$|\s|[^\u0980-\u09ff\w])/i
     ]
   },
   {
@@ -619,8 +619,10 @@ export function detectSubjectAndChapterFromQuery(queryText, currentSubjectId = n
 
   const cleanNoCase = clean.replace(/(?:ের|কে|তে|এ|য়|টি|গুলো|টার|টির)(?=\s|$|[^\u0980-\u09ff\w])/g, '');
 
-  // 1. Direct explicit subject check
-  const directSubj = normalizeSubject(clean) || normalizeSubject(cleanNoCase);
+  // 1. Direct explicit subject check (only for concise queries <= 4 words or explicit subject change intent)
+  const isConcise = clean.split(/\s+/).length <= 4;
+  const hasSubjectIntent = /(?:subject|বিষয়|বিষয়|sub)\s*[:ঃ]?\s*([^\s,।]+)|(?:এখন\s*থেকে|আমরা\s*এখন|পড়ব|পড়তে\s*চাই|যাব)\s*([^\s,।]+)/i.test(clean);
+  const directSubj = (isConcise || hasSubjectIntent) ? (normalizeSubject(clean) || normalizeSubject(cleanNoCase)) : null;
   if (directSubj && directSubj !== currentSubjectId) {
     // If user explicitly named a different subject (e.g. "physics porbo", "chemistry te jabo")
     for (const item of TOPIC_TAXONOMY) {

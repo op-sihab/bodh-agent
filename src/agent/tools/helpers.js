@@ -153,8 +153,9 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
   let bestMatch = null;
   let highestScore = -99999;
   const totalChapters = all.length;
+  const candidateChapters = targetSubj ? all.filter(c => c.subject_id === targetSubj) : all;
 
-  for (const c of all) {
+  for (const c of candidateChapters) {
     let score = 0;
     const normChName = normalizeAcademicString(c.name);
     const chNum = parseInt(c.order_num, 10);
@@ -225,7 +226,9 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
       if (normCon === 'কাজ' && c.subject_id === 'ssc_physics' && isWorkGenericContext) {
         continue;
       }
-      if (normCon.length >= 2 && (rawClean.includes(normCon) || queryTokens.includes(normCon))) {
+      const isConExact = queryTokens.includes(normCon);
+      const isConSub = normCon.length >= 4 && rawClean.includes(normCon);
+      if (isConExact || isConSub) {
         score += 850;
       }
     }

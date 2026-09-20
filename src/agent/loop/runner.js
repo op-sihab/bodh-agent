@@ -188,13 +188,15 @@ function extractAiAcademicIntent(thoughtText) {
     }
   }
 
-  // 4. Autonomous concept detection fallback directly from thought content
-  const conceptInThought = detectSubjectAndChapterFromQuery(thoughtText);
-  if (conceptInThought && conceptInThought.subject_id) {
-    return {
-      subject: conceptInThought.subject_id,
-      chapter: conceptInThought.chapter_num || null
-    };
+  // 4. Autonomous concept detection fallback directly from thought content (only if thought explicitly announces subject change)
+  if (/(?:বিষয়|বিষয়|subject)\s*[:ঃ]|(?:এখন\s*থেকে|আমরা\s*এখন|সেশনটি)\s*(?:এসএসসি\s*)?/i.test(thoughtText)) {
+    const conceptInThought = detectSubjectAndChapterFromQuery(thoughtText);
+    if (conceptInThought && conceptInThought.subject_id) {
+      return {
+        subject: conceptInThought.subject_id,
+        chapter: conceptInThought.chapter_num || null
+      };
+    }
   }
 
   return null;
@@ -294,7 +296,7 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
   // 2. Classify Intent via Orchestrator Decision Router (Big Boss Router) early to protect conversational flow
   const classifiedIntent = classifyIntent(userMessage, state, isAnswering);
 
-  if (!isMetaDebate && !isAnswering && !isBroadSyllabus && classifiedIntent !== INTENT_TYPES.GREETING) {
+  if (!isMetaDebate && !isAnswering && !isBroadSyllabus && classifiedIntent !== INTENT_TYPES.GREETING && classifiedIntent !== INTENT_TYPES.SIMILAR_PATTERN) {
     try {
       // 1. Autonomous concept detection from query (covers both cross-subject and intra-subject chapter shifts)
       const queryConcept = detectSubjectAndChapterFromQuery(userMessage, state.subject_id);
@@ -317,20 +319,23 @@ export async function runAgenticConversation(userMessage, onEvent, options = {})
           state.subject_name = SUBJECT_DISPLAY_NAMES[explicitSubj] || explicitSubj;
           state.chapter_num = findChapterNumByKeywords(userMessage, explicitSubj);
           state.active_question = null;
+        } else if (state.subject_id) {
+          // Subject is already active: only look up chapters WITHIN the active subject
+          const dbChapterMatch = await findChapterCached(userMessage, state.subject_id);
+          if (dbChapterMatch && dbChapterMatch.subject_id === state.subject_id && String(dbChapterMatch.order_num) !== state.chapter_num) {
+            state.chapter_num = String(dbChapterMatch.order_num);
+            state.chapter_name = dbChapterMatch.name;
+            state.active_question = null;
+          }
         } else {
-          const dbChapterMatch = await findChapterCached(userMessage, null, null);
+          // No subject active: allow initial subject discovery
+          const dbChapterMatch = await findChapterCached(userMessage, null);
           if (dbChapterMatch && dbChapterMatch.subject_id) {
-            if (dbChapterMatch.subject_id !== state.subject_id) {
-              state.subject_id = dbChapterMatch.subject_id;
-              state.subject_name = SUBJECT_DISPLAY_NAMES[dbChapterMatch.subject_id] || dbChapterMatch.subject_id;
-              state.chapter_num = String(dbChapterMatch.order_num);
-              state.chapter_name = dbChapterMatch.name;
-              state.active_question = null;
-            } else if (String(dbChapterMatch.order_num) !== state.chapter_num) {
-              state.chapter_num = String(dbChapterMatch.order_num);
-              state.chapter_name = dbChapterMatch.name;
-              state.active_question = null;
-            }
+            state.subject_id = dbChapterMatch.subject_id;
+            state.subject_name = SUBJECT_DISPLAY_NAMES[dbChapterMatch.subject_id] || dbChapterMatch.subject_id;
+            state.chapter_num = String(dbChapterMatch.order_num);
+            state.chapter_name = dbChapterMatch.name;
+            state.active_question = null;
           }
         }
       }
@@ -691,7 +696,7 @@ CRITICAL DIRECTIVES:
               } else if (item.type === "text" && item.text) {
                 stepContent = item.text;
                 // Continuously inspect full text for thought intent to update subject in real time
-                if (!syncedSubjectFromStream && classifiedIntent !== INTENT_TYPES.GREETING) {
+                if (!syncedSubjectFromStream && classifiedIntent !== INTENT_TYPES.GREETING && classifiedIntent !== INTENT_TYPES.SIMILAR_PATTERN) {
                   const aiDecisions = extractAiAcademicIntent(stepContent);
                   if (aiDecisions?.subject) {
                     if (aiDecisions.subject !== state.subject_id) {
@@ -943,7 +948,7 @@ CRITICAL DIRECTIVES:
           stepContent += "</thought>\n\n";
         }
         const thoughtMatch = stepContent.match(/<[\s]*thought[\s]*>([\s\S]*?)(?:<[\s]*\/[\s]*thought[\s]*>|$)/i);
-        if (thoughtMatch && classifiedIntent !== INTENT_TYPES.GREETING) {
+        if (thoughtMatch && classifiedIntent !== INTENT_TYPES.GREETING && classifiedIntent !== INTENT_TYPES.SIMILAR_PATTERN) {
           const aiDecisions = extractAiAcademicIntent(thoughtMatch[1]);
           if (aiDecisions?.subject && aiDecisions.subject !== state.subject_id) {
             state.subject_id = aiDecisions.subject;

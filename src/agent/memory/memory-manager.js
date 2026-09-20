@@ -40,7 +40,9 @@ export class MemoryManager {
       }
     }
 
-    if (!isMetaDebate && !isSubjectRejection && !isQuestioningSubject && !isAnswering) {
+    const isSimilarPractice = /(?:এই\s*টাইপের|অনুরূপ|আরেকটি\s*প্রশ্ন|পরের\s*প্রশ্ন|next\s*question|similar\s*type)/i.test(cleanMsg);
+
+    if (!isMetaDebate && !isSubjectRejection && !isQuestioningSubject && !isAnswering && !isSimilarPractice) {
       let explicitSubject = normalizeSubject(cleanMsg);
 
       // Context-aware subject switch: If user gave an affirmative confirmation to a suggested subject
