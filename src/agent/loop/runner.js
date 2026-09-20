@@ -259,12 +259,23 @@ Correct answer code is: '${correctCode}'. Student's answer is: ${isCorrect ? "CO
       content: `EXAM COMPLETION & 1-ON-1 CONCEPT CLEARING DIRECTIVE:
 The student has just completed an exam and returned to chat for feedback and 1-on-1 tutoring!
 1. STRICT ZERO TOOL CALLS: DO NOT call any tool. All question details and scores are already in the user's prompt.
-2. Present a beautifully structured, motivating performance report using clear formatting and rich emojis (📊, 🎯, ❌, ⏳, 📈, 💡, 📝):
-   - 📊 **ফলাফল বিশ্লেষণ** (বিষয়, বোর্ড/অধ্যায়, মোট প্রশ্ন, সঠিক, ভুল, বাদ দেওয়া, সাফল্যের হার)
-   - 💡 **সংক্ষিপ্ত মূল্যায়ন** (ভুলের ধরণ নিয়ে ১-২টি চমৎকার অ্যাকাডেমিক পর্যবেক্ষণ এবং আত্মবিশ্বাস বৃদ্ধির বার্তা)
-   - 🎯 **১-অন-১ কনসেপ্ট সমাধান অফার**:
-     সুনির্দিষ্টভাবে বলো: "ভুল হওয়া প্রতিটি প্রশ্নের সঠিক উত্তর, বৈজ্ঞানিক ব্যাখ্যা এবং অনুরূপ বোর্ড প্রশ্ন অনুশীলন করতে প্রস্তুত থাকলে **'হ্যাঁ, প্রথম প্রশ্ন থেকে শুরু করো'** বলো!"
-3. Keep the output clean, structured, and engaging.`
+2. MANDATORY MARKDOWN TABLE FORMAT: Present the "📊 ফলাফল বিশ্লেষণ" section as a clean, elegant Markdown Table (DO NOT use bullet points for the metrics!). Format:
+# 📊 ফলাফল বিশ্লেষণ
+
+| মেট্রিক | বিবরণ |
+| :--- | :--- |
+| **বিষয় ও অধ্যায়** | [বিষয়] ([অধ্যায়/পরীক্ষা]) |
+| **মোট প্রশ্ন** | [সংখ্যা]টি 📝 |
+| **সঠিক উত্তর** | [সংখ্যা]টি ✅ |
+| **ভুল উত্তর** | [সংখ্যা]টি ❌ |
+| **বাদ দেওয়া প্রশ্ন** | [সংখ্যা]টি ⏳ |
+| **সাফল্যের হার** | [হার]% 📈 |
+
+3. Follow the table with:
+- 💡 **সংক্ষিপ্ত মূল্যায়ন**: ভুলের ধরণ নিয়ে ১-২টি চমৎকার অ্যাকাডেমিক পর্যবেক্ষণ এবং আত্মবিশ্বাস বৃদ্ধির বার্তা।
+- 🎯 **১-অন-১ কনসেপ্ট সমাধান অফার**:
+  সুনির্দিষ্টভাবে বলো: "ভুল হওয়া প্রতিটি প্রশ্নের সঠিক উত্তর, বৈজ্ঞানিক ব্যাখ্যা এবং অনুরূপ বোর্ড প্রশ্ন অনুশীলন করতে প্রস্তুত থাকলে **'হ্যাঁ, প্রথম প্রশ্ন থেকে শুরু করো'** বলো!"
+4. Keep the output clean, structured, and engaging.`
     });
   }
 

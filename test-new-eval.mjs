@@ -190,6 +190,7 @@ console.log(`  [Audit Response Snippet]:\n  ${auditResponseText.trim().slice(0, 
 assert(auditToolsCalled.length === 0, 'ZERO tools called during exam result debrief (No unwanted question fetches!)');
 assert(auditResponseText.includes('ফলাফল') || auditResponseText.includes('রসায়ন'), 'Output addresses exam results');
 assert(/📊|🎯|💡|❌|📈/.test(auditResponseText), 'Output includes rich structured emojis as requested');
+assert(auditResponseText.includes('|') && auditResponseText.includes('---'), 'Output presents result analysis as a Markdown table');
 
 console.log('\n====================================================');
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED WITH 100% SUCCESS!`);
