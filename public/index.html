@@ -2334,7 +2334,7 @@
         detectedAns = g;
         return '';
       });
-      clean = clean.replace(/\[(?:qid|id):\s*(q_\d+)\]/gi, (m, g) => {
+      clean = clean.replace(/\[(?:qid|id):\s*([a-zA-Z0-9_-]+)\]/gi, (m, g) => {
         detectedQid = g;
         return '';
       });
@@ -2538,7 +2538,7 @@
           if (/^(?:#{1,4}\s*)?(?:প্রশ্ন|MCQ|Q)[\s\d:০-৯\.\)]*$/i.test(l) ||
               singleOptionLineRegex.test(l) ||
               /^\s*\[ans:\s*[ক-ঘa-dA-D]/i.test(l) ||
-              /^\s*\[qid:\s*q_\d+/i.test(l) ||
+              /^\s*\[qid:\s*[a-zA-Z0-9_-]+/i.test(l) ||
               /^\s*(?:সঠিক উত্তর|Answer|Ans)[:\s]*/i.test(l)) {
             hitQuestionBlock = true;
             continue;
@@ -2975,11 +2975,19 @@
         return placeholder(mathItems.length - 1);
       });
 
+      // 6b. Escape raw HTML characters (<, >, &, \") to prevent browser swallowing HTML tags like <h1>, <h6>, <head>, <p> etc.
+      // Do not double-escape existing valid HTML entities (&nbsp;, &amp;, &lt;, &gt;, &#039;, etc.)
+      str = str
+        .replace(/&(?!([a-zA-Z0-9]+|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
       // 7. Light markdown formatting for text (bold, italic, code)
       str = str
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-        .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 rounded bg-white/[0.06] font-mono text-xs">$1</code>');
+        .replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-white/[0.08] font-mono text-xs text-indigo-300 font-semibold border border-white/[0.08]">$1</code>');
 
       // 8. Restore all math items using high-performance getRenderedKaTeX
       str = str.replace(/%%%EXAM_M_(\d+)%%%/g, (m, idx) => {

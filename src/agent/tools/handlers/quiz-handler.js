@@ -216,6 +216,20 @@ export async function handleGetMcqQuiz(args) {
     }
   }
 
+  // HTML / Web Design / Programming specificity guard:
+  // In SSC ICT, questions about e-books (like q_002970) mention the format 'HTML', but do not teach or test HTML / Web Design.
+  // When a student requests HTML / Web Design MCQs, discard non-coding e-book questions so AI Fallback can generate an authoritative HTML question!
+  if (/html|css|web\s*design|c\s*programming/i.test(rawT)) {
+    const isActualCodingQuestion = (r) => {
+      const txt = `${r.question_text || ''} ${r.question_html || ''}`;
+      return /<[a-z]+|tag|ট্যাগ|অ্যাট্রিবিউট|attribute|element|উপাদান|ওয়েব\s*পেইজ|ওয়েব\s*পেইজ|web\s*page|head|body|table|href|src|rowspan|colspan/i.test(txt);
+    };
+    verifiedRows = verifiedRows.filter(isActualCodingQuestion);
+    if (qRows) {
+      qRows = qRows.filter(isActualCodingQuestion);
+    }
+  }
+
   const activePool = verifiedRows.length > 0 ? verifiedRows : (qRows || []);
 
   // Sample prioritizing the most recent available years in activePool
@@ -264,11 +278,18 @@ export async function handleGetMcqQuiz(args) {
   let res = { rows: sampled };
 
   if (!res.rows || res.rows.length === 0) {
+    const requestedTopic = directTopicTokens.join(", ") || args.topic || args.query || args.chapter || "অনুরোধকৃত টপিক";
     return {
       subject: subjId || "all",
       quiz: [],
-      status: "not_found",
-      message: "নির্দিষ্ট অধ্যায়ে কোনো বহুনির্বাচনী প্রশ্ন পাওয়া যায়নি।"
+      status: "ai_generation_fallback",
+      requested_topic: requestedTopic,
+      message: `ডেটাবেসে '${requestedTopic}' সম্পর্কিত সরাসরি প্রামাণিক বোর্ড প্রশ্ন পাওয়া যায়নি। শিক্ষক হিসেবে শিক্ষার্থীর জন্য গভীর বিশ্লেষণধর্মী এআই বহুনির্বাচনী প্রশ্ন তৈরি করো।`,
+      instructions_for_mentor: `এআই অ্যানালাইটিক্যাল প্রশ্ন মোড: ডেটাবেসে '${requestedTopic}' সম্পর্কিত সরাসরি কোনো প্রশ্ন পাওয়া যায়নি। একজন বিশেষজ্ঞ অ্যাকাডেমিক শিক্ষক হিসেবে শিক্ষার্থীকে শূন্য হাতে ফিরিয়ে না দিয়ে, উক্ত বিষয়ের ওপর গভীর বিশ্লেষণধর্মী ১টি মানসম্মত বহুনির্বাচনী প্রশ্ন (প্রাসঙ্গিক কোড/উদ্দীপক/লজিক্যাল সিনারিওসহ) তৈরি করো।\n` +
+        `১. হেডার ট্যাগ: "[উৎস: এআই অ্যানালাইটিক্যাল প্রশ্ন | টপিক: ${requestedTopic}]"\n` +
+        `২. প্রশ্ন ও ৪টি স্পষ্ট অপশন ((ক), (খ), (গ), (ঘ)) প্রদান করো।\n` +
+        `৩. অপশনগুলোর শেষে বাধ্যতামূলকভাবে "[ans: <ক/খ/গ/ঘ>] [qid: ai_gen_${Date.now().toString(36)}]" ট্যাগ দাও যাতে শিক্ষার্থী ইন্টারঅ্যাক্টিভভাবে উত্তর দিতে পারে।\n` +
+        `৪. তাৎক্ষণিক উত্তর প্রকাশ করবে না। শিক্ষার্থী অপশন সিলেক্ট করলে পরবর্তী টার্নে বিস্তারিত বিশ্লেষণ ও পরীক্ষকের ফাঁদ ব্যাখ্যা করবে।`
     };
   }
 

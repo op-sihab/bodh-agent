@@ -78,9 +78,13 @@ function getToolSummary(tool, result) {
     case "get_board_exam_questions":
       return `${result.board} বোর্ড: ${toBnDigits(result.available_exam_sets?.length || 0)}টি অফিশিয়াল প্রশ্ন সেট সংগৃহীত।`;
     case "get_creative_question":
-      return `বোর্ড স্ট্যান্ডার্ড সৃজনশীল প্রশ্ন ও পূর্ণাঙ্গ ক, খ, গ, ঘ পাওয়া গেছে।`;
+      return result.status === "ai_generation_fallback"
+        ? `ডেটাবেসে সৃজনশীল না পাওয়ায় শিক্ষক মেন্টর দ্বারা এআই অ্যানালাইটিক্যাল সৃজনশীল প্রস্তুত হচ্ছে।`
+        : `বোর্ড স্ট্যান্ডার্ড সৃজনশীল প্রশ্ন ও পূর্ণাঙ্গ ক, খ, গ, ঘ পাওয়া গেছে।`;
     case "get_mcq_quiz":
-      return `${toBnDigits(result.quiz?.length || 0)}টি বাছাইকৃত বোর্ড MCQ প্রস্তুত।`;
+      return result.status === "ai_generation_fallback"
+        ? `ডেটাবেসে প্রশ্ন না পাওয়ায় শিক্ষক মেন্টর দ্বারা এআই অ্যানালাইটিক্যাল MCQ প্রস্তুত হচ্ছে।`
+        : `${toBnDigits(result.quiz?.length || 0)}টি বাছাইকৃত বোর্ড MCQ প্রস্তুত।`;
     case "get_chapter_importance_ranking":
       return `${result.subject}: আসল বোর্ড ডেটা অনুযায়ী সর্বাধিক গুরুত্বপূর্ণ অধ্যায় '${result.most_important_chapter}' (শীর্ষ প্রায়োরিটি চিহ্নিত)`;
     case "search_question_bank":

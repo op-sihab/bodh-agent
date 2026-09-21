@@ -209,7 +209,16 @@ export async function handleGetCreativeQuestion(args) {
   // Sample prioritizing the most recent available years in activeCqPool
   const topCqSlice = activeCqPool.slice(0, Math.min(activeCqPool.length, 6));
   const q = topCqSlice.length > 0 ? topCqSlice[Math.floor(Math.random() * topCqSlice.length)] : null;
-  if (!q) return { error: "কোনো সৃজনশীল প্রশ্ন পাওয়া যায়নি" };
+  if (!q) {
+    const requestedTopic = directTopicTokens.join(", ") || args.topic || args.query || args.chapter || "অনুরোধকৃত টপিক";
+    return {
+      status: "ai_generation_fallback",
+      subject: subjId || "all",
+      requested_topic: requestedTopic,
+      message: `ডেটাবেসে '${requestedTopic}' সম্পর্কিত সরাসরি সৃজনশীল প্রশ্ন পাওয়া যায়নি। শিক্ষক হিসেবে মানসম্মত উদ্দীপক ও ৪ স্তরের (ক, খ, গ, ঘ) সৃজনশীল প্রশ্ন তৈরি করো।`,
+      instructions_for_mentor: `এআই সৃজনশীল প্রশ্ন মোড: ডেটাবেসে '${requestedTopic}' এর সরাসরি সৃজনশীল প্রশ্ন নেই। একজন বিশেষজ্ঞ শিক্ষক হিসেবে শিক্ষার্থীকে উদ্দীপক এবং ক (জ্ঞানমূল ১), খ (অনুধাবন ২), গ (প্রয়োগ ৩), ঘ (উচ্চতর দক্ষতা ৪) স্তরবিশিষ্ট একটি পূর্ণাঙ্গ সৃজনশীল প্রশ্ন তৈরি করে দাও। শুরুতে [উৎস: এআই অ্যানালাইটিক্যাল সৃজনশীল | টপিক: ${requestedTopic}] ট্যাগ দাও।`
+    };
+  }
 
   const allChapters = await getAllChaptersCached();
   const chObj = allChapters.find(c => c.id === q.chapter_id);

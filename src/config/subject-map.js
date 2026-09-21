@@ -61,7 +61,7 @@ export function normalizeSubject(raw) {
   if (/জীববিজ্ঞান|বায়োলজি|বায়োলজি|(?:^|\s)জীব(?:\s|$)|\b(?:biology|bilogoy|bilogy|bology|bioloy|biolgy|biologi|bio|baio|boilogy|jibbiggan|jibbigan|jib)\b/i.test(s)) return 'ssc_biology';
   
   // ICT
-  if (/আইসিটি|\bict\b|তথ্য\s*ও\s*যোগাযোগ|মডেম|রাউটার|ডেটাবেজ|ডাটাবেজ/i.test(s)) return 'ssc_ict';
+  if (/আইসিটি|\bict\b|তথ্য\s*ও\s*যোগাযোগ|মডেম|রাউটার|ডেটাবেজ|ডাটাবেজ|\b(?:html|css|web\s*design)\b|ওয়েব\s*ডিজাইন|ওয়েব\s*ডিজাইন|ট্যাগ|প্রোগ্রামিং|\b(?:programming|c\s*programming)\b/i.test(s)) return 'ssc_ict';
   
   // Religion (strictly exclude scientific/general property terms and false positives like সহজ, হজম, সমন্বয়ধর্মী)
   if (/(?:ধর্মী|সমন্বয়ধর্মী|সমন্বয়ধর্মী|ভৌত\s*ধর্ম|রাসায়নিক\s*ধর্ম|পদার্থের\s*ধর্ম|মৌলের\s*ধর্ম|অম্লধর্মী|ক্ষারধর্মী|চৌম্বক\s*ধর্ম|তরঙ্গ\s*ধর্ম)/i.test(s)) {

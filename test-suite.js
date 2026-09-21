@@ -370,6 +370,39 @@ assert(complaintCheck.state.subject_id === 'ssc_chemistry', 'User complaint main
 const postPhysics = detectSubjectFromAcademicContent('গতি-সংক্রান্ত প্রধান সূত্রগুলো: 1. দ্রুতি/বেগ v = s/t\n2. ত্বরণ a = (v-u)/t\n3. v = u + at', 'ssc_chemistry');
 assert(postPhysics?.subject_id === 'ssc_physics', 'Post-response classifier detects physics formulas from AI output');
 assert(postPhysics?.chapter_num === '2', 'Post-response classifier identifies Chapter 2 (গতি)');
+// TEST 15: AI Generative Fallback for Zero-Match Queries (e.g. HTML / Coding)
+console.log('\n--- TEST 15: AI Generative Fallback for Zero-Match Queries (e.g. HTML / Coding) ---');
+const { compactToolResult } = await import('./src/agent/loop/compaction.js');
+
+// 1. Subject normalization for HTML and Web Design queries
+const htmlSubj = normalizeSubject('html er ekta mcq boss');
+assert(htmlSubj === 'ssc_ict', '"html er ekta mcq boss" correctly routes to ssc_ict');
+
+const webSubj = normalizeSubject('web design er proshno');
+assert(webSubj === 'ssc_ict', '"web design er proshno" correctly routes to ssc_ict');
+
+// 2. MCQ Fallback when query has zero DB matches
+const mcqFallback = await executeAgentTool('get_mcq_quiz', {
+  subject: 'ssc_ict',
+  query: 'colspan rowspan'
+});
+assert(mcqFallback.status === 'ai_generation_fallback', 'get_mcq_quiz returns ai_generation_fallback when 0 matching questions in DB');
+assert(mcqFallback.instructions_for_mentor.includes('এআই অ্যানালাইটিক্যাল প্রশ্ন মোড'), 'mcqFallback includes clear pedagogical guidance');
+assert(mcqFallback.instructions_for_mentor.includes('[ans:'), 'mcqFallback specifies interactive answer tag structure');
+
+// 3. Compaction formatting for AI Fallback
+const compactedFallback = compactToolResult('get_mcq_quiz', mcqFallback, { topic: 'HTML Table' });
+assert(compactedFallback.status === 'ai_generation_fallback', 'compactToolResult preserves ai_generation_fallback');
+assert(compactedFallback.mentor_guide.includes('[উৎস: এআই অ্যানালাইটিক্যাল প্রশ্ন'), 'mentor_guide requires transparent AI analytical source tag');
+assert(compactedFallback.mentor_guide.includes('[ans:'), 'mentor_guide requires interactive [ans: ...] tag');
+
+// 4. CQ Fallback when 0 matching questions in DB
+const cqFallback = await executeAgentTool('get_creative_question', {
+  subject: 'ssc_ict',
+  query: 'non_existent_creative_query_xyz_999'
+});
+assert(cqFallback.status === 'ai_generation_fallback', 'get_creative_question returns ai_generation_fallback when 0 matching CQs');
+assert(cqFallback.instructions_for_mentor.includes('এআই সৃজনশীল প্রশ্ন মোড'), 'cqFallback provides 4-tier creative question guidance');
 
 console.log('\n====================================================');
 console.log(`🎉 ALL ${passedTests}/${totalTests} TESTS PASSED WITH 100% SUCCESS!`);

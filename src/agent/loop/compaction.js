@@ -7,10 +7,21 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
 
   switch (toolName) {
     case "get_mcq_quiz": {
-      if (!rawResult.quiz || rawResult.quiz.length === 0) {
+      if (rawResult.status === "ai_generation_fallback" || !rawResult.quiz || rawResult.quiz.length === 0) {
+        const topic = rawResult.requested_topic || toolArgs?.topic || toolArgs?.query || toolArgs?.chapter || "অনুরোধকৃত টপিক";
+        const isHscIct = /html|css|web\s*design|c\s*programming|প্রোগ্রামিং|অ্যালগরিদম|ফ্লোচার্ট/i.test(topic);
+        const syllabusNote = isHscIct 
+          ? " (নোট: এই টপিকটি মূলত এইচএসসি আইসিটি সিলেবাসের অন্তর্ভুক্ত, তবে শিক্ষার্থীর অনুশীলনের জন্য শিক্ষার্থীকেন্দ্রীক গভীর বিশ্লেষণসহ তৈরি করো)"
+          : "";
         return {
-          status: "not_found",
-          message: "নির্দিষ্ট অধ্যায়ে কোনো বহুনির্বাচনী প্রশ্ন পাওয়া যায়নি। শিক্ষার্থীকে আন্তরিকভাবে বিষয় বা অন্য কোনো অধ্যায় উল্লেখ করতে বলো।"
+          status: "ai_generation_fallback",
+          topic: topic,
+          message: `ডেটাবেসে '${topic}' সম্পর্কিত প্রামাণিক প্রশ্ন পাওয়া যায়নি। শিক্ষক হিসেবে গভীর বিশ্লেষণধর্মী এআই বহুনির্বাচনী প্রশ্ন তৈরি করো।`,
+          mentor_guide: `উপস্থাপনার নিয়ম (এআই অ্যানালাইটিক্যাল প্রশ্ন): ডেটাবেসে '${topic}' সম্পর্কিত প্রশ্ন নেই। শিক্ষার্থীকে কোনো অজুহাত বা 'প্রশ্ন পাইনি' না বলে শিক্ষক হিসেবে উক্ত বিষয়ের ওপর গভীর বিশ্লেষণধর্মী ১টি মানসম্মত MCQ (প্রাসঙ্গিক কোড/উদ্দীপক/লজিক্যাল সিনারিওসহ) তৈরি করো।${syllabusNote}\n` +
+            `১. শুরুতে আলাদা লাইনে ট্যাগ দাও: [উৎস: এআই অ্যানালাইটিক্যাল প্রশ্ন | টপিক: ${topic}]\n` +
+            `২. উদ্দীপক/প্রশ্ন এবং ৪টি অপশন ((ক), (খ), (গ), (ঘ)) স্পষ্ট তুলে ধরবে।\n` +
+            `৩. শিক্ষার্থী অপশন নির্বাচন করার আগে উত্তর ও ব্যাখ্যা প্রকাশ করবে না।\n` +
+            `৪. মেসেজের একদম শেষে [ans: <সঠিক_বাংলা_অক্ষর>] [qid: ai_gen_${Date.now().toString(36)}] ট্যাগটি অবশ্যই দেবে যাতে লাইভ কুইজ ইন্টারঅ্যাকশন কাজ করে।`
         };
       }
 
@@ -55,10 +66,15 @@ export function compactToolResult(toolName, rawResult, toolArgs = {}) {
     }
 
     case "get_creative_question": {
-      if (!rawResult.stem && !rawResult.question_text) {
+      if (rawResult.status === "ai_generation_fallback" || (!rawResult.stem && !rawResult.question_text)) {
+        const topic = rawResult.requested_topic || toolArgs?.topic || toolArgs?.query || toolArgs?.chapter || "অনুরোধকৃত টপিক";
         return {
-          status: "not_found",
-          message: "নির্দিষ্ট অধ্যায়ে কোনো সৃজনশীল প্রশ্ন পাওয়া যায়নি।"
+          status: "ai_generation_fallback",
+          topic: topic,
+          message: `ডেটাবেসে '${topic}' সম্পর্কিত সৃজনশীল প্রশ্ন পাওয়া যায়নি। শিক্ষক হিসেবে মানসম্মত উদ্দীপক ও ৪ স্তরের সৃজনশীল প্রশ্ন তৈরি করো।`,
+          mentor_guide: `উপস্থাপনার নিয়ম (এআই অ্যানালাইটিক্যাল সৃজনশীল): ডেটাবেসে '${topic}' এর সরাসরি সৃজনশীল প্রশ্ন নেই। একজন বিশেষজ্ঞ শিক্ষক হিসেবে উক্ত টপিকের ওপর ১টি সম্পূর্ণ মানসম্মত উদ্দীপক ও ৪ স্তরবিশিষ্ট (ক: জ্ঞানমূলক ১, খ: অনুধাবনমূলক ২, গ: প্রয়োগমূলক ৩, ঘ: উচ্চতর দক্ষতামূলক ৪) সৃজনশীল প্রশ্ন তৈরি করে দাও।\n` +
+            `১. শুরুতে ট্যাগ দাও: [উৎস: এআই অ্যানালাইটিক্যাল সৃজনশীল | টপিক: ${topic}]\n` +
+            `২. উদ্দীপক ও ক, খ, গ, ঘ স্পষ্টভাবে উপস্থাপন করো।`
         };
       }
       const ch = rawResult.actual_chapter?.display || rawResult.actual_chapter?.name || rawResult.chapter_name || toolArgs?.chapter || "";
