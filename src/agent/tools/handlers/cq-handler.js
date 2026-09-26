@@ -1,7 +1,7 @@
 // Tool Handler: get_creative_question
 import { executeRawSql } from "../../../core/db/client.js";
 import { appCache } from "../../../core/cache.js";
-import { normalizeSubject, toBnDigits } from "../../../config/subject-map.js";
+import { normalizeSubject, toBnDigits, buildDbSubjectCondition } from "../../../config/subject-map.js";
 import { normalizeBoard } from "../../../config/board-map.js";
 import { formatTag } from "../../../config/tag-map.js";
 import {
@@ -19,7 +19,7 @@ export async function handleGetCreativeQuestion(args) {
 
   const matchedChapterInfo = await findChapterCached(args, subjId);
   const rawT = [args.chapter, args.topic, args.query].filter(Boolean).join(" ");
-  if (matchedChapterInfo && matchedChapterInfo.subject_id) {
+  if (matchedChapterInfo && matchedChapterInfo.subject_id && matchedChapterInfo.subject_id !== "HSC") {
     subjId = matchedChapterInfo.subject_id;
   }
   const matchedCqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
@@ -49,7 +49,7 @@ export async function handleGetCreativeQuestion(args) {
   // If specific story/topic tokens exist, enforce topic-level filtering
   let topicConditionSql = "";
   if (directTopicTokens.length > 0) {
-    const tKw = directTopicTokens.map(t => `(question_text LIKE '%${t.replace(/'/g, "''")}%' OR question_html LIKE '%${t.replace(/'/g, "''")}%' OR option_a LIKE '%${t.replace(/'/g, "''")}%' OR option_b LIKE '%${t.replace(/'/g, "''")}%' OR option_c LIKE '%${t.replace(/'/g, "''")}%' OR option_d LIKE '%${t.replace(/'/g, "''")}%')`).join(' OR ');
+    const tKw = directTopicTokens.map(t => `(question_text LIKE '%${t.replace(/'/g, "''")}%' OR option_a LIKE '%${t.replace(/'/g, "''")}%' OR option_b LIKE '%${t.replace(/'/g, "''")}%' OR option_c LIKE '%${t.replace(/'/g, "''")}%' OR option_d LIKE '%${t.replace(/'/g, "''")}%')`).join(' OR ');
     topicConditionSql = `(${tKw})`;
   }
 
@@ -61,8 +61,9 @@ export async function handleGetCreativeQuestion(args) {
   console.log(`[CQ Tool] poolKey="${poolKey}", cacheHit=${Boolean(qRows && qRows.length)}`);
 
   if (!qRows || qRows.length === 0) {
-    const baseConditions = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`];
-    if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
+    const baseConditions = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR option_c != '')`];
+    const sCond = buildDbSubjectCondition(subjId);
+    if (sCond) baseConditions.push(sCond);
     if (chapterConditionSql) baseConditions.push(chapterConditionSql);
     if (topicConditionSql) baseConditions.push(topicConditionSql);
 
@@ -97,7 +98,7 @@ export async function handleGetCreativeQuestion(args) {
 
     // Fast query with recent-year priority!
     let sql = `
-      SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+      SELECT id, question_text, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
       FROM questions
       WHERE ${whereClauses.join(" AND ")}
       ${RECENT_YEAR_ORDER_BY}
@@ -110,7 +111,7 @@ export async function handleGetCreativeQuestion(args) {
       const yrAllBoards = buildYearSqlConditions(null, years);
       const fb1 = [...baseConditions, yrAllBoards];
       sql = `
-        SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+        SELECT id, question_text, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
         FROM questions
         WHERE ${fb1.join(" AND ")}
         ${RECENT_YEAR_ORDER_BY}
@@ -123,7 +124,7 @@ export async function handleGetCreativeQuestion(args) {
     if (res.rows.length === 0 && boardTag && boardTag !== "RANDOM") {
       const fb2 = [...baseConditions, `tags LIKE '%${boardTag}%'`];
       sql = `
-        SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+        SELECT id, question_text, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
         FROM questions
         WHERE ${fb2.join(" AND ")}
         ${RECENT_YEAR_ORDER_BY}
@@ -136,7 +137,7 @@ export async function handleGetCreativeQuestion(args) {
     if (res.rows.length === 0) {
       const fb3 = [...baseConditions, `tags != '' AND tags IS NOT NULL`];
       sql = `
-        SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+        SELECT id, question_text, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
         FROM questions
         WHERE ${fb3.join(" AND ")}
         ${RECENT_YEAR_ORDER_BY}
@@ -148,8 +149,8 @@ export async function handleGetCreativeQuestion(args) {
     // Fallback 3.5: If verified chapter ID had 0 questions, check unmapped questions using concepts
     if (res.rows.length === 0 && chapterKeywords.length > 0) {
       const kwSql = chapterKeywords.map(k => `question_text LIKE '%${k.replace(/'/g, "''")}%'`).join(' OR ');
-      const fbUnmapped = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`, `(chapter_id NOT LIKE 'ch_%' AND (${kwSql}))`];
-      if (subjId) fbUnmapped.push(`subject_id = '${subjId}'`);
+      const fbUnmapped = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR option_c != '')`, `(chapter_id NOT LIKE 'ch_%' AND (${kwSql}))`];
+      if (sCond) fbUnmapped.push(sCond);
       let fbUnmappedWhere = [...fbUnmapped];
       if (boardTag && boardTag !== "RANDOM") {
         fbUnmappedWhere.push(`tags LIKE '%${boardTag}%'`);
@@ -157,7 +158,7 @@ export async function handleGetCreativeQuestion(args) {
         fbUnmappedWhere.push(`tags != '' AND tags IS NOT NULL`);
       }
       sql = `
-        SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+        SELECT id, question_text, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
         FROM questions
         WHERE ${fbUnmappedWhere.join(" AND ")}
         ${RECENT_YEAR_ORDER_BY}
@@ -168,10 +169,10 @@ export async function handleGetCreativeQuestion(args) {
 
     // Fallback 4: General subject fallback ONLY IF user did not specify chapter/topic
     if (res.rows.length === 0 && !rawT) {
-      const fb4 = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR question_html != '' OR option_c != '')`];
-      if (subjId) fb4.push(`subject_id = '${subjId}'`);
+      const fb4 = [`type IN ('CQ_4', 'CQ_3', 'CQ_N')`, `(question_text != '' OR option_c != '')`];
+      if (sCond) fb4.push(sCond);
       sql = `
-        SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+        SELECT id, question_text, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
         FROM questions
         WHERE ${fb4.join(" AND ")}
         ${RECENT_YEAR_ORDER_BY}
@@ -196,7 +197,7 @@ export async function handleGetCreativeQuestion(args) {
   // If user requested a specific story/topic (e.g. 'নিমগাছ', 'কপোতাক্ষ নদ'), strictly retain topic-matched questions!
   if (directTopicTokens.length > 0 && verifiedCqRows.length > 0) {
     const topicFiltered = verifiedCqRows.filter(r => {
-      const allText = `${r.question_text || ''} ${r.question_html || ''} ${r.option_a || ''} ${r.option_b || ''} ${r.option_c || ''} ${r.option_d || ''} ${r.tags || ''}`;
+      const allText = `${r.question_text || ''} ${r.option_a || ''} ${r.option_b || ''} ${r.option_c || ''} ${r.option_d || ''} ${r.tags || ''}`;
       return directTopicTokens.some(t => allText.includes(t));
     });
     if (topicFiltered.length > 0) {
@@ -208,7 +209,20 @@ export async function handleGetCreativeQuestion(args) {
 
   // Sample prioritizing the most recent available years in activeCqPool
   const topCqSlice = activeCqPool.slice(0, Math.min(activeCqPool.length, 6));
-  const q = topCqSlice.length > 0 ? topCqSlice[Math.floor(Math.random() * topCqSlice.length)] : null;
+  let q = topCqSlice.length > 0 ? topCqSlice[Math.floor(Math.random() * topCqSlice.length)] : null;
+  if (!q && subjId) {
+    const sCond = buildDbSubjectCondition(subjId);
+    const emergencyRes = await executeRawSql(`
+      SELECT id, question_text, option_a, option_b, option_c, option_d, tags, type, chapter_id, subject_id
+      FROM questions
+      WHERE ${sCond ? `${sCond} AND ` : ''}type IN ('CQ_4', 'CQ_3', 'CQ_N') AND question_text != ''
+      ${RECENT_YEAR_ORDER_BY}
+      LIMIT 10;
+    `);
+    if (emergencyRes.rows && emergencyRes.rows.length > 0) {
+      q = emergencyRes.rows[Math.floor(Math.random() * emergencyRes.rows.length)];
+    }
+  }
   if (!q) return { error: "কোনো সৃজনশীল প্রশ্ন পাওয়া যায়নি" };
 
   const allChapters = await getAllChaptersCached();
@@ -218,7 +232,7 @@ export async function handleGetCreativeQuestion(args) {
 
   // Detect if question contains a specific story/topic from directTopicTokens or KNOWN_TOPIC_PHRASES
   let specificTopicName = "";
-  const qFullText = `${q.question_text || ''} ${q.question_html || ''} ${q.option_a || ''} ${q.option_b || ''} ${q.option_c || ''} ${q.option_d || ''} ${q.tags || ''}`;
+  const qFullText = `${q.question_text || ''} ${q.option_a || ''} ${q.option_b || ''} ${q.option_c || ''} ${q.option_d || ''} ${q.tags || ''}`;
   for (const t of directTopicTokens) {
     if (qFullText.includes(t)) {
       specificTopicName = t;
@@ -242,7 +256,7 @@ export async function handleGetCreativeQuestion(args) {
     difficulty_level: diff === "hard" ? "কঠিন / অ্যাডভান্সড (উচ্চতর দক্ষতা)" : diff === "medium" ? "মাঝারি (বোর্ড স্ট্যান্ডার্ড)" : "সহজ (বেসিক)",
     board_tag: formatTag(q.tags),
     raw_tag: q.tags,
-    stem: q.question_text || q.question_html || "নিচের উদ্দীপকটি লক্ষ করো এবং সংশ্লিষ্ট প্রশ্নগুলোর উত্তর দাও:",
+    stem: q.question_text || "নিচের উদ্দীপকটি লক্ষ করো এবং সংশ্লিষ্ট প্রশ্নগুলোর উত্তর দাও:",
     part_ka: q.option_a || "জ্ঞানমূলক প্রশ্ন",
     part_kha: q.option_b || "অনুধাবনমূলক প্রশ্ন",
     part_ga: q.option_c || "প্রয়োগমূলক প্রশ্ন (৩ নম্বর)",

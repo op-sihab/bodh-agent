@@ -14,7 +14,7 @@ statsRoutes.get("/stats", (c) => {
     tagline: ENV.APP_TAGLINE,
     mode: ENV.APP_MODE,
     model: `${ENV.MODEL_NAME} (Merge.dev Gateway)`,
-    database: "Turso LibSQL (AWS ap-south-1 Mumbai)",
+    database: "BODH Local HSC SQLite (299,432 Questions + 299,419 Vectors)",
     cache: appCache.getStats(),
     gateway: getGatewayGlobalStats(),
     credits: globalCreditManager.getStatus(),

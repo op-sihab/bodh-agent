@@ -11,9 +11,11 @@
     "binding": "ASSETS"
   },
   "vars": {
-    "TURSO_DATABASE_URL": "https://mcq-db-primekeeper.aws-ap-south-1.turso.io/v2/pipeline",
-    "TURSO_AUTH_TOKEN": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODkxOTE3MjgsImlkIjoiMDFhMDkwMzAtMDgwMS03OGI1LWFjZDUtMzUyNDEzYzgwYzVlIiwia2lkIjoiVXJNT2ZOeG1ERlRQNk5pNS1CSHlTZ0tZYWVrdmVZQi1lTGx6RW92c1picyIsInJpZCI6IjMxNTlkN2YzLTg5NTAtNDc1Yi05OTZhLWE2OWJkODg4ZWViMSJ9.SJMGIVf60N0QNFYaEkgph3BEAblDo0IrvKpyns6uJOUvWccx4xFvexuAgOYo5FSpyaP1RMACzEkg03Q1jNdUCg",
-    "MERGE_API_KEY": "mg_XKCpgi4dR6M2DmaBFgvjme8uTeGyWWTWGP_XP4zUjN8",
-    "MODEL_NAME": "openai/gpt-5.6-luna"
+    "TURSO_DATABASE_URL": "https://all-qus-opsihab444.aws-ap-south-1.turso.io/v2/pipeline",
+    "TURSO_AUTH_TOKEN": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTAwOTQzMjMsImlkIjoiMDFhMGM5ZWYtOTgwMS03N2QzLWI4N2EtNmE4YjBmOGIxZGJlIiwia2lkIjoiQ05VaGI4M1NTNjBuM2ZyLUhvR1YtVGJfLXdydHRHODZ3X0RoQTlNMENKYyIsInJpZCI6IjlhOGJkM2MyLTkxYzktNGY0Zi1iOWI2LTc4MWM4N2I1ZWNiYSJ9.X66JUWaUZWUHb2hWaZT-ln49UtKgAuEHdsbk5wO-2Y5sTwE1sSqsPpcP6br6aRvGN8yP5VUsOXdmuj2F5zpfBQ",
+    "AI_API_URL": "https://api.xkiro.com/v1/chat/completions",
+    "AI_API_KEY": "sk-xt-711eb1cf17525edff0720aac39d7732bc83d2608e92104b7",
+    "MODEL_NAME": "qwen/qwen3.8-max:free",
+    "MERGE_API_KEY": "sk-xt-711eb1cf17525edff0720aac39d7732bc83d2608e92104b7"
   }
 }

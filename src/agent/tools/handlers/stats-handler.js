@@ -118,6 +118,253 @@ export async function handleGetSubjectChapters(args) {
     return finalRes;
   }
 
+  // Custom rich syllabus for HSC Physics (1st Paper: 10 chapters, 2nd Paper: 11 chapters)
+  if (subj === 'hsc_physics') {
+    const paper1Chapters = [
+      { id: "phys_1_1", order_num: "1", name: "ভৌতজগৎ ও পরিমাপ", paper: "১ম পত্র" },
+      { id: "phys_1_2", order_num: "2", name: "ভেক্টর", paper: "১ম পত্র" },
+      { id: "phys_1_3", order_num: "3", name: "গতিবিদ্যা", paper: "১ম পত্র" },
+      { id: "phys_1_4", order_num: "4", name: "নিউটনিয়ান বলবিদ্যা", paper: "১ম পত্র" },
+      { id: "phys_1_5", order_num: "5", name: "কাজ, শক্তি ও ক্ষমতা", paper: "১ম পত্র" },
+      { id: "phys_1_6", order_num: "6", name: "মহাকর্ষ ও অভিকর্ষ", paper: "১ম পত্র" },
+      { id: "phys_1_7", order_num: "7", name: "পদার্থের গাঠনিক ধর্ম", paper: "১ম পত্র" },
+      { id: "phys_1_8", order_num: "8", name: "পর্যায়বৃত্ত গতি", paper: "১ম পত্র" },
+      { id: "phys_1_9", order_num: "9", name: "তরঙ্গ", paper: "১ম পত্র" },
+      { id: "phys_1_10", order_num: "10", name: "আদর্শ গ্যাস ও গ্যাসের গতিতত্ত্ব", paper: "১ম পত্র" }
+    ];
+
+    const paper2Chapters = [
+      { id: "phys_2_1", order_num: "1", name: "তাপগতিবিদ্যা", paper: "২য় পত্র" },
+      { id: "phys_2_2", order_num: "2", name: "স্থির তড়িৎ", paper: "২য় পত্র" },
+      { id: "phys_2_3", order_num: "3", name: "চল তড়িৎ", paper: "২য় পত্র" },
+      { id: "phys_2_4", order_num: "4", name: "তড়িৎ প্রবাহের চৌম্বক ক্রিয়া ও চৌম্বকত্ব", paper: "২য় পত্র" },
+      { id: "phys_2_5", order_num: "5", name: "তড়িৎচৌম্বকীয় আবেশ ও পরিবর্তী প্রবাহ", paper: "২য় পত্র" },
+      { id: "phys_2_6", order_num: "6", name: "জ্যামিতিক আলোকবিজ্ঞান", paper: "২য় পত্র" },
+      { id: "phys_2_7", order_num: "7", name: "ভৌত আলোকবিজ্ঞান", paper: "২য় পত্র" },
+      { id: "phys_2_8", order_num: "8", name: "আধুনিক পদার্থবিজ্ঞানের সূচনা", paper: "২য় পত্র" },
+      { id: "phys_2_9", order_num: "9", name: "পরমাণুর মডেল ও নিউক্লিয়ার পদার্থবিজ্ঞান", paper: "২য় পত্র" },
+      { id: "phys_2_10", order_num: "10", name: "সেমিকন্ডাক্টর ও ইলেকট্রনিক্স", paper: "২য় পত্র" },
+      { id: "phys_2_11", order_num: "11", name: "জ্যোতির্বিজ্ঞান", paper: "২য় পত্র" }
+    ];
+
+    const finalRes = {
+      subject: "এইচএসসি পদার্থবিজ্ঞান",
+      subject_id: "hsc_physics",
+      total_chapters: 21,
+      total_paper1: 10,
+      total_paper2: 11,
+      paper_1: paper1Chapters,
+      paper_2: paper2Chapters,
+      sections: {
+        "পদার্থবিজ্ঞান ১ম পত্র (১০টি অধ্যায়)": paper1Chapters.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        "পদার্থবিজ্ঞান ২য় পত্র (১১টি অধ্যায়)": paper2Chapters.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      },
+      numbered_chapters: [
+        ...paper1Chapters.map(c => `১ম পত্র - অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        ...paper2Chapters.map(c => `২য় পত্র - অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      ],
+      instructions_for_mentor: `এনসিটিবি (NCTB) অফিশিয়াল কারিকুলাম অনুযায়ী এইচএসসি পদার্থবিজ্ঞানে মোট ২১টি অধ্যায় রয়েছে: ১ম পত্রে ১০টি অধ্যায় এবং ২য় পত্রে ১১টি অধ্যায়।\n- শিক্ষার্থী যদি নির্দিষ্টভাবে '১ম পত্র' চায়, তবে শুধুমাত্র ১ম পত্রের ১০টি অধ্যায়ের ক্রম ও নাম সুন্দর সংখ্যাযুক্ত তালিকায় উপস্থাপন করো।\n- যদি '২য় পত্র' চায়, তবে ২য় পত্রের ১১টি অধ্যায় উপস্থাপন করো।\n- অন্য কোনো বিষয়ের অধ্যায় কখনো মেশাবে না!`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
+  // Custom rich syllabus for HSC Chemistry (1st Paper: 5 chapters, 2nd Paper: 5 chapters)
+  if (subj === 'hsc_chemistry') {
+    const paper1 = [
+      { id: "chem_1_1", order_num: "1", name: "ল্যাবরেটরির নিরাপদ ব্যবহার", paper: "১ম পত্র" },
+      { id: "chem_1_2", order_num: "2", name: "গুণগত রসায়ন", paper: "১ম পত্র" },
+      { id: "chem_1_3", order_num: "3", name: "মৌলের পর্যায়বৃত্ত ধর্ম ও রাসায়নিক বন্ধন", paper: "১ম পত্র" },
+      { id: "chem_1_4", order_num: "4", name: "রাসায়নিক পরিবর্তন", paper: "১ম পত্র" },
+      { id: "chem_1_5", order_num: "5", name: "কর্মমুখী রসায়ন", paper: "১ম পত্র" }
+    ];
+    const paper2 = [
+      { id: "chem_2_1", order_num: "1", name: "পরিবেশ রসায়ন", paper: "২য় পত্র" },
+      { id: "chem_2_2", order_num: "2", name: "জৈব যৌগ", paper: "২য় পত্র" },
+      { id: "chem_2_3", order_num: "3", name: "পরিমাণগত রসায়ন", paper: "২য় পত্র" },
+      { id: "chem_2_4", order_num: "4", name: "তড়িৎ রসায়ন", paper: "২য় পত্র" },
+      { id: "chem_2_5", order_num: "5", name: "অর্থনৈতিক রসায়ন", paper: "২য় পত্র" }
+    ];
+
+    const finalRes = {
+      subject: "এইচএসসি রসায়ন",
+      subject_id: "hsc_chemistry",
+      total_chapters: 10,
+      total_paper1: 5,
+      total_paper2: 5,
+      paper_1: paper1,
+      paper_2: paper2,
+      sections: {
+        "রসায়ন ১ম পত্র (৫টি অধ্যায়)": paper1.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        "রসায়ন ২য় পত্র (৫টি অধ্যায়)": paper2.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      },
+      numbered_chapters: [
+        ...paper1.map(c => `১ম পত্র - অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        ...paper2.map(c => `২য় পত্র - অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      ],
+      instructions_for_mentor: `এনসিটিবি (NCTB) কারিকুলাম অনুযায়ী এইচএসসি রসায়নে মোট ১০টি অধ্যায়: ১ম পত্রে ৫টি এবং ২য় পত্রে ৫টি। শিক্ষার্থীর চাহিদামাফিক ১ম পত্র বা ২য় পত্রের তালিকা নির্ভুলভাবে দাও।`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
+  // Custom rich syllabus for HSC Higher Math (1st Paper: 10 chapters, 2nd Paper: 10 chapters)
+  if (subj === 'hsc_math' || subj === 'hsc_higher_math') {
+    const paper1 = [
+      { id: "math_1_1", order_num: "1", name: "ম্যাট্রিক্স ও নির্ণায়ক" },
+      { id: "math_1_2", order_num: "2", name: "ভেক্টর" },
+      { id: "math_1_3", order_num: "3", name: "সরলরেখা" },
+      { id: "math_1_4", order_num: "4", name: "বৃত্ত" },
+      { id: "math_1_5", order_num: "5", name: "বিন্যাস ও সমাবেশ" },
+      { id: "math_1_6", order_num: "6", name: "ত্রিকোণমিতিক অনুপাত" },
+      { id: "math_1_7", order_num: "7", name: "সংযুক্ত ও যৌগিক কোণের ত্রিকোণমিতিক অনুপাত" },
+      { id: "math_1_8", order_num: "8", name: "ফাংশন ও ফাংশনের লেখচিত্র" },
+      { id: "math_1_9", order_num: "9", name: "অন্তরীকরণ" },
+      { id: "math_1_10", order_num: "10", name: "যোগজীকরণ" }
+    ];
+    const paper2 = [
+      { id: "math_2_1", order_num: "1", name: "বাস্তব সংখ্যা ও অসমতা" },
+      { id: "math_2_2", order_num: "2", name: "যোগাশ্রয়ী প্রোগ্রাম" },
+      { id: "math_2_3", order_num: "3", name: "জটিল সংখ্যা" },
+      { id: "math_2_4", order_num: "4", name: "বহুপদী ও বহুপদী সমীকরণ" },
+      { id: "math_2_5", order_num: "5", name: "দ্বিপদী বিস্তৃতি" },
+      { id: "math_2_6", order_num: "6", name: "কণিক" },
+      { id: "math_2_7", order_num: "7", name: "বিপরীত ত্রিকোণমিতিক ফাংশন ও ত্রিকোণমিতিক সমীকরণ" },
+      { id: "math_2_8", order_num: "8", name: "স্থিতিবিদ্যা" },
+      { id: "math_2_9", order_num: "9", name: "সমতলে বস্তুকণার গতি" },
+      { id: "math_2_10", order_num: "10", name: " বিস্তার পরিমাপ ও সম্ভাবনা" }
+    ];
+
+    const finalRes = {
+      subject: "এইচএসসি উচ্চতর গণিত",
+      subject_id: subj,
+      total_chapters: 20,
+      total_paper1: 10,
+      total_paper2: 10,
+      paper_1: paper1,
+      paper_2: paper2,
+      sections: {
+        "উচ্চতর গণিত ১ম পত্র (১০টি অধ্যায়)": paper1.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        "উচ্চতর গণিত ২য় পত্র (১০টি অধ্যায়)": paper2.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      },
+      numbered_chapters: [
+        ...paper1.map(c => `১ম পত্র - অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        ...paper2.map(c => `২য় পত্র - অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      ],
+      instructions_for_mentor: `এনসিটিবি কারিকুলাম অনুযায়ী এইচএসসি উচ্চতর গণিতে মোট ২০টি অধ্যায়: ১ম পত্রে ১০টি ও ২য় পত্রে ১০টি।`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
+  // Custom rich syllabus for HSC Biology (1st Paper Botany: 12 chapters, 2nd Paper Zoology: 12 chapters)
+  if (subj === 'hsc_biology') {
+    const botany = [
+      { id: "bio_1_1", order_num: "1", name: "কোষ ও এর গঠন" },
+      { id: "bio_1_2", order_num: "2", name: "কোষ বিভাজন" },
+      { id: "bio_1_3", order_num: "3", name: "কোষ রসায়ন" },
+      { id: "bio_1_4", order_num: "4", name: "অণুজীব" },
+      { id: "bio_1_5", order_num: "5", name: "শৈবাল ও ছত্রাক" },
+      { id: "bio_1_6", order_num: "6", name: "ব্রায়োফাইটা ও টেরিডোফাইটা" },
+      { id: "bio_1_7", order_num: "7", name: "নগ্নবীজী ও আবৃতবীজী উদ্ভিদ" },
+      { id: "bio_1_8", order_num: "8", name: "টিসু ও টিসুতন্ত্র" },
+      { id: "bio_1_9", order_num: "9", name: "উদ্ভিদ শারীরতত্ত্ব" },
+      { id: "bio_1_10", order_num: "10", name: "উদ্ভিদ প্রজনন" },
+      { id: "bio_1_11", order_num: "11", name: "জীবপ্রযুক্তি" },
+      { id: "bio_1_12", order_num: "12", name: "জীবের পরিবেশ, বিস্তার ও সংরক্ষণ" }
+    ];
+    const zoology = [
+      { id: "bio_2_1", order_num: "1", name: "প্রাণীর ভিন্নতা ও শ্রেণিবিন্যাস" },
+      { id: "bio_2_2", order_num: "2", name: "প্রাণীর পরিচিতি (হাইড্রা, ঘাসফড়িং, রুই মাছ)" },
+      { id: "bio_2_3", order_num: "3", name: "পরিপাক ও শোষণ" },
+      { id: "bio_2_4", order_num: "4", name: "রক্ত সংবহন" },
+      { id: "bio_2_5", order_num: "5", name: "শ্বাসক্রিয়া ও শ্বসন" },
+      { id: "bio_2_6", order_num: "6", name: "বর্জ্য ও নিষ্কাশন" },
+      { id: "bio_2_7", order_num: "7", name: "চলন ও অঙ্গচালনা" },
+      { id: "bio_2_8", order_num: "8", name: "সমন্বয় ও নিয়ন্ত্রণ" },
+      { id: "bio_2_9", order_num: "9", name: "মানব জীবনের ধারাবাহিকতা" },
+      { id: "bio_2_10", order_num: "10", name: "মানবদেহের প্রতিরক্ষা" },
+      { id: "bio_2_11", order_num: "11", name: "জিনতত্ত্ব ও বিবর্তন" },
+      { id: "bio_2_12", order_num: "12", name: "প্রাণীর আচরণ" }
+    ];
+
+    const finalRes = {
+      subject: "এইচএসসি জীববিজ্ঞান",
+      subject_id: "hsc_biology",
+      total_chapters: 24,
+      total_paper1: 12,
+      total_paper2: 12,
+      paper_1: botany,
+      paper_2: zoology,
+      sections: {
+        "১ম পত্র (উদ্ভিদবিজ্ঞান - ১২টি অধ্যায়)": botany.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        "২য় পত্র (প্রাণিবিজ্ঞান - ১২টি অধ্যায়)": zoology.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      },
+      numbered_chapters: [
+        ...botany.map(c => `১ম পত্র (উদ্ভিদবিজ্ঞান) - অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+        ...zoology.map(c => `২য় পত্র (প্রাণিবিজ্ঞান) - অধ্যায় ${toBn(c.order_num)}: ${c.name}`)
+      ],
+      instructions_for_mentor: `এনসিটিবি কারিকুলাম অনুযায়ী এইচএসসি জীববিজ্ঞানে মোট ২৪টি অধ্যায়: ১ম পত্র (উদ্ভিদবিজ্ঞান) ১২টি এবং ২য় পত্র (প্রাণিবিজ্ঞান) ১২টি।`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
+  // Custom rich syllabus for HSC ICT
+  if (subj === 'hsc_ict') {
+    const ictChapters = [
+      { id: "hsc_ict_1", order_num: "1", name: "তথ্য ও যোগাযোগ প্রযুক্তি: বিশ্ব ও বাংলাদেশ প্রেক্ষিত" },
+      { id: "hsc_ict_2", order_num: "2", name: "কমিউনিকেশন সিস্টেমস ও নেটওয়ার্কিং" },
+      { id: "hsc_ict_3", order_num: "3", name: "সংখ্যা পদ্ধতি ও ডিজিটাল ডিভাইস" },
+      { id: "hsc_ict_4", order_num: "4", name: "ওয়েব ডিজাইন পরিচিতি এবং এইচটিএমএল (HTML)" },
+      { id: "hsc_ict_5", order_num: "5", name: "প্রোগ্রামিং ভাষা (C Programming)" },
+      { id: "hsc_ict_6", order_num: "6", name: "ডেটাবেজ ম্যানেজমেন্ট সিস্টেম (DBMS)" }
+    ];
+
+    const finalRes = {
+      subject: "এইচএসসি তথ্য ও যোগাযোগ প্রযুক্তি",
+      subject_id: "hsc_ict",
+      total_chapters: 6,
+      chapters: ictChapters,
+      numbered_chapters: ictChapters.map(c => `অধ্যায় ${toBn(c.order_num)}: ${c.name}`),
+      instructions_for_mentor: `এনসিটিবি অফিশিয়াল সিলেবাস অনুযায়ী এইচএসসি ICT বিষয়ে মোট ৬টি অধ্যায় রয়েছে। অধ্যায়গুলোর তালিকা সাজিয়ে উপস্থাপন করো।`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
+  // Default dynamic chapter resolution for SSC/other subjects from cached corpus
+  const allCached = await getAllChaptersCached();
+  const matched = allCached.filter(c => c.subject_id === subj);
+
+  if (matched.length > 0) {
+    const numberedChapters = matched.map(r => {
+      const ord = r.relative_num || r.order_num ? `অধ্যায় ${toBn(r.relative_num || r.order_num)}: ` : "";
+      return `${ord}${r.name}`;
+    });
+
+    const finalRes = {
+      subject: subjectName,
+      subject_id: subj,
+      total_chapters: matched.length,
+      chapters: matched.map(r => ({
+        id: r.id,
+        name: r.name,
+        order_num: r.relative_num || r.order_num
+      })),
+      numbered_chapters: numberedChapters,
+      instructions_for_mentor: `এনসিটিবি কারিকুলাম অনুযায়ী '${subjectName}' বিষয়ের মোট ${toBn(matched.length)}টি অধ্যায়ের তালিকা প্রস্তুত। শিক্ষার্থীদের সুন্দরভাবে মার্জিত নম্বর ও বুলেট তালিকা আকারে উপস্থাপন করো।`
+    };
+
+    appCache.set(cacheKey, finalRes, 3600);
+    return finalRes;
+  }
+
   const sql = `
     SELECT c.id, c.name, c.order_num, COUNT(q.id) as question_count 
     FROM chapters c 

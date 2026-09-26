@@ -1,74 +1,144 @@
-// Subject Display Names & Identification Mapping
-export const SUBJECT_DISPLAY_NAMES = {
-  "ssc_physics": "পদার্থবিজ্ঞান",
-  "ssc_chemistry": "রসায়ন",
-  "ssc_biology": "জীববিজ্ঞান",
-  "ssc_general_math": "সাধারণ গণিত",
-  "ssc_higher_math": "উচ্চতর গণিত",
-  "ssc_bangla_1st": "বাংলা ১ম পত্র",
-  "ssc_bangla_2nd": "বাংলা ২য় পত্র",
-  "ssc_english_1st": "ইংরেজি ১ম পত্র",
-  "ssc_english_2nd": "ইংরেজি ২য় পত্র",
-  "ssc_ict": "তথ্য ও যোগাযোগ প্রযুক্তি",
-  "ssc_bgs": "বাংলাদেশ ও বিশ্বপরিচয়",
-  "ssc_islam": "ইসলাম ও নৈতিক শিক্ষা",
-  "ssc_hindu": "হিন্দুধর্ম ও নৈতিক শিক্ষা",
-  "ssc_agriculture": "কৃষি শিক্ষা"
+// HSC Academic Subject Map & Database Resolver
+// Pure model-driven architecture: clean mapping to SQLite database entities
+
+export const HSC_SUBJECTS = {
+  hsc_physics: {
+    key: "hsc_physics",
+    name: "পদার্থবিজ্ঞান",
+    dbIds: ["phys_1", "phys_2"]
+  },
+  hsc_chemistry: {
+    key: "hsc_chemistry",
+    name: "রসায়ন",
+    dbIds: ["chem_1", "chem_2"]
+  },
+  hsc_math: {
+    key: "hsc_math",
+    name: "উচ্চতর গণিত",
+    dbIds: ["math_1", "math_2"]
+  },
+  hsc_biology: {
+    key: "hsc_biology",
+    name: "জীববিজ্ঞান",
+    dbIds: ["bio_1", "bio_2"]
+  },
+  hsc_ict: {
+    key: "hsc_ict",
+    name: "তথ্য ও যোগাযোগ প্রযুক্তি",
+    dbIds: ["ict"]
+  },
+  hsc_bangla: {
+    key: "hsc_bangla",
+    name: "বাংলা",
+    dbIds: ["bangla_1", "KJ8CZWa7zU", "4bM6-nK47k"]
+  },
+  hsc_english: {
+    key: "hsc_english",
+    name: "ইংরেজি",
+    dbIds: ["fIt1mZ0AW1", "JtLdMQGSi3", "r7dj8eEqhG", "InnRLd", "6vXYtS"]
+  },
+  hsc_accounting: {
+    key: "hsc_accounting",
+    name: "হিসাববিজ্ঞান",
+    dbIds: ["accountingxx_1", "accounting_2"]
+  },
+  hsc_economics: {
+    key: "hsc_economics",
+    name: "অর্থনীতি",
+    dbIds: ["economics_1", "economics_2"]
+  },
+  hsc_management: {
+    key: "hsc_management",
+    name: "ব্যবসায় সংগঠন ও ব্যবস্থাপনা",
+    dbIds: ["management_1", "management_2"]
+  },
+  hsc_finance: {
+    key: "hsc_finance",
+    name: "ফিন্যান্স ও ব্যাংকিং",
+    dbIds: ["finance_2"]
+  }
 };
 
+// Subject display names for UI & prompts
+export const SUBJECT_DISPLAY_NAMES = Object.fromEntries(
+  Object.entries(HSC_SUBJECTS).map(([k, v]) => [k, v.name])
+);
+
+// Bengali digit formatter
+const BN_DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
 export function toBnDigits(num) {
   if (num === undefined || num === null) return "";
-  const bn = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
-  return String(num).replace(/[0-9]/g, d => bn[d]);
+  return String(num).replace(/[0-9]/g, d => BN_DIGITS[d] || d);
 }
+
+// Clean canonical subject resolver (trusts Jev & LLM classification without fragile regex ladders)
+const DIRECT_LOOKUP = {
+  physics: "hsc_physics",
+  phys: "hsc_physics",
+  পদার্থবিজ্ঞান: "hsc_physics",
+  পদার্থ: "hsc_physics",
+  chemistry: "hsc_chemistry",
+  chem: "hsc_chemistry",
+  রসায়ন: "hsc_chemistry",
+  রসায়ন: "hsc_chemistry",
+  math: "hsc_math",
+  higher_math: "hsc_math",
+  গণিত: "hsc_math",
+  biology: "hsc_biology",
+  bio: "hsc_biology",
+  জীববিজ্ঞান: "hsc_biology",
+  ict: "hsc_ict",
+  তথ্য: "hsc_ict",
+  bangla: "hsc_bangla",
+  বাংলা: "hsc_bangla",
+  english: "hsc_english",
+  ইংরেজি: "hsc_english",
+  accounting: "hsc_accounting",
+  হিসাববিজ্ঞান: "hsc_accounting",
+  economics: "hsc_economics",
+  অর্থনীতি: "hsc_economics",
+  management: "hsc_management",
+  ব্যবস্থাপনা: "hsc_management",
+  finance: "hsc_finance",
+  ফিন্যান্স: "hsc_finance"
+};
 
 export function normalizeSubject(raw) {
   if (!raw) return null;
-  const s = String(raw).toLowerCase().trim();
+  const s = String(raw).toLowerCase().trim().replace(/^ssc_/, "hsc_");
 
-  // Fast direct ID match
-  if (s.startsWith("ssc_")) return s;
+  if (HSC_SUBJECTS[s]) return s;
 
-  // Bangla 2nd Paper
-  if (/bangla\s*2|বাংলা\s*২|ব্যাকরণ|byakoron|bakoron|bng\s*2|সমাস|সন্ধি|ণ-ত্ব|ষ-ত্ব|কারক|প্রত্যয়|বাগধারা/i.test(s)) return 'ssc_bangla_2nd';
-  
-  // English 2nd Paper
-  if (/english\s*2|ইংরেজি\s*২|eng\s*2/i.test(s)) return 'ssc_english_2nd';
-  
-  // BGS (Bangladesh & Global Studies) - must precede Bangla so 'বাংলাদেশ' never matches 'বাংলা'
-  if (/বিজিএস|\bbgs\b|বাংলাদেশ|বিশ্বপরিচয়|বিশ্বপরিচয়|সমাজ|বঙ্গভঙ্গ|মুক্তিযুদ্ধ|৬\s*দফা|৭ই\s*মার্চ|জাতির\s*পিতা|বঙ্গবন্ধু|মুজিবনগর/i.test(s)) return 'ssc_bgs';
+  // Direct dictionary check
+  if (DIRECT_LOOKUP[s]) return DIRECT_LOOKUP[s];
 
-  // Bangla 1st Paper
-  if (/suva|সুভা|শুভা|নিমগাছ|নিম\s*গাছ|আম-আঁটি|আম\s*আঁটি|মানুষ\s*মুহম্মদ|পল্লীজননী|কপোতাক্ষ|রানার|কাকতাড়ুয়া|kaktarua|বহিপীর|bohipir|বই\s*পড়া|boi\s*pora|goddo|gotto|গদ্য|kobita|কবিতা|সাহিত্য|সহপাঠ/i.test(s)) return 'ssc_bangla_1st';
-  if (/bangla\s*1|বাংলা\s*১|\bbng\s*1\b|bangla(?!\w)|বাংলা(?!\s*দেশ)|\bbng\b/i.test(s)) return 'ssc_bangla_1st';
-  
-  // English 1st Paper
-  if (/english\s*1|ইংরেজি\s*১|\beng\s*1\b|english|ইংরেজি|\beng\b/i.test(s)) return 'ssc_english_1st';
-  
-  // Higher Math
-  if (/উচ্চতর|হায়ার|হায়ার|\b(?:hm|hmath|higher|h_math|h\s*math)\b/i.test(s)) return 'ssc_higher_math';
-  
-  // General Math
-  if (/সাধারণ\s*গণিত|গণিত|গনিত|\b(?:math|maths|gonit|gonith|gm|gen\s*math)\b/i.test(s)) return 'ssc_general_math';
-  
-  // Physics: covers physics, phycis, physcis, physisc, physis, physic, phys, phy, fijiks, fizix, fizic, fizics, podartho, podartha, podarthobiggan, podarthobidya, etc.
-  if (/পদার্থবিজ্ঞান|পদার্থবিদ্য|পদার্থ|\b(?:physics|phycis|physcis|physisc|physis|physic|phys|phy|fijiks|fizix|fizic|fizics|fizi|fysics|fyziks|podartho|podartha|podarthobiggan|podarthobidya)\b|\bphyc|\bfizik|\bfijik/i.test(s)) return 'ssc_physics';
-  
-  // Chemistry: covers chemistry, chemisty, chemestry, chemi, chem, kemistri, kemistry, kemi, roshon, roshoyon, roshayon, ইত্যাদি
-  if (/রসায়ন|রসায়ন|কেমিস্ট্রি|\b(?:chemistry|chemisty|chemestry|chem|chemi|kemi|kemistri|kemistry|roshon|roshayon|roshoyon)\b/i.test(s)) return 'ssc_chemistry';
-  
-  // Biology: covers biology, bilogoy, bilogy, bology, bioloy, biolgy, biologi, bio, baio, boilogy, jibbiggan, jibbigan, jib, ইত্যাদি
-  if (/জীববিজ্ঞান|বায়োলজি|বায়োলজি|(?:^|\s)জীব(?:\s|$)|\b(?:biology|bilogoy|bilogy|bology|bioloy|biolgy|biologi|bio|baio|boilogy|jibbiggan|jibbigan|jib)\b/i.test(s)) return 'ssc_biology';
-  
-  // ICT
-  if (/আইসিটি|\bict\b|তথ্য\s*ও\s*যোগাযোগ|মডেম|রাউটার|ডেটাবেজ|ডাটাবেজ/i.test(s)) return 'ssc_ict';
-  
-  // Religion
-  if (/ইসলাম|ধর্ম|\bislam\b|আকিকা|আকীকাহ|কুরবানি|নামাজ|রোজা|হজ|যাকাত|তাওহিদ/i.test(s)) return 'ssc_islam';
-  if (/হিন্দু|\bhindu\b/i.test(s)) return 'ssc_hindu';
-  
-  // Agriculture
-  if (/কৃষি|\bagri\b|agriculture/i.test(s)) return 'ssc_agriculture';
+  // Simple token scan
+  for (const [key, canonical] of Object.entries(DIRECT_LOOKUP)) {
+    if (s.includes(key)) return canonical;
+  }
 
   return null;
+}
+
+/**
+ * Maps canonical subject IDs to actual DB questions.subject_id values
+ */
+export function getDbSubjectList(subjectId) {
+  if (!subjectId) return [];
+  const canonical = normalizeSubject(subjectId) || subjectId;
+  const entry = HSC_SUBJECTS[canonical];
+  if (entry) return entry.dbIds;
+
+  const s = String(subjectId).toLowerCase();
+  for (const [key, data] of Object.entries(HSC_SUBJECTS)) {
+    if (s.includes(key.replace("hsc_", ""))) return data.dbIds;
+  }
+  return [subjectId];
+}
+
+export function buildDbSubjectCondition(subjectId, column = "subject_id") {
+  const list = getDbSubjectList(subjectId);
+  if (!list || list.length === 0) return "";
+  if (list.length === 1) return `${column} = '${list[0]}'`;
+  return `${column} IN (${list.map(s => `'${s}'`).join(", ")})`;
 }

@@ -1,423 +1,86 @@
-// Chapter and Topic Normalization, Concept Taxonomy & Year Parsing
-export const BN_TO_EN_DIGITS = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+// Chapter and Topic Normalization, Year Parsing & SQL Utilities
+// Clean, lean utilities for database queries without hardcoded topic bloat
 
-export const BENGALI_ORDINALS = {
-  "১ম": 1, "২য়": 2, "২য়": 2, "৩য়": 3, "৩য়": 3, "৪র্থ": 4, "৫ম": 5, "৬ষ্ঠ": 6, "৭ম": 7, "৮ম": 8, "৯ম": 9, "১০ম": 10,
-  "১১শ": 11, "১২শ": 12, "১৩শ": 13, "১৪শ": 14, "১৫শ": 15, "১৬শ": 16, "১৭শ": 17,
-  "প্রথম": 1, "দ্বিতীয়": 2, "দ্বিতীয়": 2, "তৃতীয়": 3, "তৃতীয়": 3, "চতুর্থ": 4, "পঞ্চম": 5, "ষষ্ঠ": 6, "সপ্তম": 7, "অষ্টম": 8, "নবম": 9, "দশম": 10,
-  "একাদশ": 11, "দ্বাদশ": 12, "ত্রয়োদশ": 13, "ত্রয়োদশ": 13, "চতুর্দশ": 14, "পঞ্চদশ": 15, "ষোড়শ": 16, "ষোড়শ": 16, "সপ্তদশ": 17
+export const BN_TO_EN_DIGITS = {
+  "০": "0", "১": "1", "২": "2", "৩": "3", "৪": "4",
+  "৫": "5", "৬": "6", "৭": "7", "৮": "8", "৯": "9"
 };
 
+/**
+ * Extracts numeric chapter index from string if explicitly mentioned
+ */
 export function extractChapterNum(raw) {
   if (!raw) return null;
-  const norm = String(raw).normalize('NFC').toLowerCase();
+  const str = String(raw).normalize("NFC").trim();
+  const enStr = str.replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d);
 
-  // 1. Check Bengali words like 'একাদশ', 'দশম', '১১শ'
-  for (const [word, num] of Object.entries(BENGALI_ORDINALS)) {
-    const re = new RegExp(`(?:^|\\s)${word}(?:\\s|$)`, 'i');
-    if (re.test(norm)) return String(num);
-  }
+  // Match: "ch 2", "chapter 3", "২য় অধ্যায়", "অধ্যায় ৪"
+  const m = enStr.match(/(?:অধ্যায়|অধ্যায়|chapter|ch)\s*[:.\-]?\s*(\d{1,2})/i) ||
+            enStr.match(/(\d{1,2})\s*(?:তম|নং|শ|ম|র্থ|nd|rd|th)?\s*(?:অধ্যায়|অধ্যায়|chapter)/i) ||
+            enStr.match(/^(\d{1,2})\s*(?:নং|er|এর|theke|থেকে)?$/i);
 
-  // 2. Check digits with explicit chapter keywords ('ch', 'chapter', 'অধ্যায়', 'অধ্যায়', 'চ্যাপ্টার')
-  const converted = norm.replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d);
-  const m = converted.match(/(?:অধ্যায়|অধ্যায়|চ্যাপ্টার|chapter|ch)\w*\s*[:ঃ.\-]?\s*(\d{1,2})/i) || 
-            converted.match(/(?:^|\s)(\d{1,2})\s*(?:নং|তম|শ|ম|র্থ|st|nd|rd|th)?\s*(?:অধ্যায়|অধ্যায়|চ্যাপ্টার|chapter|ch)/i) ||
-            converted.match(/(?:^|\s)(\d{1,2})\s*(?:নং|তম|শ|ম|র্থ|st|nd|rd|th)\b/i);
   if (m) {
     const num = parseInt(m[1], 10);
-    if (num >= 1 && num <= 25) return String(num);
-  }
-
-  // 3. If input begins with a number (e.g. "6 theke", "6 er", "6 no") or is purely a number
-  const trimmed = converted.trim();
-  const leadingMatch = trimmed.match(/^(\d{1,2})(?:\s*(?:theke|এর|থেকে|er|নং|no\b)|$)/i);
-  if (leadingMatch) {
-    const num = parseInt(leadingMatch[1], 10);
-    if (num >= 1 && num <= 25) return String(num);
+    if (num >= 1 && num <= 30) return String(num);
   }
 
   return null;
 }
 
-export function findChapterNumByKeywords(message, subjectId = null) {
+export function findChapterNumByKeywords(message) {
   if (!message) return null;
-  const msg = String(message).toLowerCase();
-  
-  const num = extractChapterNum(msg);
-  if (num) return num;
-
-  const normT = normalizeTopic(msg);
-
-  const subjectsToCheck = subjectId && CHAPTER_CONCEPTS_MAP[subjectId] 
-    ? [subjectId] 
-    : Object.keys(CHAPTER_CONCEPTS_MAP);
-
-  let bestMatch = null;
-  let maxMatchLength = 0;
-
-  for (const sId of subjectsToCheck) {
-    const chapters = CHAPTER_CONCEPTS_MAP[sId];
-    if (!chapters) continue;
-    
-    for (const [chNum, keywords] of Object.entries(chapters)) {
-      for (const kw of keywords) {
-        const kwLower = kw.toLowerCase();
-        if (msg.includes(kwLower) || (normT && normT.includes(kwLower))) {
-          if (kwLower.length > maxMatchLength) {
-            maxMatchLength = kwLower.length;
-            bestMatch = String(chNum);
-          }
-        }
-      }
-    }
-  }
-
-  return bestMatch;
+  return extractChapterNum(message);
 }
 
-export function normalizeTopic(raw) {
-  if (!raw) return "";
-  const t = String(raw).toLowerCase().trim();
-  const TOPIC_MAP = {
-    "goti": "গতি",
-    "motion": "গতি",
-    "bol": "বল",
-    "force": "বল",
-    "kaj": "কাজ, ক্ষমতা ও শক্তি",
-    "power": "কাজ, ক্ষমতা ও শক্তি",
-    "energy": "কাজ, ক্ষমতা ও শক্তি",
-    "chap": "পদার্থের অবস্থা ও চাপ",
-    "pressure": "পদার্থের অবস্থা ও চাপ",
-    "tap": "বস্তুর ওপর তাপের প্রভাব",
-    "heat": "বস্তুর ওপর তাপের প্রভাব",
-    "torongo": "তরঙ্গ ও শব্দ",
-    "sound": "তরঙ্গ ও শব্দ",
-    "wave": "তরঙ্গ ও শব্দ",
-    "alor protifolon": "আলোর প্রতিফলন",
-    "reflection": "আলোর প্রতিফলন",
-    "alor protisoron": "আলোর প্রতিসরণ",
-    "refraction": "আলোর প্রতিসরণ",
-    "sthir bidyut": "স্থির বিদ্যুৎ",
-    "chol bidyut": "চল বিদ্যুৎ",
-    "trikonmiti": "ত্রিকোণমিতি",
-    "trigonometry": "ত্রিকোণমিতি",
-    "porimiti": "পরিমিতি",
-    "mensuration": "পরিমিতি",
-    "porisongkhan": "পরিসংখ্যান",
-    "statistics": "পরিসংখ্যান",
-    "set": "সেট ও ফাংশন",
-    "dhara": "সসীম ধারা",
-    "series": "সসীম ধারা",
-    "porjoy saroni": "পর্যায় সারণী",
-    "periodic table": "পর্যায় সারণী",
-    "moler dharona": "মোলের ধারণা",
-    "jaron": "জারণ",
-    "bijaron": "বিজারণ",
-    "redox": "জারণ",
-    "bikriya": "রাসায়নিক বিক্রিয়া",
-    "bikria": "রাসায়নিক বিক্রিয়া",
-    "acid": "অ্যাসিড",
-    "khar": "ক্ষার",
-    "kharok": "ক্ষারক",
-    "kosh": "কোষ",
-    "cell": "কোষ",
-    "mitochondria": "মাইটোকন্ড্রিয়া",
-    "mitosis": "মাইটোসিস",
-    "meiosis": "মিয়োসিস",
-    "dna": "ডিএনএ",
-    "vector": "ভেক্টর",
-    "probability": "সম্ভাবনা",
-    "shombhabona": "সম্ভাবনা",
-    "suva": "সুভা",
-    "shuva": "সুভা",
-    "shova": "সুভা",
-    "kaktarua": "কাকতাড়ুয়া",
-    "bohipir": "বহিপীর",
-    "boi pora": "বই পড়া"
-  };
-  for (const [k, v] of Object.entries(TOPIC_MAP)) {
-    if (t.includes(k)) return v;
-  }
-  return raw;
-}
+export function parseYearFilter(yearInput) {
+  if (!yearInput) return [];
+  const str = String(yearInput).replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d).trim();
+  if (str === "all" || str === "any" || str === "none") return [];
 
-export function parseYearFilter(rawYear) {
-  if (!rawYear) return [];
-  const bnToEn = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
-  const str = String(rawYear).replace(/[০-৯]/g, d => bnToEn[d]).trim();
-
-  // 1. Check for range: e.g. "2020-2025", "2020 - 2025", "2020 to 2025", "20-25", "2020-25", "২০২০-২০২৫", "2020 থেকে 2025"
-  const rangeMatch = str.match(/(?:20)?(\d{2})\s*(?:-|to|থেকে|পর্যন্ত|–|—)\s*(?:20)?(\d{2})/i);
+  const years = [];
+  const rangeMatch = str.match(/(\d{2,4})\s*-\s*(\d{2,4})/);
   if (rangeMatch) {
-    let start = parseInt(rangeMatch[1], 10);
-    let end = parseInt(rangeMatch[2], 10);
-    if (start > end) [start, end] = [end, start];
-    const years = [];
-    for (let y = start; y <= end; y++) {
-      years.push(String(y).padStart(2, '0'));
+    let start = parseInt(rangeMatch[1]);
+    let end = parseInt(rangeMatch[2]);
+    if (start < 100) start += 2000;
+    if (end < 100) end += 2000;
+    for (let y = Math.min(start, end); y <= Math.max(start, end); y++) {
+      years.push(String(y).slice(-2));
     }
     return years;
   }
 
-  // 2. Individual 4-digit or 2-digit years: e.g. "2024", "24", "2021, 2023"
-  const matches = str.match(/(?:20)?(\d{2})/g);
+  const matches = str.match(/\b\d{2,4}\b/g);
   if (matches) {
-    const list = matches.map(m => {
-      const stripped = m.replace(/^20/, '');
-      return stripped.length === 2 ? stripped : String(m).slice(-2);
-    });
-    return [...new Set(list)];
-  }
-
-  return [];
-}
-
-export function buildYearSqlConditions(boardTag, years) {
-  if (!years || years.length === 0) {
-    if (boardTag && boardTag !== "RANDOM") {
-      return `tags LIKE '%${boardTag}%'`;
-    }
-    return `tags != '' AND tags IS NOT NULL`;
-  }
-
-  if (boardTag && boardTag !== "RANDOM") {
-    const sub = years.map(y => `(tags LIKE '%${boardTag} ${y}%' OR (tags LIKE '%${boardTag}%' AND tags LIKE '% ${y}%'))`);
-    return `(${sub.join(" OR ")})`;
-  } else {
-    const sub = years.map(y => `tags LIKE '% ${y}%'`);
-    return `(${sub.join(" OR ")})`;
-  }
-}
-
-export const CHAPTER_CONCEPTS_MAP = {
-  ssc_biology: {
-    "1": ["জীবন পাঠ", "শ্রেণিবিন্যাস", "দ্বিপদ", "লিনিয়াস", "হুইটটেকার", "প্রোটিস্টা", "মনেরা", "ফানজাই", "প্ল্যান্টি", "অ্যানিম্যালিয়া", "হায়ারার্কি", "আইসিজেডএন", "আইসিবিএন"],
-    "2": ["জীবকোষ", "টিস্যু", "মাইটোকন্ড্রিয়া", "প্লাস্টিড", "গলগি", "রাইবোজোম", "লাইসোজোম", "কোষঝিল্লি", "কোষপ্রাচীর", "জাইলেম", "ফ্লোয়েম", "প্যারেনকাইমা", "কোলেনকাইমা", "স্ক্লেরেনকাইমা", "মৌলিক টিস্যু"],
-    "3": ["কোষ বিভাজন", "মাইটোসিস", "মিয়োসিস", "অ্যামাইটোসিস", "প্রোফেজ", "মেটাফেজ", "অ্যানাফেজ", "টেলোফেজ", "ক্রসিং ওভার", "স্পিন্ডল"],
-    "4": ["জীবনীশক্তি", "সালোকসংশ্লেষণ", "শ্বসন", "এটিপি", "ATP", "ক্যালভিন", "ক্রেবস চক্র", "গ্লাইকোলাইসিস", "ফার্মেন্টেশন", "সবাত", "অবাত", "ক্লোরোফিল"],
-    "5": ["খাদ্য", "পুষ্টি", "পরিপাক", "পাকস্থলী", "যকৃৎ", "অগ্ন্যাশয়", "ক্ষুদ্রান্ত্র", "বৃহদান্ত্র", "ভিটামিন", "খনিজ", "এনজাইম", "বিএমআই", "BMI", "ক্যালোরি", "দাঁত", "আন্ত্রিক রস"],
-    "6": ["জীবে পরিবহন", "রক্ত", "হৃদপিণ্ড", "ধমনী", "শিরা", "রক্তরস", "লোহিত", "শ্বেত", "অনুচক্রিকা", "হিমোগ্লোবিন", "রক্তচাপ", "প্রস্বেদন", "ট্রান্সপিরেশন", "লসিকা", "কৈশিক"],
-    "7": ["গ্যাসীয় বিনিময়", "শ্বসনতন্ত্র", "ফুসফুস", "অ্যালভিওলাস", "ব্রঙ্কাস", "ব্রঙ্কাইটিস", "ট্রাকিয়া", "হাঁপানি", "নিউমোনিয়া", "অক্সিজেন", "কার্বন ডাই-অক্সাইড"],
-    "8": ["রেচন", "বৃক্ক", "নেফ্রন", "ইউরেটার", "মূত্রথলি", "ডায়ালাইসিস", "গ্লোমেরুলাস", "রেনাল", "ইউরিয়া", "ইউরিক"],
-    "9": ["দৃঢ়তা প্রদান", "চলন", "কঙ্কাল", "অস্থি", "তরুণাস্থি", "সাইনোভিয়াল", "অস্টিওপোরোসিস", "লিগামেন্ট", "টেনডন", "ঐচ্ছিক", "অনৈচ্ছিক"],
-    "10": ["সমন্বয়", "নিউরন", "সিন্যাপস", "মস্তিষ্ক", "হরমোন", "থাইরয়েড", "পিটুইটারি", "অক্সিন", "জিব্বেরেলিন", "অ্যাড্রেনালিন", "স্নায়ু"],
-    "11": ["জীবের প্রজনন", "প্রজনন", "পরাগায়ন", "পুংকেশর", "গর্ভাশয়", "পরাগধানী", "নিষেক", "অমরা", "ভ্রূণ", "ফুল", "পুংস্তবক", "স্ত্রীস্তবক", "গর্ভমুণ্ড"],
-    "12": ["জীবের বংশগতি", "বিবর্তন", "বংশগতি", "ডিএনএ", "আরএনএ", "DNA", "RNA", "জিন", "ক্রোমোজোম", "মেন্ডেল", "ডারউইন", "থ্যালাসেমিয়া", "বর্ণান্ধতা", "মিউটেশন"],
-    "13": ["জীবের পরিবেশ", "বাস্তুতন্ত্র", "উৎপাদক", "খাদক", "বিয়োজক", "খাদ্যশিকল", "খাদ্যজাল", "ট্রফিক", "শক্তি পিরামিড", "মিথোজীবিতা", "সিমবায়োসিস", "অ্যান্টিবায়োসিস", "পরজীবী খাদ্যশিকল"],
-    "14": ["জীবপ্রযুক্তি", "টিস্যু কালচার", "রিকম্বিন্যান্ট", "প্লাজমিড", "রেস্ট্রিকশন", "জিএমও", "GMO", "ইনসুলিন", "জিন প্রকৌশল"]
-  },
-  ssc_physics: {
-    "1": ["ভৌত রাশি", "পরিমাপ", "ভার্নিয়ার", "স্ক্রু গজ", "স্লাইড ক্যালিপার্স", "মাত্রা", "পিচ", "লঘিষ্ট গণনা"],
-    "2": ["গতি", "ত্বরণ", "বেগ", "দ্রুতি", "সরণ", "মন্দন", "প্রাস", "পরন্ত বস্তু"],
-    "3": ["বল", "নিউটনের সূত্র", "ভরবেগ", "ঘর্ষণ", "জড়তা", "ভরবেগের সংরক্ষণ", "ক্রিয়া-প্রতিক্রিয়া"],
-    "4": ["কাজ", "ক্ষমতা", "শক্তি", "গতিশক্তি", "বিভবশক্তি", "কর্মদক্ষতা", "জুল", "ওয়াট"],
-    "5": ["পদার্থের অবস্থা", "চাপ", "প্যাসকেল", "আর্কিমিডিস", "প্লবতা", "ঘনত্ব", "বায়ুমণ্ডলীয় চাপ", "ব্যারোমিটার", "পীড়ন", "বিকৃতি"],
-    "6": ["বস্তুর ওপর তাপের প্রভাব", "তাপমাত্রা", "ফারেনহাইট", "সেলসিয়াস", "আপেক্ষিক তাপ", "তাপধারণ ক্ষমতা", "প্রসারণ", "সুপ্ততাপ", "ক্যালোরিমিতি"],
-    "7": ["তরঙ্গ", "শব্দ", "তরঙ্গদৈর্ঘ্য", "কম্পাঙ্ক", "পর্যায়কাল", "প্রতিধ্বনি", "শ্রাব্যতার সীমা"],
-    "8": ["আলোর প্রতিফলন", "দর্পণ", "অবতল", "উত্তল", "ফোকাস দূরত্ব", "বক্রতার ব্যাসার্ধ", "বিম্ব", "প্রতিবিম্ব"],
-    "9": ["আলোর প্রতিসরণ", "প্রতিসরাঙ্ক", "ক্রান্তি কোণ", "সংকট কোণ", "পূর্ণ অভ্যন্তরীণ প্রতিফলন", "লেন্স", "ডায়োপ্টার", "দৃষ্টির ত্রুটি"],
-    "10": ["স্থির বিদ্যুৎ", "কুলম্বের সূত্র", "তড়িৎ তীব্রতা", "তড়িৎ বিভব", "আধান", "ধারক", "চার্জ"],
-    "11": ["চল বিদ্যুৎ", "ওহমের সূত্র", "রোধ", "তুল্য রোধ", "বর্তনী", "তড়িৎ প্রবাহ", "তড়িৎ ক্ষমতা", "তড়িচ্চালক শক্তি", "আপেক্ষিক রোধ"],
-    "12": ["বিদ্যুতের চৌম্বক ক্রিয়া", "চৌম্বক ক্ষেত্র", "সোলেনয়েড", "মোটর", "জেনারেটর", "ট্রান্সফরমার", "তড়িৎচৌম্বক আবেশ", "ফ্যারাডের সূত্র"],
-    "13": ["আধুনিক পদার্থবিজ্ঞান", "ইলেকট্রনিক্স", "তেজস্ক্রিয়তা", "অর্ধায়ু", "সেমিকন্ডাক্টর", "ডায়োড", "ট্রানজিস্টর", "আইসি", "অ্যানালগ", "ডিজিটাল"],
-    "14": ["জীবন বাঁচাতে পদার্থবিজ্ঞান", "এক্স-রে", "সিটি স্ক্যান", "এমআরআই", "MRI", "আল্ট্রাসনোগ্রাফি", "ইসিজি", "ECG", "রেডিওথেরাপি"]
-  },
-  ssc_chemistry: {
-    "1": ["রসায়নের ধারণা", "রসায়ন পাঠ", "ল্যাবরেটরি", "হ্যাজার্ড প্রতীক"],
-    "2": ["পদার্থের অবস্থা", "কণার গতিতত্ত্ব", "ব্যাপন", "নিঃসরণ", "ঊর্ধ্বপাতন", "গলনাঙ্ক", "স্ফুটনাঙ্ক", "শীতলীকরণ"],
-    "3": ["পদার্থের গঠন", "পরমাণু", "প্রোটন", "নিউট্রন", "ইলেকট্রন বিন্যাস", "আইসোটোপ", "বোর মডেল", "রাদারফোর্ড", "আপেক্ষিক পারমাণবিক ভর"],
-    "4": ["পর্যায় সারণি", "পর্যায়", "গ্রুপ", "ক্ষার ধাতু", "মৃৎক্ষার ধাতু", "হ্যালোজেন", "নিষ্ক্রিয় গ্যাস", "আয়নীকরণ শক্তি", "তড়িৎ ঋণাত্মকতা", "ইলেকট্রন আসক্তি"],
-    "5": ["রাসায়নিক বন্ধন", "যোজ্যতা", "যোজনী", "আয়নিক বন্ধন", "সমযোজী বন্ধন", "ধাতব বন্ধন", "অষ্টক নিয়ম", "ক্যাটায়ন", "অ্যানায়ন"],
-    "6": ["মোলের ধারণা", "রাসায়নিক গণনা", "মোল", "অ্যাভোগাড্রো", "মোলার দ্রবণ", "মোলারিটি", "লিমিটিং বিক্রিয়ক", "শতকরা সংযুতি", "স্থূল সংকেত", "আণবিক সংকেত"],
-    "7": ["রাসায়নিক বিক্রিয়া", "জারণ", "বিজারণ", "রেডক্স", "সংযোজন", "বিযোজন", "প্রতিস্থাপন", "দহন", "তাপোৎপাদী", "তাপহারী", "লা-শাতেলিয়ার"],
-    "8": ["রসায়ন ও শক্তি", "তড়িৎ রাসায়নিক কোষ", "গ্যালভানিক কোষ", "ড্রাই সেল", "লবণ সেতু", "অ্যানোড", "ক্যাথোড", "তড়িৎ বিশ্লেষণ"],
-    "9": ["অ্যাসিড-ক্ষারক সমতা", "অ্যাসিড", "ক্ষার", "ক্ষারক", "pH", "নির্দেশক", "প্রশমন বিক্রিয়া", "লবণ"],
-    "10": ["খনিজ সম্পদঃ ধাতু-অধাতু", "খনিজ সম্পদ: ধাতু-অধাতু", "খনিজ সম্পদ ধাতু অধাতু", "ধাতু-অধাতু", "ধাতু নিষ্কাশন", "আকরিক", "খনিজ", "ক্ষয়রোধ", "মরিচা"],
-    "11": ["খনিজ সম্পদঃ জীবাশ্ম", "খনিজ সম্পদ: জীবাশ্ম", "খনিজ সম্পদ জীবাশ্ম", "জীবাশ্ম", "জীবাশ্ম জ্বালানি", "হাইড্রোকার্বন", "অ্যালকেন", "অ্যালকিন", "অ্যালকাইন", "অ্যালকোহল", "অ্যালডিহাইড", "জৈব অ্যাসিড", "পলিমার", "প্লাস্টিক"],
-    "12": ["আমাদের জীবনে রসায়ন", "বেকিং পাউডার", "ভিনেগার", "ব্লিচিং পাউডার", "সাবান", "ডিটারজেন্ট", "টয়লেট ক্লিনার"]
-  },
-  ssc_general_math: {
-    "1": ["বাস্তব সংখ্যা", "মূলদ", "অমূলদ", "আবৃত দশমিক", "ভগ্নাংশ"],
-    "2": ["সেট", "ফাংশন", "ডোমেন", "রেঞ্জ", "সার্বিক সেট", "শক্তি সেট", "ভেনচিত্র"],
-    "3": ["বীজগণিতীয় রাশি", "উৎপাদক", "বর্গ", "ঘন", "লঘিষ্ঠকরণ"],
-    "4": ["সূচক", "লগারিদম", "সূচকীয় সমীকরণ", "লগ"],
-    "5": ["এক চলকবিশিষ্ট সমীকরণ", "ঘাত", "মূল", "সমাধান সেট"],
-    "6": ["রেখা", "কোণ", "ত্রিভুজ", "সমকোণী", "সমদ্বিবাহু", "পিথাগোরাস"],
-    "7": ["ব্যবহারিক জ্যামিতি", "ত্রিভুজ অঙ্কন", "চতুর্ভুজ অঙ্কন", "সম্পাদ্য"],
-    "8": ["বৃত্ত", "স্পর্শক", "কেন্দ্রস্থ কোণ", "বৃত্তস্থ কোণ", "উপপাদ্য", "বৃত্তস্থ চতুর্ভুজ"],
-    "9": ["ত্রিকোণমিতিক অনুপাত", "sin", "cos", "tan", "ত্রিকোণমিতি", "অভেদাবলী"],
-    "10": ["দূরত্ব ও উচ্চতা", "উন্নতি কোণ", "অবনতি কোণ"],
-    "11": ["বীজগাণিতিক অনুপাত", "সমানুপাত", "যোজন-বিয়োজন"],
-    "12": ["দুই চলকবিশিষ্ট সরল সহসমীকরণ", "প্রতিস্থাপন", "অপনয়ন", "আর্যভট্ট", "বজ্রগুণন"],
-    "13": ["সসীম ধারা", "সমান্তর ধারা", "গুণোত্তর ধারা", "পদসংখ্যা", "সমষ্টি"],
-    "14": ["অনুপাত", "সদৃশতা", "প্রতিসমতা"],
-    "15": ["ক্ষেত্রফল সম্পর্কিত ক্ষেত্র ও পরিমাপ", "ত্রিভুজের ক্ষেত্রফল", "সামান্তরিকের ক্ষেত্রফল"],
-    "16": ["পরিমিতি", "বেলন", "সিলিন্ডার", "গোলক", "ঘনক", "চতুর্ভুজ", "বহুভুজ", "বৃত্তাংশ"],
-    "17": ["পরিসংখ্যান", "গড়", "মধ্যক", "প্রচুরক", "অজিব রেখা", "আয়তলেখ", "ক্রমযোজিত"]
-  },
-  ssc_higher_math: {
-    "1": ["সেট", "ফাংশন", "ডোমেন", "রেঞ্জ", "এক-এক ফাংশন", "সার্বিক ফাংশন", "বিপরীত ফাংশন"],
-    "2": ["বীজগণিতীয় রাশি", "বহুপদী", "ভাগশেষ উপপাদ্য", "উৎপাদক উপপাদ্য", "আংশিক ভগ্নাংশ", "চক্র-ক্রমিক"],
-    "3": ["জ্যামিতি", "অ্যাপোলোনিয়াস", "টলেমি", "ব্রহ্মগুপ্ত", "লম্ব অভিক্ষেপ"],
-    "4": ["জ্যামিতিক অঙ্কন", "সম্পাদ্য"],
-    "5": ["সমীকরণ", "দ্বিঘাত সমীকরণ", "মূলের প্রকৃতি", "নিশ্চায়ক", "পৃথায়ক"],
-    "6": ["অসমতা", "পরমমান", "অসমতার সমাধান"],
-    "7": ["অসীম ধারা", "অনন্ত গুণোত্তর ধারা", "অসীমতক সমষ্টি", "পুনরাবৃত্ত"],
-    "8": ["ত্রিকোণমিতি", "রেডিয়ান", "বৃত্তচাপ", "কোণের পরিমাপ", "ত্রিকোণমিতিক অভেদ"],
-    "9": ["সূচকীয়", "লগারিদমীয় ফাংশন", "প্রাকৃতিক লগ"],
-    "10": ["দ্বিপদী বিস্তৃতি", "প্যাসকেলের ত্রিভুজ", "মধ্যপদ", "সহগ"],
-    "11": ["স্থানাঙ্ক জ্যামিতি", "দূরত্ব", "ঢাল", "ত্রিভুজের ক্ষেত্রফল", "সরলরেখার সমীকরণ"],
-    "12": ["সমতলীয় ভেক্টর", "স্কেলার", "ভেক্টর যোগ", "একক ভেক্টর", "অবস্থান ভেক্টর"],
-    "13": ["ঘন জ্যামিতি", "আয়তাকার ঘনবস্তু", "কোনক", "গোলক", "প্রিজম", "পিরামিড"],
-    "14": ["সম্ভাবনা", "Probability", "নমুনা ক্ষেত্র", "ঘটনা", "মার্বেল", "মুদ্রা", "ছক্কা"]
-  },
-  ssc_bangla_1st: {
-    "1": ["গদ্য", "সুভা", "শুভা", "বই পড়া", "আম-আঁটির ভেঁপু", "মানুষ মুহম্মদ", "নিমগাছ", "শিক্ষা ও মনুষ্যত্ব", "প্রবাস বন্ধু", "মমতাদি", "একাত্তরের দিনগুলি", "সাহিত্যের রূপ ও রীতি", "বাণীকণ্ঠ", "প্রতাপ"],
-    "2": ["কবিতা", "কপোতাক্ষ নদ", "জীবন-সঙ্গীত", "জুতা-আবিष्कार", "বঙ্গবাণী", "ঝিঙে ফুল", "প্রাণ", "সেইদিন এই মাঠ", "পল্লীজননী", "রানার", "তোমাকে পাওয়ার জন্যে, হে স্বাধীনতা", "আমার পরিচয়", "স্বাধীনতা"],
-    "3": ["সহপাঠ", "কাকতাড়ুয়া", "বহিপীর", "উপন্যাস", "নাটক", "বুধা", "হাতেম আলী", "তাহেরা"]
-  },
-  ssc_bangla_2nd: {
-    "1": ["ব্যাকরণ", "সমাস", "সন্ধি", "ণ-ত্ব ও ষ-ত্ব", "কারক", "বিভক্তি", "উপসর্গ", "প্রত্যয়", "ধ্বনি", "শব্দ", "বাক্য", "বাচ্য", "বাগধারা", "উক্তি", "শব্দদ্বিত্ব", "যোজক"],
-    "2": ["নির্মিতি", "অনুচ্ছেদ", "পত্র", "দরখাস্ত", "সারাংশ", "সারমর্ম", "ভাবসম্প্রসারণ", "প্রতিবেদন", "প্রবন্ধ"]
-  },
-  ssc_bgs: {
-    "1": ["পূর্ব বাংলার আন্দোলন", "ভাষা আন্দোলন", "যুক্তফ্রন্ট", "৬ দফা", "গণঅভ্যুত্থান", "৭০ এর নির্বাচন"],
-    "2": ["বাংলাদেশের স্বাধীনতা", "মুক্তিযুদ্ধ", "মুজিবনগর সরকার", "বঙ্গবন্ধু", "গণহত্যা", "স্বাধীনতা যুদ্ধ"],
-    "3": ["সৌরজগৎ", "ভূমন্ডল", "পৃথিবী", "অক্ষাংশ", "দ্রাঘিমাংশ", "ঋতু পরিবর্তন", "দিন-রাত্রি"],
-    "4": ["ভূপ্রকৃতি", "জলবায়ু", "কালবৈশাখী", "মৌসুমি বায়ু", "ভূমিকম্প"],
-    "5": ["নদ-নদী", "প্রাকৃতিক সম্পদ", "পানি সম্পদ", "বনজ সম্পদ"],
-    "6": ["রাষ্ট্র", "নাগরিকতা", "আইন", "সংবিধান", "মৌলিক অধিকার"],
-    "7": ["শাসন বিভাগ", "আইন বিভাগ", "বিচার বিভাগ", "প্রশাসন"],
-    "8": ["গণতন্ত্র", "নির্বাচন", "নির্বাচন কমিশন", "রাজনৈতিক দল"],
-    "9": ["জাতিসংঘ", "ইউনেস্কো", "ইউনিসেফ", "শান্তিরক্ষা"],
-    "10": ["জাতীয় সম্পদ", "অর্থনৈতিক ব্যবস্থা", "পুঁজিবাদী", "সমাজতান্ত্রিক"],
-    "11": ["জিডিপি", "জিএনপি", "মাথাপিছু আয়", "দারিদ্র্য"],
-    "12": ["সরকারের অর্থব্যবস্থা", "কর", "ব্যাংক", "কেন্দ্রীয় ব্যাংক"],
-    "13": ["পরিবার", "সামাজিকীকরণ", "সামাজিক প্রতিষ্ঠান"],
-    "14": ["সামাজিক পরিবর্তন", "শিল্পায়ন", "নগরায়ণ"],
-    "15": ["সামাজিক সমস্যা", "নিরক্ষরতা", "যৌতুক", "মাদকাসক্তি"]
-  },
-  ssc_islam: {
-    "1": ["আকাইদ", "নৈতিক জীবন", "ঈমান", "তাওহিদ", "কুফর", "শিরক", "নিফাক", "রিসালাত", "নবুওয়াত", "আখিরাত", "হাশর", "মিজান", "জান্নাত", "জাহান্নাম"],
-    "2": ["শরিয়তের উৎস", "আল-কুরআন", "হাদিস", "সুন্নাহ", "ইজমা", "কিয়াস"],
-    "3": ["ইবাদত", "সালাত", "নামাজ", "যাকাত", "সাওম", "রোজা", "হজ", "হজ্জ", "জিহাদ", "আকিকা", "আকীকাহ", "কুরবানি", "পবিত্রতা", "তাহারাত"],
-    "4": ["আখলাক", "সদাচার", "সততা", "শালীনতা", "পিতা-মাতার খেদমত", "হিংসা", "গীবত"],
-    "5": ["জীবনচরিত", "রাসূলুল্লাহ", "মুহাম্মদ", "খলিফা", "আবু বকর", "উমর", "উসমান", "আলী", "ইমাম বুখারী", "ইমাম আবু হানিফা"]
-  },
-  ssc_ict: {
-    "1": ["তথ্য ও যোগাযোগ প্রযুক্তি", "ই-লার্নিং", "ই-গভর্ন্যান্স", "ই-সার্ভিস", "ই-কমার্স", "টেলিমেডিসিন", "মডেম", "রাউটার"],
-    "2": ["কম্পিউটার নিরাপত্তা", "কম্পিউটার ভাইরাস", "অ্যান্টিভাইরাস", "পাসওয়ার্ড", "পাইরেসি", "কপিরাইট", "সাইবার ক্রাইম", "সফটওয়্যার"],
-    "3": ["ইন্টারনেট", "ডিজিটাল কনটেন্ট", "ই-বুক", "শিক্ষায় ইন্টারনেট"],
-    "4": ["লেখালেখি ও হিসাব", "ওয়ার্ড প্রসেসর", "স্প্রেডশিট", "এক্সেল", "ফাংশন", "ফর্মুলা"],
-    "5": ["মাল্টিমিডিয়া", "গ্রাফিক্স", "ফটোশপ", "ইলাস্ট্রেটর", "পাওয়ারপয়েন্ট", "অ্যানিমেশন"],
-    "6": ["ডেটাবেজ", "ডাটাবেজ", "কুয়েরি", "রিলেশন", "রেকর্ড", "ফিল্ড", "প্রাইমারি কি"]
-  }
-};
-
-export function getChapterConceptKeywords(subjId, chNum) {
-  if (!subjId || !chNum) return [];
-  const numStr = String(chNum);
-  const concepts = CHAPTER_CONCEPTS_MAP[subjId]?.[numStr] || [];
-  return concepts;
-}
-
-export const KNOWN_TOPIC_PHRASES = [
-  // Bangla 1st & 2nd
-  "সুভা", "শুভা", "বই পড়া", "বইপড়া", "আম-আঁটির ভেঁপু", "আম আঁটির ভেঁপু", "আমআঁটির ভেঁপু", "মানুষ মুহম্মদ", 
-  "নিমগাছ", "শিক্ষা ও মনুষ্যত্ব", "প্রবাস বন্ধু", "মমতাদি", "একাত্তরের দিনগুলি", "সাহিত্যের রূপ ও রীতি",
-  "নিয়তি", "উপেক্ষিত শক্তির উদ্বোধন", "দেনাপাওনা", "দেনা-পাওনা", "দেনা পাওনা", "অভাগীর স্বর্গ", "পহেলা বৈশাখ",
-  "কপোতাক্ষ নদ", "জীবন-সঙ্গীত", "জীবন সঙ্গীত", "জুতা-আবিष्कार", "জুতা আবিষ্কার", "বঙ্গবাণী", "ঝিঙে ফুল", "প্রাণ", 
-  "সেইদিন এই মাঠ", "পল্লীজননী", "আশা", "আমি কোনো আগন্তুক নই", "রানার", "তোমাকে পাওয়ার জন্যে, হে স্বাধীনতা", 
-  "তোমাকে পাওয়ার জন্যে হে স্বাধীনতা", "তোমাকে পাওয়ার জন্য হে স্বাধীনতা", "তোমাকে পাওয়ার জন্য",
-  "আমার পরিচয়", "আমার পরিচয়", "স্বাধীনতা, এ শব্দটি কীভাবে আমাদের হলো", "স্বাধীনতা এ শব্দটি কীভাবে আমাদের হলো", 
-  "স্বাধীনতা এ শব্দটি", "সাহসী জননী বাংলা", "কাকতাড়ুয়া", "বহিপীর",
-  "সমাস", "সন্ধি", "ণ-ত্ব", "ষ-ত্ব", "ণ-ত্ব ও ষ-ত্ব", "ধ্বনি", "শব্দ", "বাক্য", "কারক", "প্রত্যয়", "উপসর্গ",
-  // Physics
-  "ভৌত রাশি ও পরিমাপ", "ভৌত রাশি এবং পরিমাপ", "গতি", "বল", "কাজ, ক্ষমতা ও শক্তি", "কাজ ক্ষমতা ও শক্তি", "পদার্থের অবস্থা ও চাপ", 
-  "বস্তুর উপর তাপের প্রভাব", "বস্তুর ওপর তাপের প্রভাব", "তরঙ্গ ও শব্দ", "আলোর প্রতিফলন", "আলোর প্রতিসরণ", "চোখের ক্রিয়া", "স্থির বিদ্যুৎ", 
-  "চল বিদ্যুৎ", "বিদ্যুতের চৌম্বক ক্রিয়া", "বিদ্যুতের চৌম্বক ক্রিয়া", "আধুনিক পদার্থবিজ্ঞান ও ইলেকট্রনিক্স", "আধুনিক পদার্থবিজ্ঞান ও ইলেকট্রনিকস", "জীবন বাঁচাতে পদার্থবিজ্ঞান",
-  // Chemistry
-  "রসায়নের ধারণা", "পদার্থের অবস্থা", "পদার্থের গঠন", "পর্যায় সারণী", "পর্যায় সারণি", "পর্যায় সারণি", "পর্যায় সারণী", "রাসায়নিক বন্ধন", 
-  "মোলের ধারণা ও রাসায়নিক গণনা", "মোলের ধারণা", "রাসায়নিক বিক্রিয়া", "রসায়ন ও শক্তি", "এসিড-ক্ষারক সমতা", 
-  "খনিজ সম্পদ: ধাতু-অধাতু", "খনিজ সম্পদ: জীবাশ্ম", "খনিজ সম্পদ ও জীবাশ্ম", "আমাদের জীবনে রসায়ন",
-  // Biology
-  "জীবন পাঠ", "জীবকোষ ও টিস্যু", "কোষ বিভাজন", "জীবনীশক্তি", "খাদ্য, পুষ্টি ও পরিপাক", "জীবে পরিবহন", 
-  "গ্যাসীয় বিনিময়", "রেচন প্রক্রিয়া", "দৃঢ়তা প্রদান ও চলন", "সমন্বয় ও নিঃসরণ", "জীবের প্রজনন", 
-  "জীবের বংশগতি ও বিবর্তন", "জীবের পরিবেশ", "জীবপ্রযুক্তি",
-  // Math & Higher Math
-  "বাস্তব সংখ্যা", "সেট ও ফাংশন", "বীজগাণিতিক রাশি", "সূচক ও লগারিদম", "এক চলকবিশিষ্ট সমীকরণ", 
-  "রেখা, কোণ ও ত্রিভুজ", "ব্যবহারিক জ্যামিতি", "বৃত্ত", "ত্রিকোণমিতিক অনুপাত", "ত্রিকোণমিতি", "দূরত্ব ও উচ্চতা", 
-  "বীজগাণিতিক অনুপাত ও সমানুপাত", "দুই চলকবিশিষ্ট সরল সহসমীকরণ", "সসীম ধারা", "অনুপাত, সদৃশতা ও প্রতিসমতা", 
-  "ক্ষেত্রফল সম্পর্কিত উপপাদ্য ও সম্পাদ্য", "পরিমিতি", "পরিসংখ্যান",
-  "দ্বিপদী বিস্তৃতি", "স্থানাঙ্ক জ্যামিতি", "ভেক্টর", "সম্ভাবনা",
-  // ICT
-  "তথ্য ও যোগাযোগ প্রযুক্তি এবং আমাদের বাংলাদেশ", "কম্পিউটার ও কম্পিউটার ব্যবহারকারীর নিরাপত্তা", 
-  "আমার শিক্ষায় ইন্টারনেট", "আমার লেখালেখি ও হিসাব", "মাল্টিমিডিয়া ও গ্রাফিক্স", "মাল্টিমিডিয়া ও গ্রাফিক্স", "ডেটাবেজ-এর ব্যবহার", "ডেটাবেজ"
-];
-
-export function extractDirectTopicTokens(rawT, matchedChapterInfo) {
-  if (!rawT) return [];
-  const stopWords = new Set([
-    'অধ্যায়', 'অধ্যায়', 'chapter', 'ch', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'ekta', 'akta', 'কুইজ', 'quiz',
-    'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে',
-    'প্রশ্ন', 'prosno', 'বোর্ড', 'সাল', 'দেও', 'mcq', 'cq', '১টি', 'একটি', 'দুটো', '১', '২', '৩', '৪', '৫',
-    'dio', 'deba', 'debe', 'chai', 'চাই', 'দিতে', 'করো', 'koro', 'practice', 'অনুশীলন',
-    'গল্প', 'উপন্যাস', 'নাটক', 'কবিতা', 'প্রবন্ধ', 'পদ্য', 'গদ্য', 'সাহিত্য', 'অংশ', 'নিয়ে', 'সম্পর্কে', 'বিষয়', 'বিষয়ক',
-    'সম্পূর্ণ', 'পুরো', 'সব', 'সকল', 'পাঠ্যক্রম', 'সিলেবাস', 'বই', 'বইয়ের', 'ফুল', 'all', 'full', 'syllabus', 'book', 'whole', 'সবগুলো'
-  ]);
-  const normT = normalizeTopic(rawT);
-
-  // 1. Check for known multi-word or exact topic phrases
-  const matchedPhrases = [];
-  for (const phrase of KNOWN_TOPIC_PHRASES) {
-    if (normT.includes(phrase)) {
-      matchedPhrases.push(phrase);
+    for (const m of matches) {
+      years.push(m.length === 4 ? m.slice(-2) : m);
     }
   }
-  if (matchedPhrases.length > 0) {
-    return [...new Set(matchedPhrases)];
-  }
-
-  // 2. Fallback to token splitting with strict stopwords filter
-  const words = normT.split(/[\s,–—\-:;।?!/&()+]+/).map(w => w.trim()).filter(w => 
-    w.length >= 2 && 
-    !/^\d+$/.test(w) && 
-    !/^[০-৯]+$/.test(w) && 
-    !stopWords.has(w.toLowerCase())
-  );
-  const chName = matchedChapterInfo?.name;
-  return words.filter(w => !chName || !chName.includes(w));
+  return years;
 }
 
-export function extractChapterKeywords(rawT, matchedChapterInfo, subjId) {
-  let chapterKeywords = [];
-  if (!rawT) return chapterKeywords;
-
-  const normT = normalizeTopic(rawT);
-  const candidateNames = [normT, matchedChapterInfo?.name].filter(Boolean);
-  const stopWords = new Set([
-    'অধ্যায়', 'অধ্যায়', 'chapter', 'theke', 'থেকে', 'er', 'এর', 'দাও', 'dao', 'ekta', 'akta', 'কুইজ', 'quiz',
-    'ওপর', 'উপর', 'জন্য', 'পর', 'প্রভাব', 'কোন', 'কোনটি', 'বল', 'কি', 'কিভাবে', 'কী', 'নিচের', 'নিচে',
-    'dio', 'deba', 'debe', 'chai', 'চাই', 'দিতে', 'করো', 'koro', 'practice', 'অনুশীলন', 'সাহিত্য',
-    'সম্পূর্ণ', 'পুরো', 'সব', 'সকল', 'পাঠ্যক্রম', 'সিলেবাস', 'বই', 'বইয়ের', 'ফুল', 'all', 'full', 'syllabus', 'book', 'whole', 'সবগুলো'
-  ]);
-
-  for (const name of candidateNames) {
-    const cleanName = name.replace(/\s+ও\s+/g, ' ');
-    const words = cleanName.split(/[\s,–—\-:;।?!/&()+]+/).map(w => w.trim()).filter(w => 
-      w.length >= 2 && 
-      !/^\d+$/.test(w) && 
-      !/^[০-৯]+$/.test(w) && 
-      !stopWords.has(w.toLowerCase())
-    );
-    chapterKeywords.push(...words);
+export function buildYearSqlConditions(boardCode, years) {
+  if (!years || years.length === 0) return "";
+  const clauses = [];
+  for (const yr of years) {
+    if (boardCode && boardCode !== "RANDOM") {
+      clauses.push(`tags LIKE '%${boardCode} ${yr}%'`);
+      clauses.push(`tags LIKE '%${boardCode}${yr}%'`);
+    } else {
+      clauses.push(`tags LIKE '% ${yr}%'`);
+    }
   }
-  const chNum = matchedChapterInfo?.order_num || extractChapterNum(rawT);
-  const extraConcepts = getChapterConceptKeywords(subjId, chNum);
-  if (extraConcepts && extraConcepts.length > 0) {
-    chapterKeywords.push(...extraConcepts);
-  }
-  return [...new Set(chapterKeywords)];
+  return clauses.length > 0 ? `(${clauses.join(" OR ")})` : "";
+}
+
+export function normalizeAcademicString(str) {
+  if (!str) return "";
+  return String(str)
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/[–—\-:;।?!/&()+,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export const RECENT_YEAR_ORDER_BY = `
@@ -429,94 +92,41 @@ export const RECENT_YEAR_ORDER_BY = `
       WHEN tags LIKE '% 23%' THEN 4 
       WHEN tags LIKE '% 22%' THEN 5 
       WHEN tags LIKE '% 21%' THEN 6 
-      WHEN tags LIKE '% 20%' THEN 7 
-      WHEN tags LIKE '% 19%' THEN 8 
-      WHEN tags LIKE '% 18%' THEN 9 
-      ELSE 10 
+      ELSE 7 
     END ASC, 
-    RANDOM()
+    id DESC
 `;
 
+export function normalizeTopic(raw) {
+  if (!raw) return "";
+  return String(raw).toLowerCase().trim();
+}
+
 export const STOP_WORDS_IR = new Set([
-  'অধ্যায়', 'অধ্যায়', 'chapter', 'ch', 'এর', 'থেকে', 'theke', 'এবং', 'ও', 'সম্পর্কিত', 'dio', 'dao', 'ekta', 'akta', 'mcq', 'cq', 'prosno', 'প্রশ্ন',
-  'দাও', 'দেও', 'কুইজ', 'quiz', 'কোনটি', 'কোন', 'কি', 'কী', 'নিচের', 'নিচে', 'বোর্ড', 'সাল',
-  'কে', 'কাকে', 'কার', 'কারা', 'কাদের', 'বলে', 'বলতে', 'বোঝায়', 'বোঝায়', 'বলুন', 'বলো', 'জানাও', 'উত্তরে', 'উত্তর', 'হলো', 'হলে', 'হয়', 'হয়', 'হয়েছিল', 'হয়েছিল', 'করে', 'করা', 'কখন', 'কোথায়', 'কোথায়', 'কেন', 'কিভাবে', 'কীভাবে', 'সম্পর্কে', 'কিছু', 'উদাহরণ', 'ব্যাখ্যা', 'বর্ণনা',
-  'সম্পূর্ণ', 'পুরো', 'সব', 'সকল', 'পাঠ্যক্রম', 'সিলেবাস', 'বই', 'বইয়ের', 'ফুল', 'all', 'full', 'syllabus', 'book', 'whole', 'সবগুলো',
-  'ভাই', 'vai', 'bhai', 'bro', 'sir', 'স্যার', 'ম্যাম', 'আপু', 'apu', 'হ্যালো', 'হাই', 'হে', 'হেই', 'সালাম', 'আসসালামু', 'আলাইকুম', 'নমস্কার', 'আদাব', 'kemon', 'acho', 'কেমন', 'আছো', 'আছেন', 'ভালো', 'valo', 'hi', 'hello', 'hlw', 'hey'
+  "অধ্যায়", "অধ্যায়", "chapter", "ch", "এর", "থেকে", "theke", "এবং", "ও",
+  "দাও", "দেও", "dio", "কুইজ", "quiz", "কোনটি", "কোন", "কি", "কী", "নিচের", "নিচে",
+  "বোর্ড", "সাল", "প্রশ্ন", "mcq", "cq", "ভাই", "sir", "please", "plz",
+  "1st", "2nd", "১ম", "২য়", "প্রথম", "দ্বিতীয়", "first", "second",
+  "paper", "পত্র", "list", "তালিকা", "নাম", "কয়টা", "কয়টা", "সবগুলো", "অধ্যায়গুলো"
 ]);
 
-export function normalizeAcademicString(str) {
-  if (!str) return "";
-  return String(str)
-    .normalize('NFC')
-    .toLowerCase()
-    .replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d)
-    // Keep Bengali Anusvara (ং is \u0982), strip Visarga (ঃ is \u0983), colons, hyphens, dashes, and punctuation
-    .replace(/[\u0983:;,\–\—\-_।/\\()\[\]{}'"`?*!+~@#$%^&=|]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeBnConcept(str) {
-  if (!str) return "";
-  return String(str)
-    .normalize('NFC')
-    .replace(/\u09af\u09bc/g, '\u09df') // Normalize Bengali ya with nukta
-    .toLowerCase();
-}
-
-/**
- * Universal Semantic Chapter Relevance Gatekeeper
- * Automatically checks if a candidate question actually belongs to the target chapter.
- * Rejects questions that have 0 target concepts and alien domain concepts from another chapter.
- */
-export function isQuestionRelevantToChapter(question, subjectId, targetChapterNum) {
-  if (!subjectId || !targetChapterNum || !question) return true;
-  const conceptsMap = CHAPTER_CONCEPTS_MAP[subjectId];
-  if (!conceptsMap) return true;
-
-  const targetNumStr = String(targetChapterNum);
-  const targetConcepts = conceptsMap[targetNumStr];
-  if (!targetConcepts || targetConcepts.length === 0) return true;
-
-  const rawText = `${question.question_text || ''} ${question.question_html || ''} ${question.option_a || ''} ${question.option_b || ''} ${question.option_c || ''} ${question.option_d || ''}`;
-  const text = normalizeBnConcept(rawText);
-
-  // 1. If text matches any core concept of the target chapter, it's immediately valid!
-  const hasTargetConcept = targetConcepts.some(c => text.includes(normalizeBnConcept(c)));
-  if (hasTargetConcept) return true;
-
-  // 2. If question has zero target concepts, check if it strongly belongs to an alien chapter
-  for (const [alienNum, alienConcepts] of Object.entries(conceptsMap)) {
-    if (alienNum === targetNumStr) continue;
-
-    // Check for strong domain-specific keywords (length >= 4 or multi-word)
-    const strongAlienMatch = alienConcepts.some(c => {
-      const normC = normalizeBnConcept(c);
-      if (normC.length >= 4 || normC.includes(' ')) {
-        return text.includes(normC);
-      }
-      return false;
-    });
-
-    if (strongAlienMatch) {
-      // Strong alien concept detected with 0 target concepts -> DISQUALIFY!
-      return false;
-    }
-
-    // Or 2+ general alien keywords (length >= 3)
-    const generalMatches = alienConcepts.filter(c => {
-      const normC = normalizeBnConcept(c);
-      return normC.length >= 3 && text.includes(normC);
-    });
-
-    if (generalMatches.length >= 2) {
-      return false;
-    }
+export function extractChapterKeywords(rawT, matchedChapterInfo) {
+  const candidateNames = [rawT, matchedChapterInfo?.name].filter(Boolean);
+  const words = [];
+  for (const name of candidateNames) {
+    const clean = String(name).replace(/\s+ও\s+/g, " ");
+    const parts = clean.split(/[\s,–—\-:;।?!/&()+]+/).map(w => w.trim()).filter(w =>
+      w.length >= 2 && !/^\d+$/.test(w) && !/^[০-৯]+$/.test(w) && !STOP_WORDS_IR.has(w.toLowerCase())
+    );
+    words.push(...parts);
   }
-
-  // 3. If neither positive nor strongly alien, allow through
-  return true;
+  return [...new Set(words)];
 }
 
+export function extractDirectTopicTokens(rawT, matchedChapterInfo) {
+  return extractChapterKeywords(rawT, matchedChapterInfo);
+}
 
+export function isQuestionRelevantToChapter(question, subjectId, targetChapterNum) {
+  return Boolean(question);
+}

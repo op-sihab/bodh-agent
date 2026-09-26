@@ -1,10 +1,11 @@
-// Merge.dev Gateway (openai/gpt-5.6-luna) + Turso RAG Engine
+// Merge.dev Gateway (openai/gpt-6-luna) + Local HSC RAG Engine
 import { retrieveRealAcademicContext, formatRagContextForPrompt } from "./rag-engine.js";
 import { appCache } from "./cache.js";
+import { ENV } from "./config/env.js";
 
-const MERGE_API_URL = "https://api-gateway.merge.dev/v1/responses";
-const MERGE_API_KEY = process.env.MERGE_API_KEY || "mg_XKCpgi4dR6M2DmaBFgvjme8uTeGyWWTWGP_XP4zUjN8";
-const MODEL_NAME = "openai/gpt-5.6-luna";
+const MERGE_API_URL = ENV.MERGE_API_URL || "https://api-gateway.merge.dev/v1/responses";
+const MERGE_API_KEY = ENV.MERGE_API_KEY || "mg_HFahKt_qaHMfdy_hCZP_aGQWLXkyW5CZFyBhU85CRkc";
+const MODEL_NAME = ENV.MODEL_NAME || "openai/gpt-6-luna";
 
 const SYSTEM_PROMPT = `
 তুমি "বোধ" (BODH) — একজন তুখোড়, বাস্তববাদী ও প্রো-অ্যাক্টিভ (Proactive) স্টাডি পার্টনার ও একাডেমিক মেন্টর। তোমার দর্শন: "না বুঝে মুখস্থ নয়, পড়াশোনায় এবার গভীর বোধ।"

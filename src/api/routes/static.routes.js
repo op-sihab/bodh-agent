@@ -10,6 +10,30 @@ const projectRoot = path.resolve(__dirname, "../../..");
 
 export const staticRoutes = new Hono();
 
+const mimeMap = {
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".js": "application/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".json": "application/json"
+};
+
+function serveFile(subDir, fileName, c) {
+  // Prevent directory traversal
+  const safeName = path.basename(fileName);
+  const filePath = path.join(projectRoot, "public", subDir, safeName);
+  if (fs.existsSync(filePath)) {
+    const ext = path.extname(safeName).toLowerCase();
+    const mime = mimeMap[ext] || "application/octet-stream";
+    return c.body(fs.readFileSync(filePath), 200, { "Content-Type": mime });
+  }
+  return c.notFound();
+}
+
 // 1. Web Test UI
 staticRoutes.get("/", (c) => {
   const htmlPath = path.join(projectRoot, "public", "index.html");
@@ -20,22 +44,11 @@ staticRoutes.get("/", (c) => {
 });
 
 // 2. Static Assets (SVG Icons & Logos)
-staticRoutes.get("/assets/:file", (c) => {
-  const fileName = c.req.param("file");
-  const filePath = path.join(projectRoot, "public", "assets", fileName);
-  if (fs.existsSync(filePath)) {
-    const ext = path.extname(fileName).toLowerCase();
-    const mimeMap = {
-      ".svg": "image/svg+xml",
-      ".png": "image/png",
-      ".webp": "image/webp",
-      ".jpg": "image/jpeg",
-      ".jpeg": "image/jpeg",
-      ".js": "application/javascript",
-      ".css": "text/css"
-    };
-    const mime = mimeMap[ext] || "application/octet-stream";
-    return c.body(fs.readFileSync(filePath), 200, { "Content-Type": mime });
-  }
-  return c.notFound();
-});
+staticRoutes.get("/assets/:file", (c) => serveFile("assets", c.req.param("file"), c));
+
+// 3. Static CSS Modules
+staticRoutes.get("/css/:file", (c) => serveFile("css", c.req.param("file"), c));
+
+// 4. Static JS Modules
+staticRoutes.get("/js/:file", (c) => serveFile("js", c.req.param("file"), c));
+

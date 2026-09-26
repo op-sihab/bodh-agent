@@ -1,10 +1,9 @@
-// Chapter Indexing, Inverted Token Matching, and Resolution Algorithms
+// Chapter Indexing, Inverted Token Matching, and Dynamic Resolution Engine
 import { executeRawSql } from "../../core/db/client.js";
 import { appCache } from "../../core/cache.js";
 import { normalizeSubject } from "../../config/subject-map.js";
 import {
   extractChapterNum,
-  CHAPTER_CONCEPTS_MAP,
   STOP_WORDS_IR,
   normalizeAcademicString
 } from "../../config/chapter-map.js";
@@ -27,6 +26,18 @@ export function stemBnToken(t) {
   return t;
 }
 
+export function getSubjectForChapter(r) {
+  const o = parseInt(r.order_num, 10);
+  if (r.id?.startsWith('phys_') || (o >= 33 && o <= 45)) return { subject_id: 'hsc_physics', relative_num: o - 32 };
+  if (r.id?.startsWith('chem_') || (o >= 46 && o <= 55)) return { subject_id: 'hsc_chemistry', relative_num: o - 45 };
+  if (r.id?.startsWith('bio_') || (o >= 56 && o <= 79)) return { subject_id: 'hsc_biology', relative_num: o - 55 };
+  if (r.id?.startsWith('math_') || (o >= 80 && o <= 99)) return { subject_id: 'hsc_math', relative_num: o - 79 };
+  if (o >= 100 && o <= 105) return { subject_id: 'hsc_ict', relative_num: o - 99 };
+  if (o <= 29) return { subject_id: 'hsc_bangla', relative_num: o };
+  if (o <= 32) return { subject_id: 'hsc_english', relative_num: o - 29 };
+  return { subject_id: 'hsc_general', relative_num: o };
+}
+
 function buildCorpusIndex(chapters) {
   if (!chapters || chapters.length === 0) return;
   tokenDocFreq.clear();
@@ -35,11 +46,8 @@ function buildCorpusIndex(chapters) {
   for (const ch of chapters) {
     const normName = normalizeAcademicString(ch.name);
     const titleTokens = normName.split(' ').filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
-    const concepts = CHAPTER_CONCEPTS_MAP[ch.subject_id]?.[String(ch.order_num)] || [];
-    const conceptTokens = concepts.flatMap(c => normalizeAcademicString(c).split(' ')).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
-    const combined = [...titleTokens, ...conceptTokens];
-    const stemmed = combined.map(stemBnToken).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
-    const allTokens = [...new Set([...combined, ...stemmed])];
+    const stemmed = titleTokens.map(stemBnToken).filter(t => t.length >= 2 && !STOP_WORDS_IR.has(t));
+    const allTokens = [...new Set([...titleTokens, ...stemmed])];
     chapterTokensMap.set(ch.id, allTokens);
     for (const t of allTokens) {
       tokenDocFreq.set(t, (tokenDocFreq.get(t) || 0) + 1);
@@ -53,22 +61,39 @@ function getIDF(token, totalDocs) {
   return Math.log(1 + (totalDocs / df));
 }
 
+export function getChaptersSync() {
+  if (cachedChapters && cachedChapters.length > 0) return cachedChapters;
+  const fromCache = appCache.get("all_hsc_chapters");
+  if (fromCache && fromCache.length > 0) {
+    cachedChapters = fromCache;
+    return cachedChapters;
+  }
+  return [];
+}
+
 export async function getAllChaptersCached() {
   if (cachedChapters && cachedChapters.length > 0) {
     if (!isCorpusIndexed) buildCorpusIndex(cachedChapters);
     return cachedChapters;
   }
-  const fromCache = appCache.get("all_nctb_chapters");
+  const fromCache = appCache.get("all_hsc_chapters");
   if (fromCache && fromCache.length > 0) {
     cachedChapters = fromCache;
     buildCorpusIndex(cachedChapters);
     return cachedChapters;
   }
   try {
-    const res = await executeRawSql("SELECT id, subject_id, name, order_num FROM chapters ORDER BY subject_id, CAST(order_num AS INTEGER) ASC;");
+    const res = await executeRawSql("SELECT id, subject_id, name, order_num FROM chapters ORDER BY CAST(order_num AS INTEGER) ASC;");
     if (res.rows && res.rows.length > 0) {
-      cachedChapters = res.rows;
-      appCache.set("all_nctb_chapters", cachedChapters, 3600);
+      cachedChapters = res.rows.map(r => {
+        const meta = getSubjectForChapter(r);
+        return {
+          ...r,
+          subject_id: meta.subject_id,
+          relative_num: meta.relative_num
+        };
+      });
+      appCache.set("all_hsc_chapters", cachedChapters, 3600);
       buildCorpusIndex(cachedChapters);
     }
   } catch (e) {
@@ -115,12 +140,13 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
   // TIER 0: 100% Deterministic Subject + Chapter Number Resolution
   if (targetSubj && targetChapterNum) {
     const numInt = parseInt(targetChapterNum, 10);
-    const directCh = all.find(c => c.subject_id === targetSubj && parseInt(c.order_num, 10) === numInt);
+    // Match by relative number within this subject or absolute order_num
+    const directCh = all.find(c => c.subject_id === targetSubj && (c.relative_num === numInt || parseInt(c.order_num, 10) === numInt));
     if (directCh) return directCh;
   }
 
   // Broad Syllabus / Entire Book check: do not map to a single chapter
-  const isBroadSyllabus = /সম্পূর্ণ|পুরো\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|সব\s*অধ্যায়|সকল\s*অধ্যায়|ফুল\s*বই|ফুল\s*সিলেবাস|full\s*(?:syllabus|book)|all\s*chapters/i.test(fullContext);
+  const isBroadSyllabus = /সম্পূর্ণ|পুরো\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|সব\s*অধ্যায়|সকল\s*অধ্যায়|ফুল\s*বই|ফুল\s*সিলেবাস|full\s*(?:syllabus|book)|all\s*chapters|(?:1st|2nd|১ম|২য়|প্রথম|দ্বিতীয়|first|second)\s*(?:paper|পত্র)?\s*(?:er\s*)?(?:list|তালিকা|অধ্যায়|chapter|নাম)|(?:অধ্যায়গুলো|অধ্যায়ের\s*তালিকা|অধ্যায়\s*তালিকা|সিলেবাস|syllabus|\blist\b|তালিকা)/i.test(fullContext);
   if (isBroadSyllabus && !targetChapterNum) {
     return null;
   }
@@ -149,78 +175,54 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     const isSameSubj = targetSubj && c.subject_id === targetSubj;
     const chTokens = chapterTokensMap.get(c.id) || [];
 
-    // 1. Exact normalized name match (Punctuation Invariant)
+    // Paper-level pseudo-chapters (Bangla 1st/2nd, English 1st/2nd/Admission)
+    // NEVER match unless user explicitly mentioned that subject or targetSubj matches
+    if (chNum >= 28 && chNum <= 32) {
+      const mentionsPaperSubject = (chNum <= 29 && /(?:bangla|বাংলা)/i.test(rawClean)) ||
+                                   (chNum >= 30 && /(?:english|ইংরেজি)/i.test(rawClean));
+      if (!isSameSubj && !mentionsPaperSubject) {
+        continue;
+      }
+    }
+
+    // Strict subject isolation: if targetSubj is active, heavily penalize chapters from other subjects
+    if (targetSubj && !isSameSubj) {
+      score -= 5000;
+    }
+
+    // 1. Exact normalized name match
     if (rawClean === normChName) {
       score += 2500;
     } else if (rawClean.includes(normChName)) {
       score += 1800 + (normChName.length * 8);
-    } else if (normChName.includes(rawClean) && rawClean.length >= 4) {
+    } else if (normChName.includes(rawClean) && rawClean.length >= 3) {
       score += 1400 + (rawClean.length * 8);
     }
 
-    // 2. Explicit chapter number match or mismatch penalty
+    // 2. Explicit chapter number match
     if (extractedNum) {
-      if (chNum === parseInt(extractedNum, 10)) {
-        score += isSameSubj ? 1500 : 800;
-      } else {
-        score -= 1000; // Strong penalty if user specified another number!
+      const numInt = parseInt(extractedNum, 10);
+      if (c.relative_num === numInt || chNum === numInt) {
+        score += isSameSubj ? 1500 : 600;
       }
     }
 
-    // 3. Dynamic BM25 / TF-IDF Token Similarity (Weighted by Uniqueness across all chapters)
+    // 3. Dynamic BM25 / TF-IDF Token Similarity
     let matchedWeight = 0;
     let matchedCount = 0;
     for (const qt of queryTokens) {
-      // Avoid false positive on "function of X" queries matching Physics Chapter 4 (কাজ, ক্ষমতা ও শক্তি)
-      const isWorkGeneric = (qt === 'কাজ' && /(?:এর|\w+ের|\w+র)\s*কাজ\s*(?:কি|কী|গুলো|বর্ণনা|লিখ)/i.test(fullContext));
-      if (isWorkGeneric && c.subject_id === 'ssc_physics') {
-        continue;
-      }
-
       const isExact = chTokens.includes(qt);
-      const isSub = !isExact && chTokens.some(ct => (ct.length >= 4 && qt.length >= 4 && (ct.includes(qt) || qt.includes(ct))));
+      const isSub = !isExact && chTokens.some(ct => (ct.length >= 3 && qt.length >= 3 && (ct.includes(qt) || qt.includes(ct))));
       if (isExact || isSub) {
         const idf = getIDF(qt, totalChapters);
-        matchedWeight += idf * (isExact ? 180 : 100);
+        matchedWeight += idf * (isExact ? 200 : 120);
         matchedCount++;
       }
     }
     score += matchedWeight;
 
-    // Coverage Bonus & Dynamic Mutual Exclusion Penalty
-    if (chTokens.length > 0 && queryTokens.length > 0) {
-      const queryOverlapRatio = matchedCount / queryTokens.length;
-      const chOverlapRatio = matchedCount / chTokens.length;
-      score += (queryOverlapRatio * 400) + (chOverlapRatio * 250);
-
-      // Dynamic mutual exclusion penalty
-      const missingTokens = queryTokens.filter(qt => {
-        if (qt === 'কাজ' && /(?:এর|\w+ের|\w+র)\s*কাজ/i.test(fullContext)) return false;
-        return !chTokens.includes(qt) && !chTokens.some(ct => (ct.length >= 4 && qt.length >= 4 && (ct.includes(qt) || qt.includes(ct))));
-      });
-      for (const mt of missingTokens) {
-        if (tokenDocFreq.has(mt)) {
-          score -= getIDF(mt, totalChapters) * 180;
-        }
-      }
-    }
-
-    // 4. Curriculum Concept Map Matching
-    const concepts = CHAPTER_CONCEPTS_MAP[c.subject_id]?.[String(c.order_num)] || [];
-    const isWorkGenericContext = /(?:এর|\w+ের|\w+র)\s*কাজ\s*(?:কি|কী|গুলো|বর্ণনা|লিখ)/i.test(fullContext);
-    for (const con of concepts) {
-      const normCon = normalizeAcademicString(con);
-      if (normCon === 'কাজ' && c.subject_id === 'ssc_physics' && isWorkGenericContext) {
-        continue;
-      }
-      if (normCon.length >= 2 && (rawClean.includes(normCon) || queryTokens.includes(normCon))) {
-        score += 850;
-      }
-    }
-
-    // 5. Subject Alignment Bonus
     if (isSameSubj) {
-      score += 150;
+      score += 200;
     }
 
     if (score > highestScore) {
@@ -229,53 +231,6 @@ export async function findChapterCached(rawTopicOrCh, subjId = null) {
     }
   }
 
-  // Phase 2 Fallback: If title and concept matching confidence is low (< 350),
-  // dynamically query the 50,855 questions database!
-  if (highestScore < 350 && queryTokens.length > 0) {
-    const searchTerms = queryTokens.filter(t => t.length >= 2);
-    if (searchTerms.length > 0) {
-      const cacheKey = `${targetSubj || 'all'}_${searchTerms.join("_")}`;
-      if (dynamicDbLookupCache.has(cacheKey)) {
-        const cached = dynamicDbLookupCache.get(cacheKey);
-        bestMatch = cached.ch;
-        highestScore = cached.score;
-      } else {
-        const fullPhrase = searchTerms.join(" ");
-        const clauses = [`q.question_text LIKE '%${fullPhrase.replace(/'/g, "''")}%'`];
-        for (const t of searchTerms) {
-          clauses.push(`q.question_text LIKE '%${t.replace(/'/g, "''")}%'`);
-        }
-        const subjCondition = targetSubj ? `AND c.subject_id = '${targetSubj}'` : '';
-        const dbSearchSql = `
-          SELECT q.chapter_id, c.id, c.name, c.subject_id, COUNT(*) as cnt 
-          FROM questions q 
-          JOIN chapters c ON q.chapter_id = c.id 
-          WHERE (${clauses.join(' OR ')}) ${subjCondition}
-          GROUP BY q.chapter_id, c.id, c.name, c.subject_id 
-          ORDER BY 
-            CASE WHEN q.question_text LIKE '%${fullPhrase.replace(/'/g, "''")}%' THEN 1 ELSE 2 END ASC,
-            cnt DESC 
-          LIMIT 1;
-        `;
-        try {
-          const dbRes = await executeRawSql(dbSearchSql);
-          if (dbRes.rows.length > 0) {
-            const foundChId = dbRes.rows[0].chapter_id;
-            const foundCh = all.find(c => c.id === foundChId);
-            if (foundCh) {
-              bestMatch = foundCh;
-              highestScore = 900;
-              dynamicDbLookupCache.set(cacheKey, { ch: foundCh, score: 900 });
-            }
-          }
-        } catch (e) {
-          console.error("Dynamic DB lookup error:", e);
-        }
-      }
-    }
-  }
-
-  // If match confidence is solid, return chapter
   if (bestMatch && highestScore >= 300) {
     return bestMatch;
   }

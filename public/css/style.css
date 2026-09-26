@@ -1,0 +1,457 @@
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Anek Bangla', 'Hind Siliguri', -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      background-color: #08080d;
+      color: #f4f4f5;
+    }
+
+    /* Subtle ambient mesh glow in background */
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 8%, rgba(79, 70, 229, 0.08) 0%, rgba(56, 189, 248, 0.025) 30%, transparent 65%);
+      z-index: 0;
+    }
+
+    /* Minimalist Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+
+    .chatgpt-scroll::-webkit-scrollbar { width: 5px; }
+    .chatgpt-scroll::-webkit-scrollbar-track { background: transparent; }
+    .chatgpt-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
+    .chatgpt-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+
+    /* Precision Student Psychology: Calming Lavender-Violet & Warm Golden Amber Insight Wave (Slow, Meditative Pace) */
+    @keyframes thinkingBeam {
+      0% { background-position: -260% 0; }
+      100% { background-position: 260% 0; }
+    }
+    @keyframes slowBulbPulse {
+      0%, 100% {
+        opacity: 0.65;
+        filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.25));
+        transform: scale(0.96);
+      }
+      50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.7));
+        transform: scale(1.04);
+      }
+    }
+    .thinking-bulb-glow {
+      animation: slowBulbPulse 3.6s ease-in-out infinite;
+    }
+    .thinking-shimmer {
+      background: linear-gradient(
+        90deg,
+        #71717a 0%,
+        #a855f7 22%,
+        #fbbf24 45%,
+        #ffffff 52%,
+        #f59e0b 60%,
+        #c084fc 78%,
+        #71717a 100%
+      );
+      background-size: 260% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: thinkingBeam 6.2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-block;
+      vertical-align: middle;
+      filter: drop-shadow(0 0 10px rgba(192, 132, 252, 0.3));
+    }
+
+    /* Exact Reference: Dotted Thought Tree */
+    .thought-tree {
+      transition: max-height 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, margin 0.2s ease;
+      overflow: hidden;
+    }
+    .thought-tree.collapsed {
+      max-height: 0px !important;
+      opacity: 0 !important;
+      margin-top: 0px !important;
+      margin-bottom: 0px !important;
+      border-left-color: transparent !important;
+    }
+    .thought-sub-content {
+      transition: max-height 0.22s ease, opacity 0.18s ease;
+      overflow: hidden;
+    }
+    .thought-sub-content.collapsed {
+      max-height: 0px !important;
+      opacity: 0 !important;
+      padding-top: 0px !important;
+      padding-bottom: 0px !important;
+    }
+
+    /* Exam Result Audit Collapsible Accordion */
+    .audit-collapsible {
+      transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, margin 0.2s ease;
+      overflow: hidden;
+      max-height: 3500px;
+      opacity: 1;
+    }
+    .audit-collapsible.collapsed {
+      max-height: 0px !important;
+      opacity: 0 !important;
+      margin-top: 0px !important;
+      margin-bottom: 0px !important;
+      padding-top: 0px !important;
+      padding-bottom: 0px !important;
+      pointer-events: none;
+    }
+
+    /* Markdown Styling */
+    .markdown-body p { margin-bottom: 0.85rem; line-height: 1.75; font-size: 0.9375rem; color: #d4d4d8; }
+    .markdown-body p:last-child { margin-bottom: 0; }
+    
+    .markdown-body ul { list-style-type: none; margin-left: 0; padding-left: 0; margin-top: 0.35rem; margin-bottom: 0.85rem; }
+    .markdown-body ul li { position: relative; padding-left: 1.25rem; margin-bottom: 0.4rem; line-height: 1.65; color: #d4d4d8; }
+    .markdown-body ul li::before {
+      content: "•";
+      position: absolute;
+      left: 0.3rem;
+      color: #71717a;
+      font-weight: bold;
+    }
+
+    .markdown-body ol { list-style-type: decimal; margin-left: 1.35rem; margin-top: 0.35rem; margin-bottom: 0.85rem; }
+    .markdown-body ol li { margin-bottom: 0.35rem; line-height: 1.65; color: #d4d4d8; }
+
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 { 
+      font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; letter-spacing: -0.015em; color: #ffffff; 
+    }
+    .markdown-body h2 { font-size: 1.15rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.35rem; }
+    .markdown-body h3 { font-size: 1.05rem; }
+    .markdown-body strong { font-weight: 600; color: #ffffff; }
+    .markdown-body code { 
+      padding: 0.15rem 0.4rem; border-radius: 0.375rem; font-family: 'JetBrains Mono', monospace; font-size: 0.84em; background: rgba(255, 255, 255, 0.08);
+    }
+    /* Modern Glassmorphic Table Styling */
+    .markdown-body table {
+      width: 100%;
+      max-width: 580px;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 1.1rem 0;
+      font-size: 0.88rem;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 0.875rem;
+      overflow: hidden;
+      background: rgba(18, 18, 24, 0.55);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    .markdown-body th {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.7rem 1.05rem;
+      text-align: left;
+      font-weight: 600;
+      color: #ffffff;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+      letter-spacing: 0.02em;
+    }
+    .markdown-body td {
+      padding: 0.65rem 1.05rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: #d4d4d8;
+      transition: background 0.15s ease;
+    }
+    .markdown-body tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .markdown-body tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Examiner Trap & Callout Alert Styling */
+    .markdown-body blockquote {
+      margin: 0.85rem 0;
+      padding: 0.75rem 1rem;
+      border-left: 3px solid #f59e0b;
+      background: rgba(245, 158, 11, 0.08);
+      border-radius: 0 0.75rem 0.75rem 0;
+      color: #fef3c7;
+      font-size: 0.92em;
+      line-height: 1.6;
+      border: 1px solid rgba(245, 158, 11, 0.15);
+      border-left-width: 3.5px;
+    }
+    .markdown-body blockquote p { margin: 0; }
+
+    /* ChatGPT-style Animated Streaming Dot Indicator */
+    .streaming-dot, .streaming-cursor {
+      display: inline-block;
+      width: 7.5px;
+      height: 7.5px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.8), 0 0 2px #38bdf8;
+      margin-left: 5px;
+      margin-right: 2px;
+      vertical-align: 0.05em;
+      animation: chatGptDotPulse 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+      pointer-events: none;
+    }
+    @keyframes chatGptDotPulse {
+      0% {
+        opacity: 0.35;
+        transform: scale(0.75);
+        box-shadow: 0 0 4px rgba(56, 189, 248, 0.3);
+      }
+      50% {
+        opacity: 0.85;
+        transform: scale(1.05);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1.22);
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.95), 0 0 3px #bae6fd;
+      }
+    }
+
+    @keyframes thoughtCursorPulse {
+      0% {
+        opacity: 0.45;
+        transform: scale(0.9);
+        box-shadow: 0 0 4px rgba(251, 191, 36, 0.4);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1.25);
+        box-shadow: 0 0 10px rgba(251, 191, 36, 0.9), 0 0 5px rgba(192, 132, 252, 0.7);
+      }
+    }
+
+    .thought-cursor {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fbbf24 0%, #c084fc 100%);
+      margin-left: 6px;
+      vertical-align: 0.05em;
+      animation: thoughtCursorPulse 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+      pointer-events: none;
+    }
+
+    .exam-launcher-card {
+      animation: examCardFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      contain: layout paint;
+    }
+    @keyframes examCardFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* KaTeX Math Styling */
+    .katex { font-size: 1.08em; line-height: 1.2; color: #ffffff; }
+    .katex-display { 
+      margin: 0.85rem 0; overflow-x: auto; overflow-y: hidden; 
+      padding: 0.75rem 1rem; border-radius: 0.75rem; text-align: center; 
+      background: #111114; border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    /* Dedicated Exam Cockpit & Co-Pilot Markdown Typography */
+    #dedicatedExamPage .markdown-body p {
+      margin-bottom: 0.5rem;
+      line-height: 1.6;
+      font-size: 0.8125rem;
+      color: #e4e4e7;
+    }
+    #dedicatedExamPage .markdown-body p:last-child {
+      margin-bottom: 0;
+    }
+    #dedicatedExamPage .markdown-body ul {
+      list-style-type: none;
+      margin-left: 0;
+      padding-left: 0;
+      margin-top: 0.25rem;
+      margin-bottom: 0.5rem;
+    }
+    #dedicatedExamPage .markdown-body ul li {
+      position: relative;
+      padding-left: 1.15rem;
+      margin-bottom: 0.3rem;
+      line-height: 1.55;
+      font-size: 0.8125rem;
+      color: #e4e4e7;
+    }
+    #dedicatedExamPage .markdown-body ul li::before {
+      content: "•";
+      position: absolute;
+      left: 0.25rem;
+      color: #38bdf8;
+      font-weight: bold;
+    }
+    #dedicatedExamPage .markdown-body ol {
+      list-style-type: decimal;
+      margin-left: 1.25rem;
+      margin-top: 0.25rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.8125rem;
+      color: #e4e4e7;
+    }
+    #dedicatedExamPage .markdown-body ol li {
+      margin-bottom: 0.25rem;
+      line-height: 1.55;
+    }
+    #dedicatedExamPage .markdown-body strong {
+      font-weight: 600;
+      color: #ffffff;
+    }
+    #dedicatedExamPage .markdown-body code {
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.375rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82em;
+      background: rgba(255, 255, 255, 0.08);
+      color: #38bdf8;
+    }
+    #dedicatedExamPage .markdown-body .katex {
+      font-size: 1.05em;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+    #dedicatedExamPage .markdown-body .katex-display {
+      margin: 0.45rem 0;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.75rem;
+      font-size: 0.95em;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .subj-card {
+      position: relative;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .subj-card:hover {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.14), 0 8px 24px -6px rgba(0, 0, 0, 0.6);
+      transform: translateY(-2px);
+    }
+    .subj-card.active-selected {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(24, 24, 28, 0.95) 100%) !important;
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2), 0 10px 30px -8px rgba(0, 0, 0, 0.7) !important;
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    /* AI Input Container (Spotlight Glass) */
+    .ai-input-card {
+      background: linear-gradient(180deg, rgba(18, 19, 30, 0.85) 0%, rgba(12, 13, 21, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .ai-input-card:focus-within {
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.14), 0 20px 48px -10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(79, 70, 229, 0.15);
+    }
+
+    /* MCQ Option Card (Clean Tactical State - Anti-Slop) */
+    .mcq-opt {
+      transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      color: #f4f4f5;
+    }
+    .mcq-opt:hover {
+      border-color: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.04);
+      transform: translateY(-1px);
+    }
+    .mcq-opt:active {
+      transform: scale(0.99);
+    }
+    .mcq-opt.correct {
+      border: 1.5px solid #10b981 !important;
+      background: rgba(16, 185, 129, 0.08) !important;
+    }
+    .mcq-opt.correct .opt-letter {
+      background-color: #10b981 !important;
+      color: #09090b !important;
+      border-color: #10b981 !important;
+      font-weight: 700 !important;
+    }
+    .mcq-opt.correct .opt-text {
+      color: #ecfdf5 !important;
+      font-weight: 500 !important;
+    }
+    .mcq-opt.wrong {
+      border: 1.5px solid #f43f5e !important;
+      background: rgba(244, 63, 94, 0.08) !important;
+    }
+    .mcq-opt.wrong .opt-letter {
+      background-color: #f43f5e !important;
+      color: #ffffff !important;
+      border-color: #f43f5e !important;
+      font-weight: 700 !important;
+    }
+    .mcq-opt.wrong .opt-text {
+      color: #fff1f2 !important;
+      font-weight: 500 !important;
+    }
+
+    /* Hero & Chat Transitions */
+    #heroView {
+      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #heroView.hidden-state {
+      opacity: 0;
+      transform: translateY(-12px);
+      display: none;
+    }
+
+    #chatView {
+      transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1), transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #chatView.hidden-state {
+      opacity: 0;
+      transform: translateY(10px);
+      display: none;
+    }
+
+    /* Exam Launcher Card & Transitions */
+    .exam-launcher-card {
+      animation: fadeInCard 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      min-height: 80px;
+    }
+    @keyframes fadeInCard {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .message-exam-slot {
+      margin-top: 0.85rem;
+    }
+    .message-exam-slot:empty {
+      display: none;
+      margin: 0;
+    }
+
+    /* Bodh 3D Monogram Matching Gradient Brand Typography */
+    .bodh-gradient-text {
+      background: linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 40%, #93C5FD 75%, #38BDF8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .bodh-gradient-hero {
+      background: linear-gradient(135deg, #FFFFFF 0%, #E0E7FF 35%, #A5B4FC 70%, #38BDF8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 8px rgba(79, 70, 229, 0.2));
+    }

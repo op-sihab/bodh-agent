@@ -1,8 +1,6 @@
 node_modules/
 .wrangler/
 tmp/
-.env
-.env.*
 *.log
 .DS_Store
 Thumbs.db
@@ -13,3 +11,6 @@ test_*.mjs
 scratch/
 .next/
 next-env.d.ts
+database/
+database.zip
+hsc_questions_for_embedding.csv

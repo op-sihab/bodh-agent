@@ -105,8 +105,9 @@ academicRoutes.post("/quiz/explain", async (c) => {
     return c.json({ error: "question_text is required" }, 400);
   }
 
-  const mergeUrl = process.env.MERGE_API_URL || ENV.MERGE_API_URL;
-  const mergeKey = process.env.MERGE_API_KEY || ENV.MERGE_API_KEY;
+  const isMergeGateway = (ENV.AI_GATEWAY === "merge");
+  const aiApiUrl = isMergeGateway ? (process.env.MERGE_API_URL || ENV.MERGE_API_URL) : ENV.AI_API_URL;
+  const aiApiKey = isMergeGateway ? (process.env.MERGE_API_KEY || ENV.MERGE_API_KEY) : ENV.AI_API_KEY;
   const modelName = process.env.MODEL_NAME || ENV.MODEL_NAME;
 
   let optStr = "";
@@ -123,12 +124,7 @@ ${board ? `বোর্ড/উৎস: ${board}\n` : ""}প্রশ্ন: ${que
 ${optStr ? `বিকল্পসমূহ: ${optStr}\n` : ""}সঠিক উত্তর: ${correctAnswer}
 ${userAnswer ? `শিক্ষার্থীর উত্তর: ${userAnswer}` : ""}`;
 
-  const payload = {
-    input: [
-      {
-        type: "message",
-        role: "system",
-        content: `You are "বোধ" (BODH), an elite SSC tutor.
+  const systemPrompt = `You are "বোধ" (BODH), an elite SSC tutor.
 Provide a hyper-fast, highly focused MCQ explanation in clear Bengali.
 Strictly under 40 words total. Format strictly as 3 bullet points:
 - **সঠিক কারণ:** (১ বাক্যে মূল বৈজ্ঞানিক বা গাণিতিক কারণ)
@@ -137,19 +133,31 @@ Strictly under 40 words total. Format strictly as 3 bullet points:
 Rules:
 - Strictly 1 short sentence per bullet.
 - ALWAYS enclose chemical formulas, isotopes, units, or math in $...$ (e.g. $^{32}\\text{P}$, $^{60}\\text{Co}$, $\\mathrm{H_2O}$, $10^{23}$).
-- Output ONLY the 3 bullets. Never output <thought> tags, conversational filler, or introductory remarks.`
-      },
-      {
-        type: "message",
-        role: "user",
-        content: promptContent
-      }
-    ],
-    model: modelName,
-    vendor: "openai",
-    stream: isStream,
-    max_tokens: 280
-  };
+- Output ONLY the 3 bullets. Never output <thought> tags, conversational filler, or introductory remarks.`;
+
+  let payload;
+  if (isMergeGateway) {
+    payload = {
+      input: [
+        { type: "message", role: "system", content: systemPrompt },
+        { type: "message", role: "user", content: promptContent }
+      ],
+      model: modelName,
+      vendor: "openai",
+      stream: isStream,
+      max_tokens: 280
+    };
+  } else {
+    payload = {
+      model: modelName,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: promptContent }
+      ],
+      stream: isStream,
+      max_tokens: 280
+    };
+  }
 
   if (isStream) {
     c.header("Content-Type", "text/event-stream");
@@ -159,11 +167,11 @@ Rules:
 
     return streamSSE(c, async (stream) => {
       try {
-        const response = await fetch(mergeUrl, {
+        const response = await fetch(aiApiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${mergeKey}`
+            "Authorization": `Bearer ${aiApiKey}`
           },
           body: JSON.stringify(payload)
         });
@@ -192,13 +200,21 @@ Rules:
             if (!raw || raw === "[DONE]") continue;
             try {
               const parsed = JSON.parse(raw);
-              const text = parsed.output?.[0]?.content?.[0]?.text;
-              if (text && text.length > fullText.length) {
-                const delta = text.slice(fullText.length);
-                fullText = text;
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullText += delta;
                 await stream.writeSSE({
                   data: JSON.stringify({ delta, text: fullText })
                 });
+              } else {
+                const text = parsed.output?.[0]?.content?.[0]?.text;
+                if (text && text.length > fullText.length) {
+                  const d = text.slice(fullText.length);
+                  fullText = text;
+                  await stream.writeSSE({
+                    data: JSON.stringify({ delta: d, text: fullText })
+                  });
+                }
               }
             } catch (e) {}
           }
@@ -215,16 +231,16 @@ Rules:
     });
   } else {
     try {
-      const response = await fetch(mergeUrl, {
+      const response = await fetch(aiApiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${mergeKey}`
+          "Authorization": `Bearer ${aiApiKey}`
         },
         body: JSON.stringify({ ...payload, stream: false })
       });
       const data = await response.json();
-      const text = data.output?.[0]?.content?.[0]?.text || "";
+      const text = data.choices?.[0]?.message?.content || data.output?.[0]?.content?.[0]?.text || "";
       return c.json({ success: true, explanation: text });
     } catch (err) {
       return c.json({ success: false, error: err.message }, 500);
@@ -247,8 +263,9 @@ academicRoutes.post("/quiz/copilot", async (c) => {
     return c.json({ error: "question_text is required" }, 400);
   }
 
-  const mergeUrl = process.env.MERGE_API_URL || ENV.MERGE_API_URL;
-  const mergeKey = process.env.MERGE_API_KEY || ENV.MERGE_API_KEY;
+  const isMergeGateway = (ENV.AI_GATEWAY === "merge");
+  const aiApiUrl = isMergeGateway ? (process.env.MERGE_API_URL || ENV.MERGE_API_URL) : ENV.AI_API_URL;
+  const aiApiKey = isMergeGateway ? (process.env.MERGE_API_KEY || ENV.MERGE_API_KEY) : ENV.AI_API_KEY;
   const modelName = process.env.MODEL_NAME || ENV.MODEL_NAME;
 
   let optStr = "";
@@ -311,24 +328,29 @@ CRITICAL FORMATTING & ACADEMIC RULES:
     userPrompt += `\nশিক্ষার্থীর প্রশ্ন: ${userQuery || "এই প্রশ্নটি বুঝতে পারছি না"}`;
   }
 
-  const payload = {
-    input: [
-      {
-        type: "message",
-        role: "system",
-        content: systemInstruction
-      },
-      {
-        type: "message",
-        role: "user",
-        content: userPrompt
-      }
-    ],
-    model: modelName,
-    vendor: "openai",
-    stream: isStream,
-    max_tokens: 220
-  };
+  let payload;
+  if (isMergeGateway) {
+    payload = {
+      input: [
+        { type: "message", role: "system", content: systemInstruction },
+        { type: "message", role: "user", content: userPrompt }
+      ],
+      model: modelName,
+      vendor: "openai",
+      stream: isStream,
+      max_tokens: 220
+    };
+  } else {
+    payload = {
+      model: modelName,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: userPrompt }
+      ],
+      stream: isStream,
+      max_tokens: 220
+    };
+  }
 
   if (isStream) {
     c.header("Content-Type", "text/event-stream");
@@ -338,11 +360,11 @@ CRITICAL FORMATTING & ACADEMIC RULES:
 
     return streamSSE(c, async (stream) => {
       try {
-        const response = await fetch(mergeUrl, {
+        const response = await fetch(aiApiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${mergeKey}`
+            "Authorization": `Bearer ${aiApiKey}`
           },
           body: JSON.stringify(payload)
         });
@@ -371,13 +393,21 @@ CRITICAL FORMATTING & ACADEMIC RULES:
             if (!raw || raw === "[DONE]") continue;
             try {
               const parsed = JSON.parse(raw);
-              const text = parsed.output?.[0]?.content?.[0]?.text;
-              if (text && text.length > fullText.length) {
-                const delta = text.slice(fullText.length);
-                fullText = text;
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                fullText += delta;
                 await stream.writeSSE({
                   data: JSON.stringify({ delta, text: fullText })
                 });
+              } else {
+                const text = parsed.output?.[0]?.content?.[0]?.text;
+                if (text && text.length > fullText.length) {
+                  const d = text.slice(fullText.length);
+                  fullText = text;
+                  await stream.writeSSE({
+                    data: JSON.stringify({ delta: d, text: fullText })
+                  });
+                }
               }
             } catch (e) {}
           }
@@ -394,16 +424,16 @@ CRITICAL FORMATTING & ACADEMIC RULES:
     });
   } else {
     try {
-      const response = await fetch(mergeUrl, {
+      const response = await fetch(aiApiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${mergeKey}`
+          "Authorization": `Bearer ${aiApiKey}`
         },
         body: JSON.stringify({ ...payload, stream: false })
       });
       const data = await response.json();
-      const text = data.output?.[0]?.content?.[0]?.text || "";
+      const text = data.choices?.[0]?.message?.content || data.output?.[0]?.content?.[0]?.text || "";
       return c.json({ success: true, response: text });
     } catch (err) {
       return c.json({ success: false, error: err.message }, 500);

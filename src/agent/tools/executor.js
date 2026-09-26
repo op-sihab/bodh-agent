@@ -1,4 +1,4 @@
-// Tool Dispatcher & Execution Engine
+// Tool Dispatcher & Execution Engine with Parameter Auto-Healing
 import {
   handleGetSubjectChapters,
   handleCheckBoardFrequency,
@@ -11,8 +11,72 @@ import {
   handleAnalyzeChapterPatterns,
   handleQueryQuestionDatabaseSql
 } from "./handlers/index.js";
+import { normalizeSubject } from "../../config/subject-map.js";
 
-export async function executeAgentTool(toolName, args) {
+const BN_TO_EN_DIGITS = {
+  '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+  '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+};
+
+export function normalizeBnDigits(val) {
+  if (val === null || val === undefined) return val;
+  return String(val).replace(/[০-৯]/g, d => BN_TO_EN_DIGITS[d] || d);
+}
+
+export function autoHealToolArguments(toolName, rawArgs = {}, state = null) {
+  const args = { ...rawArgs };
+
+  // 1. Subject Healing: If missing or general and state has subject, heal it
+  if (!args.subject || args.subject === 'all' || args.subject === 'any' || args.subject === 'none') {
+    if (state?.subject_id) {
+      args.subject = state.subject_id;
+    }
+  } else {
+    const norm = normalizeSubject(args.subject);
+    if (norm) args.subject = norm;
+  }
+
+  // 2. Chapter Healing & Digit Conversion
+  if (args.chapter !== undefined && args.chapter !== null) {
+    args.chapter = normalizeBnDigits(args.chapter);
+    const chMatch = String(args.chapter).match(/(?:অধ্যায়|অধ্যায়|chapter|ch)?\s*([0-9]+)/i);
+    if (chMatch && chMatch[1]) {
+      args.chapter = chMatch[1];
+    }
+  } else if (state?.chapter_num && !args.is_full_syllabus) {
+    args.chapter = normalizeBnDigits(state.chapter_num);
+  }
+
+  // 3. Count Normalization
+  if (args.count !== undefined && args.count !== null) {
+    const enCount = normalizeBnDigits(args.count);
+    const parsed = parseInt(enCount, 10);
+    args.count = !isNaN(parsed) && parsed > 0 ? parsed : 1;
+  }
+
+  // 4. Year Normalization
+  if (args.year !== undefined && args.year !== null) {
+    args.year = normalizeBnDigits(args.year);
+  }
+
+  // 5. Difficulty Normalization
+  if (args.difficulty) {
+    const diffLower = String(args.difficulty).toLowerCase();
+    if (diffLower.includes('কঠিন') || diffLower.includes('hard')) {
+      args.difficulty = 'hard';
+    } else if (diffLower.includes('সহজ') || diffLower.includes('easy')) {
+      args.difficulty = 'easy';
+    } else {
+      args.difficulty = 'medium';
+    }
+  }
+
+  return args;
+}
+
+export async function executeAgentTool(toolName, rawArgs, state = null) {
+  const args = autoHealToolArguments(toolName, rawArgs, state);
+
   switch (toolName) {
     case "get_subject_chapters":
       return handleGetSubjectChapters(args);

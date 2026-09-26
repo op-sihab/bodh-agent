@@ -28,8 +28,6 @@ export {
   normalizeTopic,
   parseYearFilter,
   buildYearSqlConditions,
-  CHAPTER_CONCEPTS_MAP,
-  getChapterConceptKeywords,
   extractChapterKeywords,
   RECENT_YEAR_ORDER_BY,
   normalizeAcademicString

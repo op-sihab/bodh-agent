@@ -1,6 +1,6 @@
 // Tool Handlers: search_question_bank & get_board_exam_questions
 import { executeRawSql } from "../../../core/db/client.js";
-import { normalizeSubject } from "../../../config/subject-map.js";
+import { normalizeSubject, buildDbSubjectCondition } from "../../../config/subject-map.js";
 import { normalizeBoard } from "../../../config/board-map.js";
 import { formatTag } from "../../../config/tag-map.js";
 import { parseYearFilter, buildYearSqlConditions, RECENT_YEAR_ORDER_BY } from "../../../config/chapter-map.js";
@@ -14,10 +14,11 @@ export async function handleSearchQuestionBank(args) {
   const years = parseYearFilter(args.year);
 
   const whereClauses = [
-    `(question_text LIKE '%${query}%' OR question_html LIKE '%${query}%' OR solution LIKE '%${query}%')`
+    `(question_text LIKE '%${query}%' OR solution LIKE '%${query}%')`
   ];
 
-  if (subjId) whereClauses.push(`subject_id = '${subjId}'`);
+  const sCond = buildDbSubjectCondition(subjId);
+  if (sCond) whereClauses.push(sCond);
 
   if (years.length > 0) {
     whereClauses.push(buildYearSqlConditions(boardTag, years));
@@ -32,12 +33,12 @@ export async function handleSearchQuestionBank(args) {
   }
 
   const limit = Math.min(parseInt(args.limit) || 2, 5);
-  let sql = `SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id, chapter_id FROM questions WHERE ${whereClauses.join(" AND ")} ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
+  let sql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id, chapter_id FROM questions WHERE ${whereClauses.join(" AND ")} ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
   let res = await executeRawSql(sql);
 
   // Fallback if combination is too strict
   if (res.rows.length === 0) {
-    const fallbackSql = `SELECT id, question_text, question_html, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id, chapter_id FROM questions WHERE (question_text LIKE '%${query}%' OR question_html LIKE '%${query}%' OR solution LIKE '%${query}%') ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
+    const fallbackSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, type, subject_id, chapter_id FROM questions WHERE (question_text LIKE '%${query}%' OR solution LIKE '%${query}%') ${RECENT_YEAR_ORDER_BY} LIMIT ${Math.max(limit * 5, 25)};`;
     res = await executeRawSql(fallbackSql);
   }
 
@@ -55,8 +56,8 @@ export async function handleSearchQuestionBank(args) {
     results: res.rows.map(r => ({
       id: r.id,
       type: r.type,
-      stem_or_question: r.question_text || r.question_html,
-      question_text: r.question_text || r.question_html,
+      stem_or_question: r.question_text,
+      question_text: r.question_text,
       option_a: r.option_a,
       option_b: r.option_b,
       option_c: r.option_c,
@@ -88,8 +89,9 @@ export async function handleGetBoardExamQuestions(args) {
   const mcqLimit = isFullExam ? Math.min(parseInt(args.count) || 30, 30) : Math.min(parseInt(args.count) || 3, 10);
 
   let qWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
-  if (subjId) {
-    qWhere.push(`subject_id = '${subjId}'`);
+  const sCond = buildDbSubjectCondition(subjId);
+  if (sCond) {
+    qWhere.push(sCond);
   }
   if (yrCode) {
     qWhere.push(`(tags LIKE '%${bCode} ${yrCode}%' OR tags LIKE '%${yrCode}%')`);
@@ -102,13 +104,13 @@ export async function handleGetBoardExamQuestions(args) {
   // Fallback: without year constraint if strict board+year had no rows
   if (mcqRes.rows.length === 0 && yrCode) {
     const fbWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
-    if (subjId) fbWhere.push(`subject_id = '${subjId}'`);
+    if (sCond) fbWhere.push(sCond);
     mcqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${fbWhere.join(" AND ")} AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`);
   }
 
   // Fallback: any recent board questions for this subject if specific board had no rows
   if (mcqRes.rows.length === 0 && subjId) {
-    mcqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE subject_id = '${subjId}' AND tags != '' AND question_text != '' AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`);
+    mcqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE ${sCond ? `${sCond} AND ` : ''}tags != '' AND question_text != '' AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT ${isFullExam ? 50 : 25};`);
   }
 
   // Determine returned slice of MCQs
@@ -118,7 +120,7 @@ export async function handleGetBoardExamQuestions(args) {
   // seamlessly complete the set using recent authentic Dhaka Board questions from preceding years (e.g. 2025/2024)!
   if (isFullExam && topMcqs.length < mcqLimit && subjId) {
     const existingIds = new Set(topMcqs.map(r => r.id));
-    const backfillSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE tags LIKE '%${bCode}%' AND subject_id = '${subjId}' AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT 50;`;
+    const backfillSql = `SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id FROM questions WHERE tags LIKE '%${bCode}%' ${sCond ? `AND ${sCond}` : ''} AND type IN ('MCQ', 'MCQ_N') AND answer != '' ${RECENT_YEAR_ORDER_BY} LIMIT 50;`;
     const bfRes = await executeRawSql(backfillSql);
     for (const row of bfRes.rows) {
       if (!existingIds.has(row.id)) {
@@ -141,12 +143,12 @@ export async function handleGetBoardExamQuestions(args) {
 
   if (cqRes.rows.length === 0 && yrCode) {
     const fbWhere = [`tags LIKE '%${bCode}%'`, `question_text != ''`];
-    if (subjId) fbWhere.push(`subject_id = '${subjId}'`);
+    if (sCond) fbWhere.push(sCond);
     cqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE ${fbWhere.join(" AND ")} AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`);
   }
 
   if (cqRes.rows.length === 0 && subjId) {
-    cqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE subject_id = '${subjId}' AND tags != '' AND question_text != '' AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`);
+    cqRes = await executeRawSql(`SELECT id, question_text, option_a, option_b, option_c, option_d, solution, tags, subject_id FROM questions WHERE ${sCond ? `${sCond} AND ` : ''}tags != '' AND question_text != '' AND type IN ('CQ_4', 'CQ_3', 'CQ_N') ${RECENT_YEAR_ORDER_BY} LIMIT 25;`);
   }
 
   const sampleCqs = isFullExam

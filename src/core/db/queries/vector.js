@@ -1,12 +1,28 @@
-// Vector Similarity Search (টাইপভিত্তিক অনুরূপ প্রশ্ন অনুসন্ধান)
 import { executeRawSql } from "../client.js";
 import { appCache } from "../../cache.js";
+import { isLocalVectorAvailable, searchSimilarHscLocal } from "../local_vector.js";
 
 export async function getSimilarQuestionsByVector({ questionId, queryText, subjectId, limit = 4 } = {}) {
+  // 1. Prioritize ultra-fast local HSC vector search if available
+  if (isLocalVectorAvailable()) {
+    try {
+      const localResult = searchSimilarHscLocal({ questionId, queryText, subjectId, limit });
+      if (localResult && localResult.seed) {
+        return {
+          ...localResult,
+          fromCache: false,
+          isLocalVector: true
+        };
+      }
+    } catch (e) {
+      console.warn("⚠️ [Vector Search] Local vector search error, falling back:", e.message);
+    }
+  }
+
   let targetId = questionId ? String(questionId).trim() : null;
 
   // If questionId not directly valid, find seed question via queryText
-  if (!targetId || !targetId.startsWith('q_')) {
+  if (!targetId || targetId.length < 3) {
     let cleanKw = (queryText || "").replace(/'/g, "''").trim();
     if (!cleanKw) return { seed: null, similar: [] };
 

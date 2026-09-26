@@ -179,7 +179,8 @@ export function getScopedTools(intent) {
 
     case INTENT_TYPES.GENERAL:
     default:
-      return AGENT_TOOLS;
+      // Zero tool schema overhead for general concept explanations or direct questions!
+      return undefined;
   }
 }
 

@@ -10,9 +10,18 @@ const globalGatewayStats = {
   totalTokens: 0,
   totalCostUsd: 0,
   totalCostSavedUsd: 0,
+  jevDecisionsCount: 0,
   startedAt: Date.now(),
   lastQueryAt: null
 };
+
+export function trackGatewayCost(costUsd = 0, inTokens = 0, outTokens = 0) {
+  globalGatewayStats.jevDecisionsCount++;
+  globalGatewayStats.totalCostUsd += costUsd;
+  globalGatewayStats.totalInputTokens += inTokens;
+  globalGatewayStats.totalOutputTokens += outTokens;
+  globalGatewayStats.totalTokens += (inTokens + outTokens);
+}
 
 // Exchange rate: 1 USD = 122.50 BDT (Live market reference for Bangladesh)
 export const USD_TO_BDT_RATE = 122.50;
@@ -115,6 +124,7 @@ export function getGatewayGlobalStats() {
     gateway: "Merge.dev AI Gateway",
     model: ENV.MODEL_NAME,
     total_queries: globalGatewayStats.totalQueries,
+    jev_decisions: globalGatewayStats.jevDecisionsCount,
     total_input_tokens: globalGatewayStats.totalInputTokens,
     total_output_tokens: globalGatewayStats.totalOutputTokens,
     total_tokens: globalGatewayStats.totalTokens,

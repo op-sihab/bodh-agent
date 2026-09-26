@@ -1,7 +1,7 @@
 // Tool Handler: get_mcq_quiz
 import { executeRawSql } from "../../../core/db/client.js";
 import { appCache } from "../../../core/cache.js";
-import { normalizeSubject, toBnDigits } from "../../../config/subject-map.js";
+import { normalizeSubject, toBnDigits, buildDbSubjectCondition } from "../../../config/subject-map.js";
 import { normalizeBoard } from "../../../config/board-map.js";
 import { formatTag } from "../../../config/tag-map.js";
 import {
@@ -22,7 +22,7 @@ export async function handleGetMcqQuiz(args) {
                          /সম্পূর্ণ\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|পুরো\s*(?:বই|সিলেবাস|পাঠ্যক্রম)|সব\s*অধ্যায়|সকল\s*অধ্যায়|ফুল\s*বই|ফুল\s*সিলেবাস/i.test(rawT);
 
   const matchedChapterInfo = isFullSyllabus ? null : await findChapterCached(args, subjId);
-  if (matchedChapterInfo && matchedChapterInfo.subject_id) {
+  if (matchedChapterInfo && matchedChapterInfo.subject_id && matchedChapterInfo.subject_id !== "HSC") {
     subjId = matchedChapterInfo.subject_id;
   }
   const matchedMcqChapterId = matchedChapterInfo ? matchedChapterInfo.id : null;
@@ -48,18 +48,16 @@ export async function handleGetMcqQuiz(args) {
     : '';
 
   let chapterConditionSql = "";
-  if (matchedMcqChapterId && kwSql) {
-    chapterConditionSql = `(chapter_id = '${matchedMcqChapterId}' OR (chapter_id NOT LIKE 'ch_%' AND (${kwSql})))`;
-  } else if (matchedMcqChapterId) {
+  if (matchedMcqChapterId) {
     chapterConditionSql = `chapter_id = '${matchedMcqChapterId}'`;
   } else if (kwSql) {
     chapterConditionSql = `(${kwSql})`;
   }
 
-  // If specific story/topic tokens exist, enforce topic-level filtering
+  // If specific story/topic tokens exist and no chapter_id, enforce topic-level filtering
   let topicConditionSql = "";
-  if (directTopicTokens.length > 0 && !isFullSyllabus) {
-    const tKw = directTopicTokens.map(t => `(question_text LIKE '%${t.replace(/'/g, "''")}%' OR question_html LIKE '%${t.replace(/'/g, "''")}%')`).join(' OR ');
+  if (!matchedMcqChapterId && directTopicTokens.length > 0 && !isFullSyllabus) {
+    const tKw = directTopicTokens.map(t => `question_text LIKE '%${t.replace(/'/g, "''")}%'`).join(' OR ');
     topicConditionSql = `(${tKw})`;
   }
 
@@ -72,7 +70,8 @@ export async function handleGetMcqQuiz(args) {
 
   if (!qRows || qRows.length === 0) {
     const baseConditions = [`type = 'MCQ'`, `question_text != ''`, `answer != ''`, `option_a != ''`, `option_b != ''`];
-    if (subjId) baseConditions.push(`subject_id = '${subjId}'`);
+    const sCond = buildDbSubjectCondition(subjId);
+    if (sCond) baseConditions.push(sCond);
     if (chapterConditionSql) baseConditions.push(chapterConditionSql);
     if (topicConditionSql) baseConditions.push(topicConditionSql);
 
@@ -170,7 +169,7 @@ export async function handleGetMcqQuiz(args) {
     if (res.rows.length < count && kwSql) {
       const existingIds = res.rows.map(r => `'${r.id}'`);
       const fbUnmapped = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `(chapter_id NOT LIKE 'ch_%' AND (${kwSql}))`];
-      if (subjId) fbUnmapped.push(`subject_id = '${subjId}'`);
+      if (sCond) fbUnmapped.push(sCond);
       fbUnmapped.push(`tags != '' AND tags IS NOT NULL`);
       if (existingIds.length > 0) fbUnmapped.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
@@ -189,7 +188,8 @@ export async function handleGetMcqQuiz(args) {
     // Fallback 4: General subject fallback if fewer than count and not full syllabus or broad request
     if (res.rows.length < count && subjId) {
       const existingIds = res.rows.map(r => `'${r.id}'`);
-      const fbWhere4 = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `subject_id = '${subjId}'`, `tags != '' AND tags IS NOT NULL`];
+      const fbWhere4 = [`question_text != ''`, `answer != ''`, `type = 'MCQ'`, `tags != '' AND tags IS NOT NULL`];
+      if (sCond) fbWhere4.push(sCond);
       if (existingIds.length > 0) fbWhere4.push(`id NOT IN (${existingIds.join(',')})`);
       sql = `
         SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
@@ -220,7 +220,7 @@ export async function handleGetMcqQuiz(args) {
   // If user requested a specific story/topic (e.g. 'নিমগাছ', 'কপোতাক্ষ নদ'), strictly retain topic-matched questions!
   if (directTopicTokens.length > 0 && verifiedRows.length > 0) {
     const topicFiltered = verifiedRows.filter(r => {
-      const allText = `${r.question_text || ''} ${r.question_html || ''} ${r.tags || ''}`;
+      const allText = `${r.question_text || ''} ${r.tags || ''}`;
       return directTopicTokens.some(t => allText.includes(t));
     });
     if (topicFiltered.length >= count) {
@@ -262,10 +262,11 @@ export async function handleGetMcqQuiz(args) {
   if (sampled.length < count && subjId) {
     const sampledIds = new Set(sampled.map(r => r.id));
     const needed = count - sampled.length;
+    const finalSubjCond = buildDbSubjectCondition(subjId);
     const finalFbSql = `
       SELECT id, question_text, option_a, option_b, option_c, option_d, answer, solution, tags, subject_id, chapter_id
       FROM questions
-      WHERE type = 'MCQ' AND question_text != '' AND answer != '' AND option_a != '' AND option_b != '' AND subject_id = '${subjId}'
+      WHERE type = 'MCQ' AND question_text != '' AND answer != '' AND option_a != '' AND option_b != '' ${finalSubjCond ? `AND ${finalSubjCond}` : ''}
       ${sampledIds.size > 0 ? `AND id NOT IN (${[...sampledIds].map(id => `'${id}'`).join(',')})` : ''}
       ${RECENT_YEAR_ORDER_BY}
       LIMIT ${needed * 4};

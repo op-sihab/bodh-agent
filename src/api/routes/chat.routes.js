@@ -1,7 +1,7 @@
-// Chat and SSE Streaming Routes
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { runAgenticConversation, globalCreditManager } from "../../agent/loop/index.js";
+import { ENV } from "../../config/env.js";
 
 export const chatRoutes = new Hono();
 
@@ -93,8 +93,8 @@ chatRoutes.post("/chat", async (c) => {
 // 3. Ultra-Fast Background Pre-warm Endpoint (Eliminates 1st Message Handshake Latency)
 chatRoutes.post("/chat/prewarm", async (c) => {
   try {
-    const mergeUrl = process.env.MERGE_API_URL || "https://api.mergegateway.com";
-    fetch(mergeUrl, { method: "HEAD" }).catch(() => {});
+    const aiUrl = ENV.AI_API_URL;
+    fetch(aiUrl, { method: "HEAD" }).catch(() => {});
     return c.json({ status: "warmed", timestamp: Date.now() });
   } catch(e) {
     return c.json({ status: "ok" });
